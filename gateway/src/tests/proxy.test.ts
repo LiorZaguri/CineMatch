@@ -1,9 +1,9 @@
 import express from "express";
 import http from "http";
-import request from "supertest";
 import jwt from "jsonwebtoken";
+import request from "supertest";
 
-describe("movie upload proxy routes", () => {
+describe("movie gateway routes", () => {
   let coreApp: express.Express;
   let coreServer: http.Server;
 
@@ -13,19 +13,78 @@ describe("movie upload proxy routes", () => {
     coreApp = express();
     coreApp.use(express.json());
 
-    coreApp.get("/api/upload-url", (req, res) => {
+    coreApp.get("/api/movies/dashboard/", (_req, res) => {
       res.json({
-        path: req.path,
-        query: req.query,
-        userId: req.header("x-user-id"),
+        now_playing: [],
+        popular: [],
+        upcoming: [],
+        top_rated: [],
       });
     });
 
-    coreApp.post("/api/upload-confirm", (req, res) => {
+    coreApp.get("/api/movies/popular/", (req, res) => {
       res.json({
-        path: req.path,
+        source: "core",
+        page: Number(req.query.page ?? 1),
+      });
+    });
+
+    coreApp.get("/api/movies/now-playing/", (req, res) => {
+      res.json({
+        source: "core",
+        page: Number(req.query.page ?? 1),
+      });
+    });
+
+    coreApp.get("/api/movies/upcoming/", (req, res) => {
+      res.json({
+        source: "core",
+        page: Number(req.query.page ?? 1),
+      });
+    });
+
+    coreApp.get("/api/movies/top-rated/", (req, res) => {
+      res.json({
+        source: "core",
+        page: Number(req.query.page ?? 1),
+      });
+    });
+
+    coreApp.get("/api/movies/:tmdb_id/", (req, res) => {
+      const id = Number(req.params.tmdb_id);
+
+      if (id === 404) {
+        return res.status(404).json({ detail: "Movie not found" });
+      }
+
+      res.json({
+        id,
+        title: "Test Movie",
+        reviews: [],
+      });
+    });
+
+    coreApp.post("/api/movies/review/", (req, res) => {
+      const userId = req.header("user-id");
+
+      if (!userId) {
+        return res.status(401).json({ detail: "Missing user-id" });
+      }
+
+      if (req.body.tmdb_id === 999) {
+        return res
+          .status(400)
+          .json({ detail: "You have already reviewed this movie." });
+      }
+
+      if (req.body.tmdb_id === 502) {
+        return res.status(502).json({ detail: "TMDB unreachable" });
+      }
+
+      res.status(201).json({
+        ok: true,
+        userId,
         body: req.body,
-        userId: req.header("x-user-id"),
       });
     });
 
@@ -56,53 +115,152 @@ describe("movie upload proxy routes", () => {
     return jwt.sign({ sub: userId }, process.env.JWT_SECRET as string);
   }
 
-  it("rejects unauthenticated upload-url requests", async () => {
+  it("allows dashboard without authentication", async () => {
     const app = await loadApp();
 
-    const res = await request(app).get(
-      "/CineMatch/movies/123/upload-url?filename=image.png"
-    );
-
-    expect(res.status).toBe(401);
-  });
-
-  it("injects the authenticated user id into upload-url proxy requests", async () => {
-    const app = await loadApp();
-    const client = request(app);
-    const userId = "user-123";
-    const accessToken = makeToken(userId);
-
-    const res = await client
-      .get("/CineMatch/movies/123/upload-url?filename=image.png")
-      .set("Authorization", `Bearer ${accessToken}`)
+    const res = await request(app)
+      .get("/CineMatch/movies/dashboard/")
       .expect(200);
 
-    expect(res.body.path).toBe("/api/upload-url");
-    expect(res.body.query).toMatchObject({
-      filename: "image.png",
+    expect(res.body).toHaveProperty("now_playing");
+    expect(res.body).toHaveProperty("popular");
+    expect(res.body).toHaveProperty("upcoming");
+    expect(res.body).toHaveProperty("top_rated");
+  });
+
+  it("forwards page query for popular movies", async () => {
+    const app = await loadApp();
+
+    const res = await request(app)
+      .get("/CineMatch/movies/popular/?page=2")
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      source: "core",
+      page: 2,
     });
-    expect(res.body.userId).toBe(userId);
   });
 
-  it("injects the authenticated user id into confirm-upload proxy requests", async () => {
+  it("returns 400 for invalid page query", async () => {
     const app = await loadApp();
-    const client = request(app);
-    const userId = "user-456";
-    const accessToken = makeToken(userId);
 
-    const payload = {
-      movie_id: 123,
-      file_key: "posters/test.png",
-    };
+    const res = await request(app)
+      .get("/CineMatch/movies/popular/?page=0")
+      .expect(400);
 
-    const res = await client
-      .post("/CineMatch/movies/123/confirm-upload")
-      .set("Authorization", `Bearer ${accessToken}`)
-      .send(payload)
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("forwards tmdb_id for movie details", async () => {
+    const app = await loadApp();
+
+    const res = await request(app)
+      .get("/CineMatch/movies/123/")
       .expect(200);
 
-    expect(res.body.path).toBe("/api/upload-confirm");
-    expect(res.body.body).toMatchObject(payload);
-    expect(res.body.userId).toBe(userId);
+    expect(res.body).toMatchObject({
+      id: 123,
+      title: "Test Movie",
+    });
+  });
+
+  it("maps core 404 for movie details", async () => {
+    const app = await loadApp();
+
+    const res = await request(app)
+      .get("/CineMatch/movies/404/")
+      .expect(404);
+
+    expect(res.body.error.code).toBe("MOVIE_NOT_FOUND");
+  });
+
+  it("rejects review submission without authentication", async () => {
+    const app = await loadApp();
+
+    const res = await request(app)
+      .post("/CineMatch/movies/review/")
+      .send({
+        tmdb_id: 123,
+        rating: 8,
+        content: "This movie was actually very good.",
+      })
+      .expect(401);
+
+    expect(res.body).toHaveProperty("error");
+  });
+
+  it("forwards authenticated review submission with user-id", async () => {
+    const app = await loadApp();
+    const token = makeToken("user-123");
+
+    const res = await request(app)
+      .post("/CineMatch/movies/review/")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        tmdb_id: 123,
+        rating: 8,
+        content: "This movie was actually very good.",
+      })
+      .expect(201);
+
+    expect(res.body).toMatchObject({
+      ok: true,
+      userId: "user-123",
+    });
+    expect(res.body.body).toMatchObject({
+      tmdb_id: 123,
+      rating: 8,
+    });
+  });
+
+  it("returns 400 for invalid review body", async () => {
+    const app = await loadApp();
+    const token = makeToken("user-123");
+
+    const res = await request(app)
+      .post("/CineMatch/movies/review/")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        tmdb_id: 123,
+        rating: 20,
+        content: "short",
+      })
+      .expect(400);
+
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("maps duplicate review error from core", async () => {
+    const app = await loadApp();
+    const token = makeToken("user-123");
+
+    const res = await request(app)
+      .post("/CineMatch/movies/review/")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        tmdb_id: 999,
+        rating: 9,
+        content: "This movie was excellent and worth reviewing.",
+      })
+      .expect(400);
+
+    expect(res.body.error.code).toBe("BAD_REQUEST");
+  });
+
+  it("maps tmdb unavailable error from core", async () => {
+    const app = await loadApp();
+    const token = makeToken("user-123");
+
+    const res = await request(app)
+      .post("/CineMatch/movies/review/")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        tmdb_id: 502,
+        rating: 9,
+        content: "This movie was excellent and worth reviewing.",
+      })
+      .expect(502);
+
+    expect(res.body.error.code).toBe("CORE_TMDB_UNAVAILABLE");
   });
 });

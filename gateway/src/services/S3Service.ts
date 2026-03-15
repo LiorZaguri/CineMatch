@@ -1,10 +1,4 @@
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-  HeadBucketCommand,
-  CreateBucketCommand,
-} from "@aws-sdk/client-s3";
+import {S3Client,PutObjectCommand,DeleteObjectCommand,HeadBucketCommand,CreateBucketCommand,PutBucketPolicyCommand,} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import crypto from "node:crypto";
 
@@ -70,6 +64,32 @@ function getExtensionFromContentType(contentType: string): string {
   }
 }
 
+function buildPublicReadBucketPolicy(bucketName: string): string {
+  return JSON.stringify({
+    Version: "2012-10-17",
+    Statement: [
+      {
+        Effect: "Allow",
+        Principal: "*",
+        Action: ["s3:GetObject"],
+        Resource: [`arn:aws:s3:::${bucketName}/*`],
+      },
+    ],
+  });
+}
+
+async function ensureAvatarBucketIsPublic() {
+  const s3Config = getS3Config();
+  const s3Client = getInternalS3Client();
+
+  await s3Client.send(
+    new PutBucketPolicyCommand({
+      Bucket: s3Config.bucketName,
+      Policy: buildPublicReadBucketPolicy(s3Config.bucketName),
+    }),
+  );
+}
+
 export function validateAvatarContentType(contentType: string) {
   if (!allowedContentTypes.has(contentType)) {
     throw new Error("Unsupported avatar content type");
@@ -110,6 +130,8 @@ export async function ensureAvatarBucketExists() {
       }),
     );
   }
+
+  await ensureAvatarBucketIsPublic();
 }
 
 export async function createAvatarUploadUrl(userId: string, contentType: string) {
