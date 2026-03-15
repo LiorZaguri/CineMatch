@@ -1,11 +1,14 @@
 /* web pages with check auth with jwt and access for core by proxy */
 import { Router } from "express";
 import { authenticateJwt } from "../middleware/authMiddleware";
-import { movieProxy, uploadUrlProxy, confirmUploadProxy, } from "../proxy/movieProxy";
+import {createReview,getDashboard,getMovieDetails,getNowPlayingMovies,getPopularMovies,getTopRatedMovies,getUpcomingMovies,} from "../controllers/movieController";
 
 export const movieRoutes = Router();
 
-movieRoutes.get("/:id/upload-url", authenticateJwt, uploadUrlProxy);
-movieRoutes.post("/:id/confirm-upload", authenticateJwt, confirmUploadProxy);
-movieRoutes.use(authenticateJwt);
-movieRoutes.use(movieProxy);
+movieRoutes.get("/dashboard/", getDashboard);
+movieRoutes.get("/popular/", getPopularMovies);
+movieRoutes.get("/now-playing/", getNowPlayingMovies);
+movieRoutes.get("/upcoming/", getUpcomingMovies);
+movieRoutes.get("/top-rated/", getTopRatedMovies);
+movieRoutes.post("/review/", authenticateJwt, createReview);
+movieRoutes.get("/:tmdb_id/", getMovieDetails);

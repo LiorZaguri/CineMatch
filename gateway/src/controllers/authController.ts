@@ -1,7 +1,11 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction} from "express";
 import { AuthenticatedRequest } from "../types/authRequest";
 import {AuthError,changeUserPassword,deleteUserAccount,loginUser,registerUser,updateUserProfile,updateUserAvatar,} from "../services/authService";
 import {buildPublicFileUrl,createAvatarUploadUrl,validateAvatarContentType,} from "../services/S3Service";
+
+
+
+
 
 function isValidEmail(email: string) {
   return typeof email === "string" && email.includes("@") && email.length <= 255;
