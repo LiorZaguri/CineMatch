@@ -234,7 +234,7 @@ import { env } from "../config/env";
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "user-id": authReq.user.userId,
+          "x-user-id": authReq.user.userId,
         },
         body: JSON.stringify(body),
       });
