@@ -30,12 +30,39 @@ For movie-related prompts, return only this structure:
 {
   "mode": "discover" | "keyword",
   "filters": {
+    "certification": "string" | null,
+    "certification_gte": "string" | null,
+    "certification_lte": "string" | null,
+    "certification_country": "string" | null,
+    "include_video": false,
+    "language": "string" | null,
+    "region": "string" | null,
     "with_genres": [number],
+    "without_genres": [number],
+    "with_keywords": [number],
+    "without_keywords": [number],
+    "with_companies": [number],
+    "with_cast": [number],
+    "with_crew": [number],
+    "with_people": [number],
+    "year": number | null,
+    "primary_release_year": number | null,
     "primary_release_date_gte": "YYYY-MM-DD" | null,
     "primary_release_date_lte": "YYYY-MM-DD" | null,
+    "release_date_gte": "YYYY-MM-DD" | null,
+    "release_date_lte": "YYYY-MM-DD" | null,
+    "with_release_type": [number],
+    "with_runtime_gte": number | null,
+    "with_runtime_lte": number | null,
     "vote_average_gte": number | null,
+    "vote_average_lte": number | null,
     "vote_count_gte": number | null,
+    "vote_count_lte": number | null,
     "with_original_language": "string" | null,
+    "with_origin_country": ["string"],
+    "watch_region": "string" | null,
+    "with_watch_providers": [number],
+    "with_watch_monetization_types": ["string"],
     "sort_by": "string" | null,
     "include_adult": false,
     "page": number,
@@ -50,6 +77,12 @@ Rules:
 - Use "discover" when the request clearly maps to filters.
 - Use "keyword" when the request is movie-related but vague or uncertain.
 - If unsure, set mode to "keyword" and place the original request inside filters.query.
+- Prefer TMDB discover-style filters when the prompt asks for runtime, release window, certifications,
+  companies, people IDs, watch providers, watch region, language, country, genres, keywords, rating,
+  vote count, or sorting.
+- Use arrays for multi-value filters.
+- Use ISO 639-1 language codes when possible, ISO 3166-1 country/region codes when possible,
+  and YYYY-MM-DD for explicit dates.
 - Do not invent unsupported fields.
 - Keep include_adult false.
 """.strip()
