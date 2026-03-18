@@ -8,11 +8,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from db.db import init_db, close_db
+from db.db import close_db, init_db
 from routers.movies import router as movies_router
 from services.rabbitmq.rabbitmq import close_rabbitmq, init_rabbitmq
 from services.s3.s3_service import close_s3, init_s3_bucket
-from services.tmdb.tmdbservice import init_tmdb, close_tmdb
+from services.tmdb.tmdbservice import close_tmdb, init_tmdb
 
 
 @asynccontextmanager

@@ -25,6 +25,8 @@ class RabbitMQSettings(BaseSettings):
     RABBITMQ_PASSWORD: str
     RABBITMQ_HOST: str
     RABBITMQ_PORT: int
+    AI_RECOMMENDATION_QUEUE: str
+
 
     # Configuration for Pydantic Settings
     # env_file: Path to the environment file
