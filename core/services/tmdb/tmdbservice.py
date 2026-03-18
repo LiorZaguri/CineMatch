@@ -15,26 +15,57 @@ from fastapi import HTTPException, status
 # import setting from tmdb/config
 from .config import get_tmdb_settings
 
+_tmdb_client: httpx.AsyncClient | None = None
+
+
+def init_tmdb():
+    """
+    Initializes the global TMDB httpx async client.
+    
+    Fetches TMDB settings and sets up the client with the required
+    authorization headers, base URL, and timeout.
+    """
+    global _tmdb_client
+    if _tmdb_client is None:
+        settings = get_tmdb_settings()
+        headers = {
+            "accept": "application/json",
+            "Authorization": f"Bearer {settings.TMDB_READ_ACCESS_TOKEN}",
+        }
+
+        _tmdb_client = httpx.AsyncClient(
+            base_url=settings.TMDB_BASE_URL, headers=headers, timeout=10.0
+        )
+
+    print("[TMDB] Client initialized.", flush=True)
+
+async def close_tmdb():
+    """
+    Gracefully closes the global TMDB httpx async client.
+    
+    Should be called during application shutdown to release network connections.
+    """
+    global _tmdb_client
+    if _tmdb_client is not None:
+        await _tmdb_client.aclose()
+        print("[TMDB] Client closed.", flush=True)
+    
 
 def get_tmdb_client() -> httpx.AsyncClient:
     """
-    Creates and configures an httpx.AsyncClient for TMDB API requests.
+    Retrieves or initializes the global httpx.AsyncClient for TMDB API requests.
 
-    This factory function retrieves API settings (base URL, access token) and
-    initializes an asynchronous HTTP client with the necessary authorization
-    headers and a request timeout.
+    This function acts as a singleton factory. If the global client has not
+    been created yet, it calls `init_tmdb()` to set it up.
 
     Returns:
         httpx.AsyncClient: A configured client instance ready for making API calls.
     """
-    setting = get_tmdb_settings()
+    global _tmdb_client
+    if _tmdb_client is None:
+        init_tmdb()
 
-    headers = {
-        "accept": "application/json",
-        "Authorization": f"Bearer {setting.TMDB_READ_ACCESS_TOKEN}",
-    }
-
-    return httpx.AsyncClient(base_url=setting.TMDB_BASE_URL, headers=headers, timeout=10.0)
+    return _tmdb_client
 
 
 async def _fetch_movie_list(category: str, page: int) -> Optional[Dict[str, Any]]:
@@ -50,25 +81,19 @@ async def _fetch_movie_list(category: str, page: int) -> Optional[Dict[str, Any]
         or None if an HTTP error occurs.
     """
     setting = get_tmdb_settings()
+    client = get_tmdb_client()
 
-    # Use an async context manager to ensure the client is properly closed.
-    async with get_tmdb_client() as client:
-        try:
-            response = await client.get(
-                f"movie/{category}",
-                params={
-                    "language": setting.TMDB_LANGUAGE,
-                    "page": page,
-                }
-            )
-            # Raise an exception for 4xx or 5xx status codes.
-            response.raise_for_status()
-            return response.json()
+    try:
+        response = await client.get(
+            f"movie/{category}",
+            params={"language": setting.TMDB_LANGUAGE, "page": page},
+        )
+        response.raise_for_status()
+        return response.json()
 
-        except httpx.HTTPError as e:
-            # In a production environment, use a structured logger instead of print.
-            print(f"[TMDB] HTTP error while fetching '{category}' movies: {e}", flush=True)
-            return None
+    except httpx.HTTPStatusError as e:
+        print(f"[TMDB] HTTP error while fetching '{category}' movies: {e}", flush=True)
+        return None
 
 
 # --- Public API Functions for Routers ---
@@ -113,31 +138,23 @@ async def get_movie_details(tmdb_id: int) -> Optional[Dict[str, Any]]:
         HTTPException: 502 Bad Gateway if TMDB returns a server error or is unreachable.
     """
     setting = get_tmdb_settings()
+    client = get_tmdb_client()
 
-    async with get_tmdb_client() as client:
-        try:
-            response = await client.get(
-                f"movie/{tmdb_id}",
-                params={"language": setting.TMDB_LANGUAGE},
-            )
+    try:
+        response = await client.get(
+            f"movie/{tmdb_id}",
+            params={"language": setting.TMDB_LANGUAGE},
+        )
 
-            if response.status_code == status.HTTP_404_NOT_FOUND:
-                return None
+        if response.status_code == status.HTTP_404_NOT_FOUND:
+            return None
 
-            response.raise_for_status()
-            return response.json()
-        
-        except httpx.HTTPStatusError as e:
-            # TMDB responded, but with an error (e.g., 500 Internal Server Error)
-            print(f"[TMDB] HTTP status error while fetching details for {tmdb_id}: {e}", flush=True)
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="TMDB API error"
-            )
-        except httpx.RequestError as e:
-            # TMDB didn't even respond (e.g., DNS failure, timeout)
-            print(f"[TMDB] Network error while fetching details for {tmdb_id}: {e}", flush=True)
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="TMDB unreachable"
-            )
+        response.raise_for_status()
+        return response.json()
+    
+    except httpx.HTTPStatusError as e:
+        print(f"[TMDB] HTTP status error while fetching details for {tmdb_id}: {e}", flush=True)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="TMDB API error")
+    except httpx.RequestError as e:
+        print(f"[TMDB] Network error while fetching details for {tmdb_id}: {e}", flush=True)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="TMDB unreachable")

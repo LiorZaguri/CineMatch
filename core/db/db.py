@@ -1,13 +1,12 @@
 """
 Database Configuration Module.
 
-This module sets up the SQLAlchemy engine, session factory, and base class for ORM models.
-It also provides a dependency function `get_db` for managing database sessions.
+This module sets up the asynchronous SQLAlchemy engine and session factory.
+It provides lifecycle functions for verifying and disposing of database connections,
+as well as a dependency function `get_db` for managing database sessions in routes.
 """
-
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
-from models.base import Base
 
 from .config import get_settings
 
@@ -41,18 +40,40 @@ SessionLocal = async_sessionmaker(
 
 async def init_db():
     """
-    Initializes the database by creating all tables defined in the ORM models.
-    This function is typically called on application startup.
+    Verifies the database connection on application startup.
+    
+    Executes a basic 'SELECT 1' query to ensure the database is reachable.
+    If the connection fails, it catches the exception, logs a critical error,
+    and re-raises it to prevent the application from starting in an invalid state.
     """
-    print("[DB] Creating tables...", flush=True)
-        
-    print("[DB] Tables created.", flush=True)
+    print("[DB] Verifying database connection...", flush=True)        
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("SELECT 1"))
 
+            print("[DB] Database connection verified successfully.", flush=True)
+    except Exception as e:
+        # If the database is down, it's better to know immediately on startup
+        print(f"[DB] CRITICAL: Failed to connect to the database: {e}", flush=True)
+        raise e  # Optionally raise to stop FastAPI from starting if the DB is strictly required
+
+
+async def close_db():
+    """
+    Gracefully closes the database connection pool during application shutdown.
+    
+    Releases all active connections to the database by calling engine.dispose().
+    """
+    print("[DB] Disposing of database connection pool...", flush=True)
+    # .dispose() closes all connections in the pool gracefully
+    await engine.dispose()
+    print("[DB] Database connections closed.", flush=True)
 
 async def get_db():
     """
-    Dependency function that yields a database session.
-    Ensures the session is closed after the request is finished.
+    FastAPI dependency that yields an asynchronous database session.
+    
+    Ensures the session is automatically and safely closed after the request finishes.
     """
     async with SessionLocal() as db:
         yield db

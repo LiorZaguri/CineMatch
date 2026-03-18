@@ -1,41 +1,56 @@
 """
 RabbitMQ Service Module.
 
-This module handles the connection to RabbitMQ, initialization of exchanges,
-and publishing of events. It uses aio_pika for asynchronous AMQP communication.
+This module manages the asynchronous connection to RabbitMQ using `aio_pika`.
+It handles the connection lifecycle, including establishing robust connections,
+initializing required exchanges during startup, and gracefully closing
+the connection upon application shutdown.
 """
-import json
 
 import aio_pika
 
 from .config import get_rabbitmq_settings
 
+# Global variable holding the active RabbitMQ connection.
+_rabbitmq_connection: aio_pika.RobustConnection | None = None
 
-async def get_rabbitmq_connection():
+
+
+async def get_rabbitmq_connection() -> aio_pika.RobustConnection:
     """
-    Establishes a robust connection to RabbitMQ.
+    Establishes or retrieves a robust connection to RabbitMQ.
 
+    This function acts as a singleton factory. It checks if an active
+    connection already exists and is open; if not, it fetches the settings
+    and creates a new robust connection.
+    
     Returns:
-        aio_pika.RobustConnection: The active RabbitMQ connection.
+        aio_pika.RobustConnection: The active, robust RabbitMQ connection.
     """
-    settings = get_rabbitmq_settings()
-    # connect_robust automatically handles reconnection logic if the broker goes down.
-    connection = await aio_pika.connect_robust(settings.rabbitmq_url)
-    return connection
+    global _rabbitmq_connection
+    if _rabbitmq_connection is None or _rabbitmq_connection.is_closed:
+        settings = get_rabbitmq_settings()
+        _rabbitmq_connection = await aio_pika.connect_robust(settings.rabbitmq_url)
+        
+    return _rabbitmq_connection
+
 
 
 async def init_rabbitmq():
     """
     Initializes RabbitMQ resources on application startup.
     
-    It connects to the broker and declares the required exchange to ensure
-    it exists before any messages are published.
+    Connects to the RabbitMQ broker and declares the main topic exchange
+    ('cinematch.events'). This ensures that the infrastructure exists
+    before any services attempt to publish or consume messages.
+    
+    Catches and logs any exceptions that occur during initialization
+    to prevent application startup failure due to broker unavailability.
     """
     try:
         connection = await get_rabbitmq_connection()
-        async with connection:
-            channel = await connection.channel()
-            # Declare the topic exchange. This is idempotent (won't fail if it exists with same settings).
+        async with connection.channel() as channel:
+            # Declare the topic exchange. This operation is idempotent.
             await channel.declare_exchange(
                 name="cinematch.events",
                 type=aio_pika.ExchangeType.TOPIC,
@@ -43,41 +58,17 @@ async def init_rabbitmq():
             )
         print("[RabbitMQ] Successfully connected and declared exchange 'cinematch.events'.", flush=True)
     except Exception as e:
-        # Log critical failure (e.g., broker not reachable).
+        # Log critical failure (e.g., if the broker is unreachable)
         print(f"[RabbitMQ] CRITICAL: Failed to connect to RabbitMQ during startup: {e}", flush=True)
 
-async def publish_movie_event(event_action: str, payload: dict):
+async def close_rabbitmq():
     """
-    Publishes a movie-related event to the RabbitMQ exchange.
-
-    Args:
-        event_action (str): The specific action (e.g., 'created', 'updated').
-                            Used to construct the routing key: 'movie.<action>'.
-        payload (dict): The data to send in the message body.
+    Closes the RabbitMQ connection gracefully during application shutdown.
+    
+    Checks if the global connection exists and is open before attempting
+    to close it, preventing potential errors during teardown.
     """
-    connection = await get_rabbitmq_connection()
-
-    async with connection:
-        channel = await connection.channel()
-
-        # Declare the exchange to ensure it exists before publishing.
-        # We use declare_exchange instead of get_exchange because we are passing configuration parameters.
-        exchange = await channel.declare_exchange(
-            name = "cinematch.events",
-            type = aio_pika.ExchangeType.TOPIC,
-            durable = True,
-        )
-
-        # Serialize the payload to JSON bytes.
-        message_body = json.dumps(payload).encode("utf-8")
-
-        message = aio_pika.Message(
-            body=message_body,
-            # PERSISTENT delivery mode ensures messages are saved to disk by RabbitMQ.
-            delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
-        )
-
-        routing_key = f"movie.{event_action}"
-
-        await exchange.publish(message, routing_key=routing_key)
-        print(f"[RabbitMQ] Successfully published event: {routing_key}", flush=True)
+    global _rabbitmq_connection
+    if _rabbitmq_connection and not _rabbitmq_connection.is_closed:
+        await _rabbitmq_connection.close()
+        print("[RabbitMQ] Connection closed gracefully.", flush=True)

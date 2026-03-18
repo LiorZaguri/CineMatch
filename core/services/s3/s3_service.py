@@ -12,26 +12,36 @@ from botocore.exceptions import ClientError
 # import setting from s3/config
 from .config import get_s3_settings
 
+# Global variable holding the active S3 client connection.
+_s3_client = None
 
 def get_s3_client():
     """
-    Creates and returns a configured boto3 S3 client.
+    Retrieves or creates a configured boto3 S3 client.
     
-    Uses settings from the configuration module to establish the connection.
+    This function implements a singleton pattern. It checks if an active
+    S3 client already exists; if not, it fetches the settings and
+    initializes a new client.
+    
+    Returns:
+        boto3.client: The active S3 client instance.
     """
-    setting = get_s3_settings()
-    
-    # Create the S3 client.
-    # signature_version='s3v4': Required for some S3-compatible services (like MinIO)
-    # and newer AWS regions to ensure requests are properly signed.
-    return boto3.client(
-        's3',
-        endpoint_url=setting.S3_ENDPOINT_URL,
-        aws_access_key_id=setting.S3_ACCESS_KEY_ID,
-        aws_secret_access_key=setting.S3_SECRET_ACCESS_KEY,
-        region_name=setting.S3_REGION,
-        config=Config(signature_version='s3v4'),
-    )
+    global _s3_client
+
+    if _s3_client is None:
+        setting = get_s3_settings()
+        
+        # signature_version='s3v4': Required for some S3-compatible services (like MinIO)
+        # and newer AWS regions to ensure requests are properly signed.
+        _s3_client = boto3.client(
+            's3',
+            endpoint_url=setting.S3_ENDPOINT_URL,
+            aws_access_key_id=setting.S3_ACCESS_KEY_ID,
+            aws_secret_access_key=setting.S3_SECRET_ACCESS_KEY,
+            region_name=setting.S3_REGION,
+            config=Config(signature_version='s3v4'),
+        )
+    return _s3_client
 
 
 def init_s3_bucket():
@@ -60,3 +70,14 @@ def init_s3_bucket():
         else:
             # Re-raise or log unexpected errors (e.g., 403 Forbidden).
             print(f"[S3] Unexpected error checking bucket: {e}", flush=True)
+
+def close_s3():
+    """
+    Closes the S3 client gracefully during application shutdown.
+    
+    Checks if the global client exists before attempting to close it.
+    """
+    global _s3_client
+    if _s3_client is not None:
+        _s3_client.close()
+        print("[S3] Connection closed gracefully.", flush=True)
