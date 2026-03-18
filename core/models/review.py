@@ -43,3 +43,28 @@ class Review(Base):
     __table_args__ = (
         Index("idx_user_movie_review", "user_id", "tmdb_id", unique=True),
     )
+
+class ReviewSummary(Base):
+    """
+    Represents an AI-generated summary of multiple user reviews for a specific movie.
+    """
+
+    __tablename__ = "review_summaries"
+
+    # Unique identifier for the summary record
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+
+    # The external movie ID from The Movie Database (TMDB).
+    # Enforces a one-to-one relationship: one summary per movie.
+    tmdb_id: Mapped[int] = mapped_column(unique=True, index=True, nullable=False)
+
+    # The AI-generated text summarizing the reviews
+    summary_text: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Timestamp of when the summary was last updated.
+    # Automatically updates when the record is modified.
+    updated_at: Mapped[datetime] = mapped_column(
+        server_default=func.now(),
+        server_onupdate=func.now(),
+        nullable=False,
+    )

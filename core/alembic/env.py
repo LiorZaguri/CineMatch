@@ -12,6 +12,8 @@ from alembic import context
 from db.config import get_settings
 from models.base import Base
 
+from models.review import Review, ReviewSummary 
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
