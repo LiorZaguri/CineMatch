@@ -188,7 +188,7 @@ async def ai_search_movie(request: AISearchRequest):
         # Call the recommendation service via RPC with a 10-second timeout
         response = await asyncio.wait_for(
             recommendation_rpc.call({"prompt": request.prompt}),
-            timeout=10.0
+            timeout=60
         )
 
         print(f"\n[AI Search] Raw reply received: {response}", flush=True)
