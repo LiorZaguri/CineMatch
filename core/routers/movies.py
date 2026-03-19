@@ -7,6 +7,7 @@ and managing user reviews.
 """
 
 import asyncio
+import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -19,9 +20,9 @@ from db.db import get_db
 from models.review import Review
 from schemas.Ai import AISearchRequest, AISearchResponse
 from schemas.review import ReviewCreate, ReviewRead
-from schemas.tmdbmovie import MovieDashboard, MovieDetailWithReviews, TmdbMovieList
+from schemas.tmdbmovie import MovieDashboard, MovieDetailWithReviews, TmdbMovieList, TmdbMovie
 from services.rabbitmq.rpc import recommendation_rpc
-from services.tmdb.tmdbservice import get_movie_details, get_now_playing_movies, get_popular_movies, get_top_rated_movies, get_upcoming_movies
+from services.tmdb.tmdbservice import get_movie_details, get_now_playing_movies, get_popular_movies, get_top_rated_movies, get_upcoming_movies, discover_movies
 
 from .dependencies import get_user_id
 
@@ -195,7 +196,32 @@ async def ai_search_movie(request: AISearchRequest):
 
         # Validate the response against the expected schema
         ai_filters = AISearchResponse(**response)
+        
+        # Check if the filters are effectively empty
+        # We ignore 'query' and 'include_adult' because they don't count as structured filters 
+        # for TMDB discovery, or they are just echoing the prompt.
+        filters_check = ai_filters.filters.model_dump(exclude_defaults=True)
+        filters_check.pop("query", None)
+        filters_check.pop("include_adult", None)
+
+        if not filters_check:
+            raise Exception("AI returned empty structured filters")
+
         print(f"[AI Search] Validated filters: {ai_filters.model_dump(exclude_none=True)}\n", flush=True)
+
+        ai_recommended_movies = await discover_movies(ai_filters)
+        
+        # Map raw JSON results to TmdbMovie objects for validation and structured printing
+        validated_movies = []
+        if ai_recommended_movies and "results" in ai_recommended_movies:
+            validated_movies = [TmdbMovie(**m) for m in ai_recommended_movies["results"]]
+
+        # Pretty-print the validated results for manual verification
+        print("\n" + "="*50)
+        print(f"[AI Search] TMDB Discovery Results ({len(validated_movies)} movies validated):")
+        print(json.dumps([m.model_dump() for m in validated_movies], indent=4, ensure_ascii=False))
+        print("="*50 + "\n")
+        
 
         return {
             "status": "success",

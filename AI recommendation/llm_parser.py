@@ -35,6 +35,7 @@ SYSTEM_PROMPT = """
     Use only these filter fields:
     certification
     language
+    original_language
     with_genres
     without_genres
     with_cast
@@ -73,6 +74,7 @@ SYSTEM_PROMPT = """
     - Example: "with_genres": [28], not "with_genres": 28
     - Example: "with_cast": [31], not "with_cast": 31
     - language must be a string such as "ar", "en", or "fr".
+    - original_language must be a string such as "ar", "en", or "fr".
     - Dates must use YYYY-MM-DD.
     - Numeric filters must be numbers, not strings.
     - include_adult is false unless explicitly requested.

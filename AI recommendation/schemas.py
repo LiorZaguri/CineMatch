@@ -11,6 +11,7 @@ class SearchRequest(BaseModel):
 class SearchFilters(BaseModel):
     certification: str | None = Field(default=None, description="Exact certification rating to match, such as PG-13.")
     language: str | None = Field(default=None, description="Response language for localized TMDB fields, usually an ISO 639-1 code like en-US.")
+    original_language: str | None = Field(default=None, description="ISO 639-1 language code to filter by original language ")
     with_genres: list[int] = Field(default_factory=list, description="Genre IDs that must be included in the results.")
     without_genres: list[int] = Field(default_factory=list, description="Genre IDs that must be excluded from the results.")
     with_cast: list[int] = Field(default_factory=list, description="Cast member person IDs that should appear in the movie.")
