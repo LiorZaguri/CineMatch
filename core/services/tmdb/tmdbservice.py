@@ -149,12 +149,20 @@ async def get_movie_details(tmdb_id: int) -> Optional[Dict[str, Any]]:
         if response.status_code == status.HTTP_404_NOT_FOUND:
             return None
 
-        response.raise_for_status()
-        return response.json()
-    
+            response.raise_for_status()
+            return response.json()
+        
     except httpx.HTTPStatusError as e:
+        # TMDB responded, but with an error (e.g., 500 Internal Server Error)
         print(f"[TMDB] HTTP status error while fetching details for {tmdb_id}: {e}", flush=True)
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="TMDB API error")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="TMDB API error"
+            )
     except httpx.RequestError as e:
+        # TMDB didn't even respond (e.g., DNS failure, timeout)
         print(f"[TMDB] Network error while fetching details for {tmdb_id}: {e}", flush=True)
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="TMDB unreachable")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="TMDB unreachable"
+            )

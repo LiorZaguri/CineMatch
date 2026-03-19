@@ -17,6 +17,11 @@ import { env } from "../config/env";
     rating: z.number().int().min(1).max(10),
     content: z.string().trim().min(10).max(1000),
   });
+
+  const aiSearchBodySchema = z.object({
+    prompt: z.string().trim().min(1).max(500),
+    page: z.coerce.number().int().min(1).default(1),
+  });
   
   function sendValidationError(res: Response, error: ZodError) {
     return res.status(400).json({
@@ -247,3 +252,24 @@ import { env } from "../config/env";
       next(error);
     }
   }
+
+  export async function aiSearch(req: Request, res: Response, next: NextFunction) {
+  try {
+    const body = aiSearchBodySchema.parse(req.body);
+
+    const { status, payload } = await forwardToCore("/api/movies/ai/search/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    return handleCoreResponse(res, status, payload);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return sendValidationError(res, error);
+    }
+    next(error);
+  }
+}
