@@ -37,7 +37,6 @@ class SearchConsumer:
 
             parsed_response = parse_user_prompt_with_fallback(
                 request.prompt,
-                page=request.page,
             )
 
             if not message.reply_to or not self.channel:

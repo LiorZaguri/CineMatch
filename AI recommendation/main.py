@@ -24,7 +24,7 @@ async def health_check():
 
 @app.get("/debug/parse")
 async def debug_parse(prompt: str = Query(..., min_length=1)):
-    parsed = parse_user_prompt_with_fallback(prompt=prompt, page=1)
+    parsed = parse_user_prompt_with_fallback(prompt=prompt)
     return parsed.model_dump()
     
     

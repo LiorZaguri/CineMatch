@@ -20,7 +20,6 @@ or movie recommendations, return this exact JSON shape:
   "mode": "keyword",
   "filters": {
     "query": null,
-    "page": 1,
     "include_adult": false
   },
   "fallback_reason": "not_movie_related"
@@ -65,7 +64,6 @@ For movie-related prompts, return only this structure:
     "with_watch_monetization_types": ["string"],
     "sort_by": "string" | null,
     "include_adult": false,
-    "page": number,
     "query": "string" | null
   }
 }
@@ -117,7 +115,7 @@ def get_llm_client() -> OpenAI:
     )
 
 
-def parse_user_prompt(prompt: str, page: int = 1) -> ParsedSearchResponse:
+def parse_user_prompt(prompt: str) -> ParsedSearchResponse:
     settings = get_AI_settings()
     client = get_llm_client()
 
@@ -127,7 +125,7 @@ def parse_user_prompt(prompt: str, page: int = 1) -> ParsedSearchResponse:
             {"role": "system", "content": SYSTEM_PROMPT},
             {
                 "role": "user",
-                "content": f"User prompt: {prompt}\nPage: {page}",
+                "content": f"User prompt: {prompt}",
             },
         ],
         temperature=0,
@@ -145,9 +143,9 @@ def parse_user_prompt(prompt: str, page: int = 1) -> ParsedSearchResponse:
     return ParsedSearchResponse.model_validate(payload)
 
 
-def parse_user_prompt_with_fallback(prompt: str, page: int = 1) -> ParsedSearchResponse:
+def parse_user_prompt_with_fallback(prompt: str) -> ParsedSearchResponse:
     try:
-        parsed = parse_user_prompt(prompt, page=page)
+        parsed = parse_user_prompt(prompt)
         return parsed
 
     except (json.JSONDecodeError, ValidationError, ValueError, TypeError):
@@ -155,7 +153,6 @@ def parse_user_prompt_with_fallback(prompt: str, page: int = 1) -> ParsedSearchR
             mode="keyword",
             filters=SearchFilters(
                 query=prompt,
-                page=page,
                 include_adult=False,
             ),
             fallback_reason="invalid_llm_output",

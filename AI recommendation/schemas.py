@@ -6,7 +6,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class SearchRequest(BaseModel):
     prompt: str = Field(min_length=1, max_length=500)
-    page: int = Field(default=1, ge=1)
 
 
 class SearchFilters(BaseModel):
@@ -45,7 +44,6 @@ class SearchFilters(BaseModel):
     with_watch_monetization_types: list[str] = Field(default_factory=list, description="Allowed monetization types such as flatrate, free, ads, or rent.")
     sort_by: str | None = Field(default=None, description="TMDB discover sort order, such as popularity.desc or vote_average.desc.")
     include_adult: bool = Field(default=False, description="Whether adult titles are allowed in results.")
-    page: int = Field(default=1, ge=1, description="Requested results page number.")
     query: str | None = Field(default=None, description="Fallback keyword query when the prompt cannot be mapped confidently to discover filters.")
 
     model_config = ConfigDict(extra="forbid")
