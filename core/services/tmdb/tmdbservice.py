@@ -158,11 +158,11 @@ async def get_movie_details(tmdb_id: int) -> Optional[Dict[str, Any]]:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="TMDB API error"
-            )
+        )
     except httpx.RequestError as e:
         # TMDB didn't even respond (e.g., DNS failure, timeout)
         print(f"[TMDB] Network error while fetching details for {tmdb_id}: {e}", flush=True)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="TMDB unreachable"
-            )
+        )
