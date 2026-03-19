@@ -14,13 +14,13 @@ class MovieBase(BaseModel):
     """
 
     # The title of the movie. Must be between 1 and 255 characters.
-    title: str = Field(..., min_length=1, max_length=255)
+    title: str = Field(..., min_length=1, max_length=255, description="The title of the movie. Must be between 1 and 255 characters.")
     # A brief description of the movie. Optional, max 1000 characters.
-    description: str | None = Field(None, max_length=1000)
+    description: str | None = Field(None, max_length=1000, description="A brief description of the movie. Optional, max 1000 characters.")
     # The release date of the movie. Optional.
     release_date: date | None = None
     # URL to the movie poster. Optional, max 500 characters.
-    poster_url: HttpUrl | None = Field(None, max_length=500)
+    poster_url: HttpUrl | None = Field(None, max_length=500, description="URL to the movie poster. Optional, max 500 characters.")
 
 
 class MovieCreate(MovieBase):
@@ -37,13 +37,13 @@ class MovieUpdate(BaseModel):
     All fields are optional, allowing for partial updates.
     """
     # Optional new title
-    title: str | None = Field(None, min_length=1, max_length=255)
+    title: str | None = Field(None, min_length=1, max_length=255, description="Optional new title")
     # Optional new description
-    description: str | None = Field(None, max_length=1000)
+    description: str | None = Field(None, max_length=1000, description="Optional new description")
     # Optional new release date
     release_date: date | None = None
     # Optional new poster URL
-    poster_url: str | None = Field(None, max_length=500)
+    poster_url: str | None = Field(None, max_length=500, description="Optional new poster URL")
 
 
 class MovieResponse(MovieBase):

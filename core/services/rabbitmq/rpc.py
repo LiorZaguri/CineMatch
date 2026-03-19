@@ -13,6 +13,8 @@ import uuid
 import aio_pika
 from aio_pika.abc import AbstractIncomingMessage
 
+from .config import get_rabbitmq_settings
+
 
 class RabbitMQRPCClient:
     """
@@ -134,7 +136,6 @@ class RabbitMQRPCClient:
 # Instantiate specific clients 
 # ==========================================
 # This section acts as a registry for RPC clients used throughout the application.
-from .config import get_rabbitmq_settings
 
 settings = get_rabbitmq_settings()
 
