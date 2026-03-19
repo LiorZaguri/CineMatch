@@ -10,6 +10,7 @@ the connection upon application shutdown.
 import aio_pika
 
 from .config import get_rabbitmq_settings
+from .rpc import recommendation_rpc
 
 # Global variable holding the active RabbitMQ connection.
 _rabbitmq_connection: aio_pika.RobustConnection | None = None
@@ -57,6 +58,13 @@ async def init_rabbitmq():
                 durable=True,
             )
         print("[RabbitMQ] Successfully connected and declared exchange 'cinematch.events'.", flush=True)
+    
+        # Start the RPC Client(s)
+        # This creates the dedicated channel and the temporary callback queue
+        # for the AI Recommendation service
+        await recommendation_rpc.connect()
+        print("[RabbitMQ] All RPC clients initialized successfully.", flush=True)
+    
     except Exception as e:
         # Log critical failure (e.g., if the broker is unreachable)
         print(f"[RabbitMQ] CRITICAL: Failed to connect to RabbitMQ during startup: {e}", flush=True)

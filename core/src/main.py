@@ -4,15 +4,17 @@ It defines the FastAPI app instance, lifespan events, and API endpoints for
 managing movies.
 """
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from db.db import init_db, close_db
+from db.db import close_db, init_db
 from routers.movies import router as movies_router
 from services.rabbitmq.rabbitmq import close_rabbitmq, init_rabbitmq
 from services.s3.s3_service import close_s3, init_s3_bucket
-from services.tmdb.tmdbservice import init_tmdb, close_tmdb
+from services.tmdb.tmdbservice import close_tmdb, init_tmdb
 
 
 @asynccontextmanager
@@ -61,6 +63,21 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="CineMatch Core API",
     lifespan=lifespan
+)
+
+# CORS Middleware Configuration
+# Read allowed origins from environment variable, fallback to default for development
+origins = os.getenv(
+    "ALLOWED_ORIGINS", 
+    "http://localhost,http://localhost:4200,http://localhost:3001"
+).split(",")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
 
 # Include routers to register API endpoints

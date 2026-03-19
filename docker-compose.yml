@@ -48,6 +48,8 @@ services:
       - ./core:/app
     ports:
       - "8000:8000"
+    environment:
+      - ALLOWED_ORIGINS=http://localhost,http://localhost:4200,http://localhost:3001
     networks:
       - cinematch-net
     depends_on:
