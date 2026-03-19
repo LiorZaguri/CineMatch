@@ -35,7 +35,7 @@ class SearchConsumer:
             payload = json.loads(message.body.decode("utf-8"))
             request = SearchRequest.model_validate(payload)
 
-            parsed_response = parse_user_prompt_with_fallback(
+            parsed_response = await parse_user_prompt_with_fallback(
                 request.prompt,
             )
 

@@ -1,89 +1,114 @@
 import json
 import re
-from openai import OpenAI
+from openai import AsyncOpenAI
 from services.AImodel.config import get_AI_settings
 from schemas import ParsedSearchResponse, SearchFilters
 from pydantic import ValidationError
+import asyncio
+import time
+
+
 
 SYSTEM_PROMPT = """
-You are a movie query parser.
+    Convert movie-related user requests into strict JSON.
 
-Your job is only to convert movie-related user requests into strict JSON for movie search.
-Do not answer questions.
-Do not explain anything.
-Do not return markdown.
-Do not add text before or after the JSON.
+    Return JSON only.
+    No markdown.
+    No explanation.
+    No extra text.
+    Never answer the user directly.
 
-If the user prompt is not about movies, films, cinema, genres, actors, directors, release periods,
-or movie recommendations, return this exact JSON shape:
-{
-  "mode": "keyword",
-  "filters": {
-    "query": null,
-    "include_adult": false
-  },
-  "fallback_reason": "not_movie_related"
-}
+    Output:
+    {
+    "mode": "discover" | "keyword",
+    "filters": { ... },
+    "fallback_reason": "not_movie_related" | null
+    }
 
-For movie-related prompts, return only this structure:
-{
-  "mode": "discover" | "keyword",
-  "filters": {
-    "certification": "string" | null,
-    "certification_gte": "string" | null,
-    "certification_lte": "string" | null,
-    "certification_country": "string" | null,
-    "include_video": false,
-    "language": "string" | null,
-    "region": "string" | null,
-    "with_genres": [number],
-    "without_genres": [number],
-    "with_keywords": [number],
-    "without_keywords": [number],
-    "with_companies": [number],
-    "with_cast": [number],
-    "with_crew": [number],
-    "with_people": [number],
-    "year": number | null,
-    "primary_release_year": number | null,
-    "primary_release_date_gte": "YYYY-MM-DD" | null,
-    "primary_release_date_lte": "YYYY-MM-DD" | null,
-    "release_date_gte": "YYYY-MM-DD" | null,
-    "release_date_lte": "YYYY-MM-DD" | null,
-    "with_release_type": [number],
-    "with_runtime_gte": number | null,
-    "with_runtime_lte": number | null,
-    "vote_average_gte": number | null,
-    "vote_average_lte": number | null,
-    "vote_count_gte": number | null,
-    "vote_count_lte": number | null,
-    "with_original_language": "string" | null,
-    "with_origin_country": ["string"],
-    "watch_region": "string" | null,
-    "with_watch_providers": [number],
-    "with_watch_monetization_types": ["string"],
-    "sort_by": "string" | null,
-    "include_adult": false,
-    "query": "string" | null
-  }
-}
+    If the prompt is not about movies, return exactly:
+    {
+    "mode": "keyword",
+    "filters": {},
+    "fallback_reason": "not_movie_related"
+    }
 
-Rules:
-- Return valid JSON only.
-- Never answer the user directly.
-- Only handle movie-related requests.
-- Use "discover" when the request clearly maps to filters.
-- Use "keyword" when the request is movie-related but vague or uncertain.
-- If unsure, set mode to "keyword" and place the original request inside filters.query.
-- Prefer TMDB discover-style filters when the prompt asks for runtime, release window, certifications,
-  companies, people IDs, watch providers, watch region, language, country, genres, keywords, rating,
-  vote count, or sorting.
-- Use arrays for multi-value filters.
-- Use ISO 639-1 language codes when possible, ISO 3166-1 country/region codes when possible,
-  and YYYY-MM-DD for explicit dates.
-- Do not invent unsupported fields.
-- Keep include_adult false.
-""".strip()
+    Use only these filter fields:
+    certification
+    language
+    with_genres
+    without_genres
+    with_cast
+    with_crew
+    year
+    primary_release_year
+    primary_release_date_gte
+    primary_release_date_lte
+    release_date_gte
+    release_date_lte
+    with_runtime_gte
+    with_runtime_lte
+    vote_average_gte
+    vote_average_lte
+    vote_count_gte
+    vote_count_lte
+    sort_by
+    include_adult
+    query
+
+    Rules:
+    - Return all relevant filters and no irrelevant filters.
+    - Use "discover" for structured movie requests.
+    - Use "keyword" for vague but movie-related requests.
+    - If unsure but movie-related, return:
+    {
+        "mode": "keyword",
+        "filters": {
+        "query": "<original user request>"
+        },
+        "fallback_reason": null
+    }
+
+    Value rules:
+    - with_genres, without_genres, with_cast, and with_crew must always be JSON arrays of integers, even for one value.
+    - Example: "with_genres": [28], not "with_genres": 28
+    - Example: "with_cast": [31], not "with_cast": 31
+    - language must be a string such as "ar", "en", or "fr".
+    - Dates must use YYYY-MM-DD.
+    - Numeric filters must be numbers, not strings.
+    - include_adult is false unless explicitly requested.
+
+    Genre IDs:
+    Action=28
+    Adventure=12
+    Animation=16
+    Comedy=35
+    Crime=80
+    Documentary=99
+    Drama=18
+    Family=10751
+    Fantasy=14
+    History=36
+    Horror=27
+    Music=10402
+    Mystery=9648
+    Romance=10749
+    Science Fiction=878
+    TV Movie=10770
+    Thriller=53
+    War=10752
+    Western=37
+
+    Example:
+    {
+    "mode": "discover",
+    "filters": {
+        "with_genres": [28],
+        "primary_release_year": 2016
+    },
+    "fallback_reason": null
+    }
+    """.strip()
+
 
 
 def _extract_json_payload(raw_content: str) -> dict:
@@ -107,19 +132,24 @@ def _extract_json_payload(raw_content: str) -> dict:
 
     return json.loads(cleaned[start : end + 1])
 
-def get_llm_client() -> OpenAI:
+def get_llm_client() -> AsyncOpenAI:
     settings = get_AI_settings()
-    return OpenAI(
+    return AsyncOpenAI(
         base_url=settings.LLM_BASE_URL,
         api_key=settings.API_KEY,
     )
 
 
-def parse_user_prompt(prompt: str) -> ParsedSearchResponse:
+
+async def parse_user_prompt(prompt: str) -> ParsedSearchResponse:
     settings = get_AI_settings()
     client = get_llm_client()
 
-    completion = client.chat.completions.create(
+    started_at = time.perf_counter()
+    print(f"[AI Parser] Starting LLM call for prompt: {prompt}", flush=True)
+
+    completion = await asyncio.wait_for(
+    client.chat.completions.create(
         model=settings.LLM_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -130,12 +160,14 @@ def parse_user_prompt(prompt: str) -> ParsedSearchResponse:
         ],
         temperature=0,
         top_p=0.95,
-        max_tokens=1024,
+        max_tokens=800,
         stream=False,
-    )
-
+    ),
+    timeout=60.0,
+)
+    elapsed = time.perf_counter() - started_at
+    print(f"[AI Parser] LLM call completed in {elapsed:.2f}s", flush=True)
     raw_content = completion.choices[0].message.content
-
     if raw_content is None:
         raise ValueError("LLM returned empty content")
 
@@ -143,12 +175,13 @@ def parse_user_prompt(prompt: str) -> ParsedSearchResponse:
     return ParsedSearchResponse.model_validate(payload)
 
 
-def parse_user_prompt_with_fallback(prompt: str) -> ParsedSearchResponse:
+async def parse_user_prompt_with_fallback(prompt: str) -> ParsedSearchResponse:
     try:
-        parsed = parse_user_prompt(prompt)
+        parsed = await parse_user_prompt(prompt)
         return parsed
 
-    except (json.JSONDecodeError, ValidationError, ValueError, TypeError):
+    except (asyncio.TimeoutError, json.JSONDecodeError, ValidationError, ValueError, TypeError) as e:
+        print(f"[AI Parser] Exception details: {e}", flush=True)
         return ParsedSearchResponse(
             mode="keyword",
             filters=SearchFilters(
