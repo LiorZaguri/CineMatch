@@ -145,7 +145,23 @@ services:
     networks:
       - cinematch-net
 
-
+  # AI review summarizer worker
+  review-summary-ai:
+    build:
+      context: ./review-summary-ai
+      dockerfile: Dockerfile
+    container_name: cinematch-review-summary-ai
+    working_dir: /app
+    env_file:
+      - ./review-summary-ai/.env
+    command: sh -c "uv run uvicorn main:app --host 0.0.0.0 --port 8002 --reload"
+    ports:
+      - "8002:8002"
+    depends_on:
+      rabbitmq:
+        condition: service_started
+    networks:
+      - cinematch-net
 
 networks:
   cinematch-net:

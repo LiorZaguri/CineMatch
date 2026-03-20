@@ -82,12 +82,11 @@
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease;
 }
 
 .back-link:hover {
     background: rgba(255, 255, 255, 0.16);
-    transform: translateY(-1px);
 }
 
 .detail-hero__badge {
@@ -164,13 +163,12 @@
     border: none;
     cursor: pointer;
     text-decoration: none;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    transition: background 0.2s ease;
 }
 
 .action-btn--primary {
     background: var(--detail-accent);
     color: #fff;
-    box-shadow: 0 4px 10px rgba(234, 42, 51, 0.12);
 }
 
 .action-btn--primary:hover {
@@ -294,7 +292,6 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
 }
 
 .trailer-overlay {
@@ -305,7 +302,6 @@
     justify-content: center;
     background: rgba(0, 0, 0, 0.45);
     opacity: 0;
-    transition: opacity 0.3s ease;
 }
 
 .trailer-overlay .material-symbols-outlined {
@@ -326,11 +322,8 @@
     letter-spacing: 0.08em;
 }
 
-.trailer-card:hover .trailer-image {
-    transform: scale(1.05);
-}
-
-.trailer-card:hover .trailer-overlay {
+.trailer-card:hover .trailer-overlay,
+.related-card:hover .related-overlay {
     opacity: 1;
 }
 
@@ -368,15 +361,9 @@
 .review-avatar {
     width: 2.6rem;
     height: 2.6rem;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.15);
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .review-avatar .material-symbols-outlined {
-    color: #fff;
     font-size: 1.4rem;
 }
 
@@ -430,9 +417,8 @@
     align-items: center;
 }
 
-.crew-avatar {
-    width: 3rem;
-    height: 3rem;
+.crew-avatar,
+.review-avatar {
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.12);
     display: flex;
@@ -440,8 +426,17 @@
     justify-content: center;
 }
 
-.crew-avatar .material-symbols-outlined {
+.crew-avatar .material-symbols-outlined,
+.review-avatar .material-symbols-outlined {
     color: #fff;
+}
+
+.crew-avatar {
+    width: 3rem;
+    height: 3rem;
+}
+
+.crew-avatar .material-symbols-outlined {
     font-size: 1.5rem;
 }
 
@@ -508,7 +503,6 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
 }
 
 .related-overlay {
@@ -519,20 +513,11 @@
     justify-content: center;
     background: rgba(234, 42, 51, 0.25);
     opacity: 0;
-    transition: opacity 0.3s ease;
 }
 
 .related-overlay .material-symbols-outlined {
     color: #fff;
     font-size: 2.5rem;
-}
-
-.related-card:hover .related-image {
-    transform: scale(1.08);
-}
-
-.related-card:hover .related-overlay {
-    opacity: 1;
 }
 
 .related-title {
@@ -590,13 +575,12 @@
     color: var(--color-text-primary);
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s ease, transform 0.2s ease;
+    transition: background 0.2s ease;
 }
 
 .retry-btn:hover,
 .back-btn:hover {
     background: rgba(255, 255, 255, 0.16);
-    transform: translateY(-1px);
 }
 
 @media (max-width: 1024px) {
@@ -673,12 +657,6 @@
 @media (min-width: 3000px) {
     .movie-detail-container {
         --page-gutter: clamp(2rem, 3vw, 6rem);
-    }
-}
-
-@media (min-width: 6000px) {
-    .movie-detail-container {
-        --page-gutter: clamp(2rem, 2vw, 6rem);
     }
 }
 
