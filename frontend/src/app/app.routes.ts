@@ -27,7 +27,7 @@ export const routes: Routes = [
         canActivate: [authGuard],
     },
     {
-        path: 'movies/:uuid',
+        path: 'movies/:tmdbId',
         loadComponent: () =>
             import('./features/movies/movie-detail/movie-detail.component').then((m) => m.MovieDetailComponent),
         canActivate: [authGuard],

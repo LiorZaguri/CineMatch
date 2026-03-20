@@ -88,6 +88,7 @@
                     <a routerLink="/movies" class="section-link">See all</a>
                 </div>
 
+                @if (recommendedMovies().length > 0) {
                 <div class="scroll-row no-scrollbar">
                     @for (movie of recommendedMovies(); track movie.id) {
                         <a [routerLink]="['/movies', movie.id]" class="poster-card">
@@ -100,6 +101,9 @@
                         </a>
                     }
                 </div>
+                } @else {
+                <div class="section-empty">No popular movies are available right now.</div>
+                }
             </section>
 
             <section appScrollReveal [revealDelay]="140">
@@ -108,6 +112,7 @@
                     <a routerLink="/movies" class="section-link">See all</a>
                 </div>
 
+                @if (topMatches().length > 0) {
                 <div class="match-grid">
                     @for (movie of topMatches(); track movie.id) {
                         <a [routerLink]="['/movies', movie.id]" class="match-card">
@@ -127,75 +132,34 @@
                         </a>
                     }
                 </div>
+                } @else {
+                <div class="section-empty">No top rated movies are available right now.</div>
+                }
             </section>
 
             <section class="critics-section" appScrollReveal [revealDelay]="200">
                 <div class="section-head critics-head">
                     <div class="critics-title">
                         <span class="material-symbols-outlined trophy">emoji_events</span>
-                        <h3>Critics' Favorites</h3>
+                        <h3>Coming Soon</h3>
                     </div>
-                    <a routerLink="/movies" class="section-link">Explore Award Winners</a>
+                    <a routerLink="/movies" class="section-link">Browse upcoming releases</a>
                 </div>
 
+                @if (upcomingMovies().length > 0) {
                 <div class="critics-row no-scrollbar">
-                    <a [routerLink]="['/movies']" [queryParams]="{ genre: 'Drama' }" class="critics-card">
+                    @for (movie of upcomingMovies(); track movie.id) {
+                    <a [routerLink]="['/movies', movie.id]" class="critics-card">
                         <div class="critics-thumb">
-                            <img src="https://www.themoviedb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg"
-                                alt="Drama" />
+                            <img [src]="movie.posterUrl" [alt]="movie.title" />
                         </div>
-                        <span>Drama</span>
+                        <span>{{ movie.title }}</span>
                     </a>
-                    <a [routerLink]="['/movies']" [queryParams]="{ genre: 'Horror' }" class="critics-card">
-                        <div class="critics-thumb">
-                            <img src="https://media.themoviedb.org/t/p/w500/ylkdrn23p3gQcHx7ukIfuy2CkTE.jpg"
-                                alt="Horror" />
-                        </div>
-                        <span>Horror</span>
-                    </a>
-                    <a [routerLink]="['/movies']" [queryParams]="{ genre: 'Comedy' }" class="critics-card">
-                        <div class="critics-thumb">
-                            <img src="https://www.themoviedb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg"
-                                alt="Comedy" />
-                        </div>
-                        <span>Comedy</span>
-                    </a>
-                    <a [routerLink]="['/movies']" [queryParams]="{ genre: 'Sci-Fi' }" class="critics-card">
-                        <div class="critics-thumb">
-                            <img src="https://www.themoviedb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg"
-                                alt="Sci-Fi" />
-                        </div>
-                        <span>Sci-Fi</span>
-                    </a>
-                    <a [routerLink]="['/movies']" [queryParams]="{ genre: 'Action' }" class="critics-card">
-                        <div class="critics-thumb">
-                            <img src="https://www.themoviedb.org/t/p/w500/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg"
-                                alt="Action" />
-                        </div>
-                        <span>Action</span>
-                    </a>
-                    <a [routerLink]="['/movies']" [queryParams]="{ genre: 'Thriller' }" class="critics-card">
-                        <div class="critics-thumb">
-                            <img src="https://media.themoviedb.org/t/p/w500/7I6VUdPj6tQECNHdviJkUHD2u89.jpg"
-                                alt="Thriller" />
-                        </div>
-                        <span>Thriller</span>
-                    </a>
-                    <a [routerLink]="['/movies']" [queryParams]="{ genre: 'Documentary' }" class="critics-card">
-                        <div class="critics-thumb">
-                            <img src="https://www.themoviedb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg"
-                                alt="Documentary" />
-                        </div>
-                        <span>Docu</span>
-                    </a>
-                    <a [routerLink]="['/movies']" [queryParams]="{ genre: 'Anime' }" class="critics-card">
-                        <div class="critics-thumb">
-                            <img src="https://media.themoviedb.org/t/p/w500/2ssWTSVklAEc98frZUQhgtGHx7s.jpg"
-                                alt="Anime" />
-                        </div>
-                        <span>Anime</span>
-                    </a>
+                    }
                 </div>
+                } @else {
+                <div class="section-empty">No upcoming releases are available right now.</div>
+                }
             </section>
 
             <section class="ai-cta" appScrollReveal [revealDelay]="260">

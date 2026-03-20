@@ -120,33 +120,122 @@
                     <article class="detail-block">
                         <div class="detail-heading-row">
                             <h2 class="detail-heading">User Reviews</h2>
-                            <button class="review-cta" type="button">
+                            <button class="review-cta" type="button" (click)="openReviewComposer()">
                                 Write a review
                                 <span class="material-symbols-outlined">edit</span>
                             </button>
                         </div>
                         <div class="review-list">
+                            <div class="review-card ai-summary-card">
+                                <div class="ai-summary-card__header">
+                                    <div class="ai-summary-card__icon-shell" aria-hidden="true">
+                                        <div class="ai-summary-card__icon-core">
+                                            <span class="material-symbols-outlined">psychology_alt</span>
+                                        </div>
+                                    </div>
+                                    <div class="ai-summary-card__meta">
+                                        <div class="ai-summary-card__topline">
+                                            <p class="ai-summary-card__title">AI Summary</p>
+                                            <span class="ai-summary-card__badge">AI-generated</span>
+                                        </div>
+                                        <p class="ai-summary-card__subhead">Generated from user reviews</p>
+                                    </div>
+                                    @if (!aiSummaryLoading()) {
+                                    <button class="review-cta ai-summary__cta ai-summary-card__action" type="button" (click)="generateAiSummary()">
+                                        <span class="material-symbols-outlined">auto_awesome</span>
+                                        Generate
+                                    </button>
+                                    }
+                                </div>
+
+                                @if (aiSummaryLoading()) {
+                                <div class="ai-summary-card__state">
+                                    <div class="loader loader--inline"></div>
+                                    <p>Generating AI summary...</p>
+                                </div>
+                                } @else if (aiSummary(); as summary) {
+                                <p class="review-body ai-summary-card__text">{{ summary }}</p>
+                                } @else {
+                                <div class="ai-summary-card__empty">
+                                    <p>No AI summary yet. Generate one to get a quick consensus view of the reviews.</p>
+                                </div>
+                                }
+
+                                @if (aiSummaryError(); as aiError) {
+                                <p class="ai-summary-card__error">{{ aiError }}</p>
+                                }
+                            </div>
+
+                            @if (reviewComposerOpen()) {
+                            <div class="review-card review-composer-card">
+                                <div class="review-composer-card__header">
+                                    <div class="review-composer-card__meta">
+                                        <p class="review-composer-card__eyebrow">Your Review</p>
+                                        <p class="review-composer-card__title">Share your take</p>
+                                    </div>
+                                </div>
+
+                                <div class="review-composer-card__rating">
+                                    <p class="review-composer-card__label">Rating</p>
+                                    <div class="review-composer-card__rating-options">
+                                        @for (rating of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; track rating) {
+                                        <button
+                                            class="review-composer-card__rating-chip"
+                                            [class.review-composer-card__rating-chip--active]="reviewComposerRating() === rating"
+                                            type="button"
+                                            (click)="setReviewComposerRating(rating)">
+                                            {{ rating }}
+                                        </button>
+                                        }
+                                    </div>
+                                </div>
+
+                                <label class="review-composer-card__field">
+                                    <span class="review-composer-card__label">Review</span>
+                                    <textarea
+                                        class="review-composer-card__textarea"
+                                        rows="3"
+                                        maxlength="1000"
+                                        placeholder="What stood out to you about this movie?"
+                                        [ngModel]="reviewComposerContent()"
+                                        (ngModelChange)="reviewComposerContent.set($event)"
+                                        (input)="autoResizeReviewComposer($event)"></textarea>
+                                </label>
+
+                                @if (reviewComposerError(); as composerError) {
+                                <p class="review-composer-card__error">{{ composerError }}</p>
+                                }
+
+                                <div class="review-composer-card__actions">
+                                    <button class="review-cta review-composer-card__submit" type="button" [disabled]="reviewComposerSubmitting()" (click)="submitReview()">
+                                        {{ reviewComposerSubmitting() ? 'Submitting...' : 'Submit review' }}
+                                        <span class="material-symbols-outlined">send</span>
+                                    </button>
+                                    <button class="review-composer-card__cancel" type="button" [disabled]="reviewComposerSubmitting()" (click)="cancelReviewComposer()">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                            }
+
+                            @for (review of displayReviews(); track $index) {
                             <div class="review-card">
                                 <div class="review-header">
                                     <div class="review-avatar">
                                         <span class="material-symbols-outlined">person</span>
                                     </div>
                                     <div>
-                                        <p class="review-name">Sarah Jenkins</p>
+                                        <p class="review-name">CineMatch Viewer</p>
                                         <div class="review-stars">
+                                            @for (star of starsForReview(review.rating); track star) {
                                             <span class="material-symbols-outlined">star</span>
-                                            <span class="material-symbols-outlined">star</span>
-                                            <span class="material-symbols-outlined">star</span>
-                                            <span class="material-symbols-outlined">star</span>
-                                            <span class="material-symbols-outlined">star</span>
+                                            }
                                         </div>
                                     </div>
                                 </div>
-                                <p class="review-body">
-                                    A visual masterpiece that pays incredible homage to the original while carving its
-                                    own unique identity. The score is breathtaking.
-                                </p>
+                                <p class="review-body">{{ review.content }}</p>
                             </div>
+                            }
                         </div>
                     </article>
                 </div>
