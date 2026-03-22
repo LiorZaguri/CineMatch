@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
+from typing import Literal
 
+from schemas.tmdbmovie import TmdbMovie
 
 class AISearchRequest(BaseModel):
     """
@@ -63,3 +65,30 @@ class AISearchResponse(BaseModel):
     fallback_reason: str | None = Field(
         None, description="Reason for falling back to default results, if any"
     )
+
+class AISearchSuccess(BaseModel):
+    """Schema for a successful AI movie search."""
+    # Literal locks this exact string. It can ONLY ever be "success"
+    status: Literal["success"] = Field("success", description="Indicates a successful AI search")
+    fallback_used: Literal[False] = Field(False, description="No fallback was needed")
+    
+    movies: list[TmdbMovie] = Field(
+        ..., 
+        description="A list of movie results discovered by the AI search filters"
+    )
+
+class AISearchFallback(BaseModel):
+    """Schema for when the AI fails and triggers a fallback."""
+    status: Literal["fallback"] = Field("fallback", description="Indicates the AI search failed")
+    fallback_used: Literal[True] = Field(True, description="A fallback search is required")
+    
+    
+    original_prompt: str = Field(
+        ..., 
+        description="The original user prompt that triggered the AI search"
+    )
+    error_detail: str = Field(
+        ..., 
+        description="Detail about why a fallback search was triggered"
+    )
+

@@ -7,7 +7,6 @@ and managing user reviews.
 """
 
 import asyncio
-import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -18,7 +17,7 @@ from sqlalchemy.future import select
 
 from db.db import get_db
 from models.review import Review
-from schemas.Ai import AISearchRequest, AISearchResponse
+from schemas.Ai import AISearchRequest, AISearchResponse, AISearchSuccess, AISearchFallback
 from schemas.review import ReviewCreate, ReviewRead
 from schemas.tmdbmovie import MovieDashboard, MovieDetailWithReviews, TmdbMovieList, TmdbMovie
 from services.rabbitmq.rpc import recommendation_rpc
@@ -165,7 +164,7 @@ async def top_rated(page: int = Query(1, ge=1)):
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="TMDB unreachable")
     return data
 
-@router.post("/ai/search/")
+@router.post("/ai/search/", response_model=AISearchSuccess | AISearchFallback)
 async def ai_search_movie(request: AISearchRequest):
     """
     Processes a natural language query using AI to generate movie search filters.
@@ -175,24 +174,20 @@ async def ai_search_movie(request: AISearchRequest):
     (like genre, release year, etc.) that can be used to query a movie database.
     
     If the RPC call times out, returns invalid data, or fails for any reason,
-    it catches the exception and returns a fallback response so the client
-    can handle the failure gracefully (e.g., by falling back to a standard text search).
+    it catches the exception and returns a fallback response.
     
     Args:
         request (AISearchRequest): The user's natural language search prompt.
         
     Returns:
-        dict: A status object containing either the parsed filters (on success) 
-              or fallback instructions (on failure).
+        AISearchSuccess | AISearchFallback: The discovered movies or a fallback signal.
     """
     try:
-        # Call the recommendation service via RPC with a 10-second timeout
+        # Call the recommendation service via RPC with a 60-second timeout
         response = await asyncio.wait_for(
             recommendation_rpc.call({"prompt": request.prompt}),
             timeout=60
         )
-
-        print(f"\n[AI Search] Raw reply received: {response}", flush=True)
 
         # Validate the response against the expected schema
         ai_filters = AISearchResponse(**response)
@@ -207,38 +202,24 @@ async def ai_search_movie(request: AISearchRequest):
         if not filters_check:
             raise Exception("AI returned empty structured filters")
 
-        print(f"[AI Search] Validated filters: {ai_filters.model_dump(exclude_none=True)}\n", flush=True)
-
         ai_recommended_movies = await discover_movies(ai_filters)
         
-        # Map raw JSON results to TmdbMovie objects for validation and structured printing
+        # Map raw JSON results to TmdbMovie objects for validation
         validated_movies = []
         if ai_recommended_movies and "results" in ai_recommended_movies:
             validated_movies = [TmdbMovie(**m) for m in ai_recommended_movies["results"]]
 
-        # Pretty-print the validated results for manual verification
-        print("\n" + "="*50)
-        print(f"[AI Search] TMDB Discovery Results ({len(validated_movies)} movies validated):")
-        print(json.dumps([m.model_dump() for m in validated_movies], indent=4, ensure_ascii=False))
-        print("="*50 + "\n")
-        
+        return AISearchSuccess(movies=validated_movies)
 
-        return {
-            "status": "success",
-            "filters": ai_filters.model_dump(exclude_none=True),
-            "fallback_used": False
-        }
     except (asyncio.TimeoutError, ValidationError, Exception) as e:
         # Catch timeouts, schema validation errors, or other unexpected issues
         print(f"\n[AI Search Fallback] Triggered due to: {type(e).__name__} - {e}")
         
         # Return a fallback response so the frontend knows to try a different search method
-        return {
-            "status": "fallback",
-            "original_prompt": request.prompt,
-            "error_detail": str(e),
-            "fallback_used": True
-        }
+        return AISearchFallback(
+            original_prompt=request.prompt,
+            error_detail=str(e)
+        )
 
 
 @router.get("/{tmdb_id}/", response_model=MovieDetailWithReviews)
