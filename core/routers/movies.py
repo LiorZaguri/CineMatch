@@ -19,68 +19,26 @@ from sqlalchemy.future import select
 from db.db import get_db
 from models.review import Review, ReviewSummary
 from schemas.Ai import AISearchFallback, AISearchRequest, AISearchResponse, AISearchSuccess
-from schemas.review import ReviewCreate, ReviewRead, TmdbAuthorDetails, TmdbReview
+from schemas.review import ReviewCreate, ReviewRead
 from schemas.summary import ReviewSummaryResponse
 from schemas.tmdbmovie import MovieDashboard, MovieDetailWithReviews, TmdbMovie, TmdbMovieList
 from services.rabbitmq.rpc import recommendation_rpc, summary_rpc
 from services.tmdb.tmdbservice import (
     discover_movies,
     get_movie_details,
-    get_movie_reviews,
     get_now_playing_movies,
     get_popular_movies,
     get_top_rated_movies,
     get_upcoming_movies,
 )
 
-from .dependencies import get_user_id
+from .dependencies import _get_all_reviews, get_user_id
 
 router = APIRouter(
     prefix="/api/movies",
     tags=["movies & reviews"],
     responses={404: {"description": "Not found"}},
 )
-
-
-async def _get_all_reviews(tmdb_id: int, db: AsyncSession) -> list[TmdbReview]:
-    """
-    Helper function to fetch and aggregate reviews from both TMDB and the local database.
-    
-    Args:
-        tmdb_id (int): The unique TMDB identifier for the movie.
-        db (AsyncSession): The database session.
-        
-    Returns:
-        list[TmdbReview]: A list of aggregated reviews mapped to the TmdbReview schema.
-    """
-    # 1. Fetch reviews from TMDB
-    tmdb_reviews_data = await get_movie_reviews(tmdb_id)
-    raw_tmdb_reviews = tmdb_reviews_data.get("results", []) if tmdb_reviews_data else []
-    
-    # 2. Fetch reviews from the local database
-    local_reviews_query = select(Review).where(Review.tmdb_id == tmdb_id).order_by(Review.created_at.desc())
-    local_reviews_result = await db.execute(local_reviews_query)
-    local_reviews = local_reviews_result.scalars().all()
-    
-    all_reviews: list[TmdbReview] = []
-
-    # Map TMDB reviews to the TmdbReview schema
-    for rev in raw_tmdb_reviews:
-        # TMDB review items don't typically include the movie ID, so we inject it
-        all_reviews.append(TmdbReview(**{**rev, "tmdb_id": tmdb_id}))
-
-    # Map local database reviews to the TmdbReview schema
-    for lr in local_reviews:
-        all_reviews.append(TmdbReview(
-            tmdb_id=lr.tmdb_id,
-            content=lr.content,
-            author_details=TmdbAuthorDetails(
-                name="Local User",
-                rating=float(lr.rating)
-            )
-        ))
-        
-    return all_reviews
 
 
 @router.post("/review/",response_model=ReviewRead ,status_code=status.HTTP_201_CREATED)
