@@ -78,9 +78,12 @@ class RabbitMQRPCClient:
         # message.process() automatically acknowledges (ACKs) the message upon successful processing,
         # or rejects (NACKs) it if an exception occurs.
         async with message.process():
-            
+            correlation_id = message.correlation_id
+            if not isinstance(correlation_id, str):
+                return
+
             # Retrieve and remove the future associated with this correlation ID
-            future = self.futures.pop(message.correlation_id, None)
+            future = self.futures.pop(correlation_id, None)
             if future and not future.done():
                 try:
                     # Decode and parse the JSON response
@@ -142,3 +145,7 @@ settings = get_rabbitmq_settings()
 # Movie Recommendation AI Client:
 # Used to request AI-generated movie recommendations based on user reviews or preferences.
 recommendation_rpc = RabbitMQRPCClient(target_queue=settings.AI_RECOMMENDATION_QUEUE)
+
+# Used to request AI-generated movie recommendations based on user reviews or preferences.
+summary_rpc = RabbitMQRPCClient(target_queue=settings.AI_REVIEW_SUMMARIZER_QUEUE)
+

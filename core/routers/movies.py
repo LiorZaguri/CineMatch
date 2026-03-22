@@ -7,6 +7,7 @@ and managing user reviews.
 """
 
 import asyncio
+from datetime import datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -16,12 +17,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from db.db import get_db
-from models.review import Review
-from schemas.Ai import AISearchRequest, AISearchResponse, AISearchSuccess, AISearchFallback
+from models.review import Review, ReviewSummary
+from schemas.Ai import AISearchFallback, AISearchRequest, AISearchResponse, AISearchSuccess
 from schemas.review import ReviewCreate, ReviewRead
-from schemas.tmdbmovie import MovieDashboard, MovieDetailWithReviews, TmdbMovieList, TmdbMovie
-from services.rabbitmq.rpc import recommendation_rpc
-from services.tmdb.tmdbservice import get_movie_details, get_now_playing_movies, get_popular_movies, get_top_rated_movies, get_upcoming_movies, discover_movies
+from schemas.summary import ReviewSummaryResponse
+from schemas.tmdbmovie import MovieDashboard, MovieDetailWithReviews, TmdbMovie, TmdbMovieList
+from services.rabbitmq.rpc import recommendation_rpc, summary_rpc
+from services.tmdb.tmdbservice import (
+    discover_movies,
+    get_movie_details,
+    get_movie_reviews,
+    get_now_playing_movies,
+    get_popular_movies,
+    get_top_rated_movies,
+    get_upcoming_movies,
+)
 
 from .dependencies import get_user_id
 
@@ -209,7 +219,7 @@ async def ai_search_movie(request: AISearchRequest):
         if ai_recommended_movies and "results" in ai_recommended_movies:
             validated_movies = [TmdbMovie(**m) for m in ai_recommended_movies["results"]]
 
-        return AISearchSuccess(movies=validated_movies)
+        return AISearchSuccess(status="success", fallback_used=False, movies=validated_movies)
 
     except (asyncio.TimeoutError, ValidationError, Exception) as e:
         # Catch timeouts, schema validation errors, or other unexpected issues
@@ -217,39 +227,168 @@ async def ai_search_movie(request: AISearchRequest):
         
         # Return a fallback response so the frontend knows to try a different search method
         return AISearchFallback(
+            status="fallback",
+            fallback_used=True,
             original_prompt=request.prompt,
             error_detail=str(e)
         )
+    
+@router.get("/{tmdb_id}/summary/", response_model=ReviewSummaryResponse)
+async def get_movie_summary(
+    tmdb_id: int, 
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Retrieves or generates an AI summary of user reviews for a specific movie.
 
+    This endpoint checks if a recently generated summary (within the last 24 hours)
+    exists in the local database. If so, it returns the cached version.
+    Otherwise, it fetches the movie details and recent reviews from TMDB, sends them
+    to the AI Summarizer worker via RabbitMQ RPC, caches the newly generated
+    summary, and then returns it.
 
+    Args:
+        tmdb_id (int): The unique TMDB identifier for the movie.
+        db (AsyncSession): The database session dependency.
+
+    Returns:
+        ReviewSummaryResponse: An object containing the TMDB ID and the summary text.
+
+    Raises:
+        HTTPException: 404 Not Found if the movie does not exist on TMDB.
+        HTTPException: 500 Internal Server Error if the AI summarization process fails.
+    """
+    # Check if a summary already exists in the database for this movie
+    query = select(ReviewSummary).where(ReviewSummary.tmdb_id == tmdb_id)
+    result = await db.execute(query)
+    existing_summary = result.scalars().first()
+
+    if existing_summary:
+        # Calculate the age of the existing summary
+        time_since_updated = datetime.now() - existing_summary.updated_at
+
+        # If the summary was updated within the last 24 hours, return the cached version
+        if time_since_updated < timedelta(24):
+            print(f"[Review Summary] Returning cached summary for TMDB ID {tmdb_id}", flush=True)
+            return ReviewSummaryResponse(
+                tmdb_id=existing_summary.tmdb_id,
+                summary=existing_summary.summary_text,
+            )
+    
+    # Fetch movie metadata and recent reviews concurrently from TMDB
+    movie = get_movie_details(tmdb_id)
+    review = get_movie_reviews(tmdb_id)
+
+    movie_data, review_data = await asyncio.gather(movie, review)
+
+    # Ensure the movie actually exists on TMDB
+    if not movie_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Movie not found on TMDB."
+        )
+    
+    review_data = review_data.get('results', []) if review_data else []
+
+    # If there are no reviews, we cannot generate a summary
+    if not review_data:
+        return ReviewSummaryResponse(
+            tmdb_id=tmdb_id,
+            summary=f"No reviews available for '{movie_data.get('title')}' yet."
+        )
+
+    # Prepare the payload for the AI worker. 
+    # Limit content to 1000 characters per review to avoid exceeding context windows.
+    payload_reviews = []
+    for review in review_data:
+        payload_reviews.append({
+            "rating": review.get('author_details', {}).get('rating', 5),
+            "content": review.get('content', '')[:1000]
+        })
+
+    payload = {
+        "movie_title": movie_data.get('title'),
+        "reviews": payload_reviews
+    }
+
+    try:
+        print("HERE 1")
+        # Send the formatted data to the AI summarization worker via RabbitMQ RPC
+        rpc_response = await asyncio.wait_for(
+            summary_rpc.call(payload),
+            timeout=60
+        )
+        print("HERE 2")
+        if not rpc_response.get('ok'):
+            error_msg = rpc_response.get("error") or "Unknown AI error"
+            raise Exception(error_msg)
+        print("HERE 3")
+        temp_summary = rpc_response.get("summary")
+        print("HERE 4")
+        if temp_summary is None:
+            raise ValueError("AI worker returned 'ok' but summary text was missing.")
+        print("HERE 5")
+        new_summary_text: str = temp_summary
+        
+    except Exception as e:
+        print(f"[Summary Error] {e}", flush=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="AI Summarization failed.")
+    
+    # Save or update the newly generated summary in the database for future requests
+    if existing_summary:
+        existing_summary.summary_text = new_summary_text
+    else:
+        new_summary = ReviewSummary(
+            tmdb_id=tmdb_id,
+            summary_text=new_summary_text
+        )
+        db.add(new_summary)
+    
+    await db.commit()
+
+    return ReviewSummaryResponse(tmdb_id=tmdb_id, summary=new_summary_text)
+        
+        
 @router.get("/{tmdb_id}/", response_model=MovieDetailWithReviews)
 async def get_movie_page(tmdb_id: int, db: AsyncSession = Depends(get_db)):
     """
     Fetches detailed information for a movie along with its most recent reviews.
-    
+
     Performs a concurrent fetch:
     1. Calls TMDB API for movie metadata.
-    2. Queries local database for recent reviews.
+    2. Calls TMDB API for movie reviews.
+    3. Queries local database for cached AI summary.
     """
-    # Prepare the async tasks
-    tmdb_task = get_movie_details(tmdb_id)
+    # Prepare the tasks
+    tmdb_detail_task = get_movie_details(tmdb_id)
+    tmdb_reviews_task = get_movie_reviews(tmdb_id)
+    summary_query = select(ReviewSummary).where(ReviewSummary.tmdb_id == tmdb_id)
+    db_summary_task = db.execute(summary_query)
 
-    # Fetch the last 10 reviews, newest first
-    query = select(Review).where(Review.tmdb_id == tmdb_id).order_by(Review.created_at.desc()).limit(10)
-    db_task = db.execute(query)
-
-    
-    # Run both tasks concurrently to reduce total latency
-    movie_data, db_result = await asyncio.gather(
-        tmdb_task,
-        db_task,
+    # Run tasks concurrently to reduce total latency
+    movie_data, reviews_response, db_result = await asyncio.gather(
+        tmdb_detail_task,
+        tmdb_reviews_task,
+        db_summary_task,
     )
-   
+
     if not movie_data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Movie not found")
 
-    # Combine TMDB data with the list of review objects
+    # Extract summary if it exists
+    summary_obj = db_result.scalars().first()
+    summary_text = summary_obj.summary_text if summary_obj else None
+
+    # Extract reviews from TMDB response
+    # We inject the tmdb_id into each review object as our schema expects it
+    raw_reviews = reviews_response.get("results", []) if reviews_response else []
+    validated_reviews = [
+        {**rev, "tmdb_id": tmdb_id} for rev in raw_reviews
+    ]
+
+    # Combine data
     return {
         **movie_data,
-        "reviews": db_result.scalars().all()
+        "reviews": validated_reviews,
+        "summary": summary_text
     }

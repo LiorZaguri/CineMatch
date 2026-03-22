@@ -48,3 +48,28 @@ class ReviewRead(BaseModel):
 
     # Configuration to enable Pydantic to read data from ORM models
     model_config = ConfigDict(from_attributes=True)
+
+
+class TmdbAuthorDetails(BaseModel):
+    """
+    Detailed information about the author of a TMDB review.
+    """
+    rating: float | None = Field(None, description="The rating given by the author (0-10.0)")
+
+
+class TmdbReview(BaseModel):
+    """
+    Schema representing a movie review fetched from TMDB.
+    """
+    tmdb_id: int = Field(..., description="The unique TMDB ID for the movie")
+    content: str = Field(..., description="The full text content of the review")
+    author_details: TmdbAuthorDetails = Field(..., description="Details about the author of the review")
+
+
+class TmdbReviewsResponse(BaseModel):
+    """
+    Schema representing all reviews for a movie fetched from TMDB.
+    """
+    tmdb_id: int = Field(..., description="The unique TMDB ID for the movie")
+    reviews: list[TmdbReview] = Field(default_factory=list, description="A list of reviews for the movie")
+

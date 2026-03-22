@@ -6,45 +6,43 @@ dashboard view aggregating multiple movie categories.
 
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from .review import ReviewRead
+from .review import TmdbReview
 
 
 class TmdbMovie(BaseModel):
     """
     Represents a single movie object as returned by the TMDB API.
     """
-    # Unique TMDB identifier
-    id: int
-    # ISO 639-1 language code (e.g., "en")
-    original_language: str
-    # Original title in the source language
-    original_title: str
-    # Short plot summary
-    overview: str
-    # The path to the poster image on TMDB's servers (needs base URL to be a full link)
-    poster_path: Optional[str] = None
-    # Release date in YYYY-MM-DD format
-    release_date: Optional[str] = None
-    # English (or requested language) title
-    title: str
-    # Average user rating (0-10)
-    vote_average: float
+    id: int = Field(..., description="Unique TMDB identifier")
+    
+    original_language: str = Field(..., description="ISO 639-1 language code (e.g., 'en')")
+    
+    original_title: str = Field(..., description="Original title in the source language")
+    
+    overview: str = Field(..., description="Short plot summary")
+    
+    poster_path: Optional[str] = Field(None, description="The path to the poster image on TMDB's servers")
+    
+    release_date: Optional[str] = Field(None, description="Release date in YYYY-MM-DD format")
+    
+    title: str = Field(..., description="English (or requested language) title")
+    
+    vote_average: float = Field(..., description="Average user rating (0-10)")
 
 
 class TmdbMovieList(BaseModel):
     """
     Represents a paginated list of movies returned by TMDB search or discovery endpoints.
     """
-    # Current page number
-    page: int
-    # List of movies on the current page
-    results: List[TmdbMovie]
-    # Total number of pages available
-    total_pages: int
-    # Total number of results across all pages
-    total_results: int
+    page: int = Field(..., description="Current page number")
+    
+    results: List[TmdbMovie] = Field(..., description="List of movies on the current page")
+    
+    total_pages: int = Field(..., description="Total number of pages available")
+    
+    total_results: int = Field(..., description="Total number of results across all pages")
 
 
 class MovieDashboard(BaseModel):
@@ -52,21 +50,22 @@ class MovieDashboard(BaseModel):
     Aggregated view containing lists of movies for different categories.
     Used to populate the main dashboard of the application.
     """
-    # Movies currently in theaters
-    now_playing: List[TmdbMovie]
-    # Movies trending now
-    popular: List[TmdbMovie]
-    # Movies coming soon
-    upcoming: List[TmdbMovie]
-    # Highest rated movies of all time
-    top_rated: List[TmdbMovie]
-    # Error indicator for each list
-    errors: List[str] = []
+    now_playing: List[TmdbMovie] = Field(..., description="Movies currently in theaters")
+    
+    popular: List[TmdbMovie] = Field(..., description="Movies trending now")
+    
+    upcoming: List[TmdbMovie] = Field(..., description="Movies coming soon")
+    
+    top_rated: List[TmdbMovie] = Field(..., description="Highest rated movies of all time")
+    
+    errors: List[str] = Field(default_factory=list, description="Error indicator for each list")
+
 
 class MovieDetailWithReviews(TmdbMovie):
     """
     Extended movie schema that includes a list of user reviews.
     Used when fetching detailed information for a specific movie.
     """
-    # List of reviews associated with this movie from the local database
-    reviews: List[ReviewRead] = []
+    reviews: List[TmdbReview] = Field(default_factory=list, description="List of reviews associated with this movie")
+
+    summary: Optional[str] = Field(None, description="Optional AI-generated summary of the reviews")

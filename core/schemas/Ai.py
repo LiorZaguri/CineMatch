@@ -1,7 +1,9 @@
-from pydantic import BaseModel, Field, field_validator
 from typing import Literal
 
+from pydantic import BaseModel, Field, field_validator
+
 from schemas.tmdbmovie import TmdbMovie
+
 
 class AISearchRequest(BaseModel):
     """
@@ -24,7 +26,8 @@ class AIFilters(BaseModel):
 
     certification: str | None = Field(None, description="Movie certification (e.g., PG-13)")
     language: str | None = Field(None, description="ISO 639-1 language code for translations (the 'language' parameter)")
-    original_language: str | None = Field(None, description="ISO 639-1 language code to filter by original language (the 'with_original_language' parameter)")
+    original_language: str | None = Field(None, 
+        description="ISO 639-1 language code to filter by original language (the 'with_original_language' parameter)")
     with_genres: list[int] = Field(default_factory=list, description="List of genre IDs to include")
     without_genres: list[int] = Field(default_factory=list, description="List of genre IDs to exclude")
     with_cast: list[int] = Field(default_factory=list, description="List of actor IDs to include")

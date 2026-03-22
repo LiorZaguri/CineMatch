@@ -152,8 +152,8 @@ async def get_movie_details(tmdb_id: int) -> Optional[Dict[str, Any]]:
         if response.status_code == status.HTTP_404_NOT_FOUND:
             return None
 
-            response.raise_for_status()
-            return response.json()
+        response.raise_for_status()
+        return response.json()
         
     except httpx.HTTPStatusError as e:
         # TMDB responded, but with an error (e.g., 500 Internal Server Error)
@@ -231,4 +231,40 @@ async def discover_movies(ai_response: AISearchResponse) -> Optional[Dict[str, A
         return None
     except httpx.RequestError as e:
         print(f"[TMDB] Network error during discovery: {e}", flush=True)
+        return None
+    
+async def get_movie_reviews(tmdb_id: int, page: int = 1):
+    """
+    Retrieves users reviews for a specific movie by its TMDB ID.
+
+    Args:
+        tmdb_id (int): The unique The Movie Database (TMDB) identifier for the movie.
+        page (int, optional): The page number of results to retrieve. Defaults to 1.
+
+    Returns:
+        Optional[Dict[str, Any]]: A dictionary containing the paginated reviews if successful,
+                                  or None if the movie does not exist or an error occurs.
+    """
+    setting = get_tmdb_settings()
+    client = get_tmdb_client()
+
+    try:
+        response = await client.get(
+            f"movie/{tmdb_id}/reviews",
+            params={"language": setting.TMDB_LANGUAGE, "page": page},
+        )
+
+        if response.status_code == status.HTTP_404_NOT_FOUND:
+            return None
+        
+        response.raise_for_status()
+        return response.json()
+    
+    # TMDB responded, but with an error (e.g., 500 Internal Server Error)
+    except httpx.HTTPStatusError as e:
+        print(f"[TMDB] HTTP status error while fetching reviews for {tmdb_id}: {e}", flush=True)
+        return None
+    # TMDB didn't even respond (e.g., DNS failure, timeout)
+    except httpx.RequestError as e:
+        print(f"[TMDB] Network error while fetching reviews for {tmdb_id}: {e}", flush=True)
         return None

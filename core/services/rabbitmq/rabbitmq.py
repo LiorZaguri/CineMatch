@@ -7,10 +7,12 @@ initializing required exchanges during startup, and gracefully closing
 the connection upon application shutdown.
 """
 
+import asyncio
+
 import aio_pika
 
 from .config import get_rabbitmq_settings
-from .rpc import recommendation_rpc
+from .rpc import recommendation_rpc, summary_rpc
 
 # Global variable holding the active RabbitMQ connection.
 _rabbitmq_connection: aio_pika.RobustConnection | None = None
@@ -62,7 +64,10 @@ async def init_rabbitmq():
         # Start the RPC Client(s)
         # This creates the dedicated channel and the temporary callback queue
         # for the AI Recommendation service
-        await recommendation_rpc.connect()
+        await asyncio.gather(
+            recommendation_rpc.connect(),
+            summary_rpc.connect()
+        )
         print("[RabbitMQ] All RPC clients initialized successfully.", flush=True)
     
     except Exception as e:

@@ -26,6 +26,8 @@ class RabbitMQSettings(BaseSettings):
     RABBITMQ_HOST: str
     RABBITMQ_PORT: int
     AI_RECOMMENDATION_QUEUE: str
+    AI_REVIEW_SUMMARIZER_QUEUE: str
+
 
 
     # Configuration for Pydantic Settings
