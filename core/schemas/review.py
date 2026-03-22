@@ -54,6 +54,7 @@ class TmdbAuthorDetails(BaseModel):
     """
     Detailed information about the author of a TMDB review.
     """
+    name: str | None = Field(None, description="The name of the review author")
     rating: float | None = Field(None, description="The rating given by the author (0-10.0)")
 
 

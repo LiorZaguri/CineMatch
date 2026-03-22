@@ -19,7 +19,7 @@ from sqlalchemy.future import select
 from db.db import get_db
 from models.review import Review, ReviewSummary
 from schemas.Ai import AISearchFallback, AISearchRequest, AISearchResponse, AISearchSuccess
-from schemas.review import ReviewCreate, ReviewRead
+from schemas.review import ReviewCreate, ReviewRead, TmdbAuthorDetails, TmdbReview
 from schemas.summary import ReviewSummaryResponse
 from schemas.tmdbmovie import MovieDashboard, MovieDetailWithReviews, TmdbMovie, TmdbMovieList
 from services.rabbitmq.rpc import recommendation_rpc, summary_rpc
@@ -40,6 +40,47 @@ router = APIRouter(
     tags=["movies & reviews"],
     responses={404: {"description": "Not found"}},
 )
+
+
+async def _get_all_reviews(tmdb_id: int, db: AsyncSession) -> list[TmdbReview]:
+    """
+    Helper function to fetch and aggregate reviews from both TMDB and the local database.
+    
+    Args:
+        tmdb_id (int): The unique TMDB identifier for the movie.
+        db (AsyncSession): The database session.
+        
+    Returns:
+        list[TmdbReview]: A list of aggregated reviews mapped to the TmdbReview schema.
+    """
+    # 1. Fetch reviews from TMDB
+    tmdb_reviews_data = await get_movie_reviews(tmdb_id)
+    raw_tmdb_reviews = tmdb_reviews_data.get("results", []) if tmdb_reviews_data else []
+    
+    # 2. Fetch reviews from the local database
+    local_reviews_query = select(Review).where(Review.tmdb_id == tmdb_id).order_by(Review.created_at.desc())
+    local_reviews_result = await db.execute(local_reviews_query)
+    local_reviews = local_reviews_result.scalars().all()
+    
+    all_reviews: list[TmdbReview] = []
+
+    # Map TMDB reviews to the TmdbReview schema
+    for rev in raw_tmdb_reviews:
+        # TMDB review items don't typically include the movie ID, so we inject it
+        all_reviews.append(TmdbReview(**{**rev, "tmdb_id": tmdb_id}))
+
+    # Map local database reviews to the TmdbReview schema
+    for lr in local_reviews:
+        all_reviews.append(TmdbReview(
+            tmdb_id=lr.tmdb_id,
+            content=lr.content,
+            author_details=TmdbAuthorDetails(
+                name="Local User",
+                rating=float(lr.rating)
+            )
+        ))
+        
+    return all_reviews
 
 
 @router.post("/review/",response_model=ReviewRead ,status_code=status.HTTP_201_CREATED)
@@ -239,13 +280,13 @@ async def get_movie_summary(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Retrieves or generates an AI summary of user reviews for a specific movie.
+    Retrieves or generates an AI summary of aggregated user reviews for a movie.
 
     This endpoint checks if a recently generated summary (within the last 24 hours)
     exists in the local database. If so, it returns the cached version.
-    Otherwise, it fetches the movie details and recent reviews from TMDB, sends them
-    to the AI Summarizer worker via RabbitMQ RPC, caches the newly generated
-    summary, and then returns it.
+    Otherwise, it fetches movie details and aggregates reviews from both TMDB 
+    and the local database, sends them to the AI Summarizer worker via 
+    RabbitMQ RPC, caches the newly generated summary, and returns it.
 
     Args:
         tmdb_id (int): The unique TMDB identifier for the movie.
@@ -275,11 +316,11 @@ async def get_movie_summary(
                 summary=existing_summary.summary_text,
             )
     
-    # Fetch movie metadata and recent reviews concurrently from TMDB
-    movie = get_movie_details(tmdb_id)
-    review = get_movie_reviews(tmdb_id)
+    # Fetch movie metadata and aggregated reviews concurrently
+    movie_task = get_movie_details(tmdb_id)
+    reviews_task = _get_all_reviews(tmdb_id, db)
 
-    movie_data, review_data = await asyncio.gather(movie, review)
+    movie_data, reviews = await asyncio.gather(movie_task, reviews_task)
 
     # Ensure the movie actually exists on TMDB
     if not movie_data:
@@ -288,10 +329,8 @@ async def get_movie_summary(
             detail="Movie not found on TMDB."
         )
     
-    review_data = review_data.get('results', []) if review_data else []
-
     # If there are no reviews, we cannot generate a summary
-    if not review_data:
+    if not reviews:
         return ReviewSummaryResponse(
             tmdb_id=tmdb_id,
             summary=f"No reviews available for '{movie_data.get('title')}' yet."
@@ -300,10 +339,10 @@ async def get_movie_summary(
     # Prepare the payload for the AI worker. 
     # Limit content to 1000 characters per review to avoid exceeding context windows.
     payload_reviews = []
-    for review in review_data:
+    for rev in reviews:
         payload_reviews.append({
-            "rating": review.get('author_details', {}).get('rating', 5),
-            "content": review.get('content', '')[:1000]
+            "rating": rev.author_details.rating or 5,
+            "content": rev.content[:1000]
         })
 
     payload = {
@@ -312,22 +351,17 @@ async def get_movie_summary(
     }
 
     try:
-        print("HERE 1")
         # Send the formatted data to the AI summarization worker via RabbitMQ RPC
         rpc_response = await asyncio.wait_for(
             summary_rpc.call(payload),
             timeout=60
         )
-        print("HERE 2")
         if not rpc_response.get('ok'):
             error_msg = rpc_response.get("error") or "Unknown AI error"
             raise Exception(error_msg)
-        print("HERE 3")
         temp_summary = rpc_response.get("summary")
-        print("HERE 4")
         if temp_summary is None:
             raise ValueError("AI worker returned 'ok' but summary text was missing.")
-        print("HERE 5")
         new_summary_text: str = temp_summary
         
     except Exception as e:
@@ -352,23 +386,23 @@ async def get_movie_summary(
 @router.get("/{tmdb_id}/", response_model=MovieDetailWithReviews)
 async def get_movie_page(tmdb_id: int, db: AsyncSession = Depends(get_db)):
     """
-    Fetches detailed information for a movie along with its most recent reviews.
+    Fetches detailed information for a movie along with aggregated reviews.
 
     Performs a concurrent fetch:
     1. Calls TMDB API for movie metadata.
-    2. Calls TMDB API for movie reviews.
+    2. Aggregates reviews from TMDB and local database.
     3. Queries local database for cached AI summary.
     """
     # Prepare the tasks
-    tmdb_detail_task = get_movie_details(tmdb_id)
-    tmdb_reviews_task = get_movie_reviews(tmdb_id)
+    movie_task = get_movie_details(tmdb_id)
+    reviews_task = _get_all_reviews(tmdb_id, db)
     summary_query = select(ReviewSummary).where(ReviewSummary.tmdb_id == tmdb_id)
     db_summary_task = db.execute(summary_query)
 
-    # Run tasks concurrently to reduce total latency
-    movie_data, reviews_response, db_result = await asyncio.gather(
-        tmdb_detail_task,
-        tmdb_reviews_task,
+    # Run tasks concurrently
+    movie_data, reviews, db_result = await asyncio.gather(
+        movie_task,
+        reviews_task,
         db_summary_task,
     )
 
@@ -379,16 +413,9 @@ async def get_movie_page(tmdb_id: int, db: AsyncSession = Depends(get_db)):
     summary_obj = db_result.scalars().first()
     summary_text = summary_obj.summary_text if summary_obj else None
 
-    # Extract reviews from TMDB response
-    # We inject the tmdb_id into each review object as our schema expects it
-    raw_reviews = reviews_response.get("results", []) if reviews_response else []
-    validated_reviews = [
-        {**rev, "tmdb_id": tmdb_id} for rev in raw_reviews
-    ]
-
     # Combine data
     return {
         **movie_data,
-        "reviews": validated_reviews,
+        "reviews": reviews,
         "summary": summary_text
     }
