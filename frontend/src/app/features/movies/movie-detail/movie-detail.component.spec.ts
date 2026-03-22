@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 
-import { provideRouter, ActivatedRoute } from '@angular/router';
+import { provideRouter, ActivatedRoute, convertToParamMap } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { signal } from '@angular/core';
 import { of, throwError, Subject } from 'rxjs';
@@ -15,9 +15,11 @@ describe('MovieDetailComponent', () => {
     let fixture: ComponentFixture<MovieDetailComponent>;
     let mockMovieService: any;
     let mockActivatedRoute: any;
+    let mockMoviesSignal: ReturnType<typeof signal<Movie[]>>;
 
     const mockMovie: Movie = {
-        id: '123',
+        id: 123,
+        tmdb_id: 123,
         title: 'Detail Movie',
         description: 'Detail Desc',
         posterUrl: 'detail.jpg',
@@ -30,17 +32,16 @@ describe('MovieDetailComponent', () => {
     };
 
     beforeEach(async () => {
+        mockMoviesSignal = signal<Movie[]>([]);
         mockMovieService = {
+            movies: mockMoviesSignal.asReadonly(),
             getMovieFromState: vi.fn().mockReturnValue(undefined),
-            getMovieByUUID: vi.fn().mockReturnValue(of(mockMovie))
+            getMovieByTmdbId: vi.fn().mockReturnValue(of(mockMovie)),
+            createReview: vi.fn(),
         };
 
         mockActivatedRoute = {
-            snapshot: {
-                paramMap: {
-                    get: vi.fn().mockReturnValue('123')
-                }
-            }
+            paramMap: of(convertToParamMap({ tmdbId: '123' }))
         };
 
         await TestBed.configureTestingModule({
@@ -63,7 +64,7 @@ describe('MovieDetailComponent', () => {
 
     it('should display loading state initially', () => {
         const pendingSubject = new Subject<Movie>();
-        mockMovieService.getMovieByUUID.mockReturnValue(pendingSubject.asObservable());
+        mockMovieService.getMovieByTmdbId.mockReturnValue(pendingSubject.asObservable());
 
         fixture.detectChanges();
 
@@ -75,7 +76,7 @@ describe('MovieDetailComponent', () => {
     it('should fetch movie data and display details', () => {
         fixture.detectChanges(); // Triggers ngOnInit
 
-        expect(mockMovieService.getMovieByUUID).toHaveBeenCalledWith('123');
+        expect(mockMovieService.getMovieByTmdbId).toHaveBeenCalledWith('123', true);
         expect(component.loading()).toBe(false);
         expect(component.movie()).toEqual(mockMovie);
 
@@ -95,7 +96,7 @@ describe('MovieDetailComponent', () => {
 
     it('should display a specific 404 error if API returns 404', () => {
         const errorResponse = new HttpErrorResponse({ status: 404 });
-        mockMovieService.getMovieByUUID.mockReturnValue(throwError(() => errorResponse));
+        mockMovieService.getMovieByTmdbId.mockReturnValue(throwError(() => errorResponse));
 
         fixture.detectChanges(); // Triggers ngOnInit
 
@@ -106,8 +107,20 @@ describe('MovieDetailComponent', () => {
         expect(errorDisplay.nativeElement.textContent).toContain('Movie not found');
     });
 
-    it('should display an invalid ID error if no UUID is in route', () => {
-        mockActivatedRoute.snapshot.paramMap.get.mockReturnValue(null);
+    it('should display an invalid ID error if no TMDB id is in route', async () => {
+        mockActivatedRoute = {
+            paramMap: of(convertToParamMap({}))
+        };
+
+        await TestBed.resetTestingModule();
+        await TestBed.configureTestingModule({
+            imports: [MovieDetailComponent],
+            providers: [
+                provideRouter([]),
+                { provide: MovieService, useValue: mockMovieService },
+                { provide: ActivatedRoute, useValue: mockActivatedRoute }
+            ]
+        }).compileComponents();
 
         fixture = TestBed.createComponent(MovieDetailComponent);
         component = fixture.componentInstance;

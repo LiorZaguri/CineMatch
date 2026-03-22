@@ -2,42 +2,44 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { MovieService } from './movie.service';
-import { Movie, MovieListResponse } from '../models/movie.models';
+import {
+    CreateReviewRequest,
+    MovieCatalogResponse,
+    RawMovieDashboardResponse,
+    ReviewResponse,
+    TmdbMovie,
+    TmdbMovieListResponse
+} from '../models/movie.models';
 
 describe('MovieService', () => {
     let service: MovieService;
     let httpTestingController: HttpTestingController;
 
-    const mockMovies: Movie[] = [
-        {
-            id: '1',
-            title: 'Test Movie 1',
-            description: 'Desc 1',
-            posterUrl: 'url1',
-            releaseDate: '2024-01-01',
-            rating: 8.0,
-            genre: ['Action'],
-            director: 'Dir 1',
-            cast: ['Cast 1'],
-            durationMinutes: 120,
-        },
-        {
-            id: '2',
-            title: 'Test Movie 2',
-            description: 'Desc 2',
-            posterUrl: 'url2',
-            releaseDate: '2024-02-01',
-            rating: 7.0,
-            genre: ['Drama'],
-            director: 'Dir 2',
-            cast: ['Cast 2'],
-            durationMinutes: 90,
-        },
-    ];
+    const createTmdbMovie = (id: number, title: string): TmdbMovie => ({
+        id,
+        title,
+        original_language: 'en',
+        original_title: title,
+        overview: `${title} overview`,
+        poster_path: `/poster-${id}.jpg`,
+        backdrop_path: `/backdrop-${id}.jpg`,
+        release_date: '2024-01-01',
+        vote_average: 8.1,
+    });
 
-    const mockResponse: MovieListResponse = {
-        movies: mockMovies,
-        total: 2,
+    const createMovieList = (...movies: TmdbMovie[]): TmdbMovieListResponse => ({
+        page: 1,
+        results: movies,
+        total_pages: 1,
+        total_results: movies.length,
+    });
+
+    const dashboardResponse: RawMovieDashboardResponse = {
+        now_playing: [createTmdbMovie(1, 'Now Playing')],
+        popular: [createTmdbMovie(2, 'Popular Pick')],
+        upcoming: [createTmdbMovie(3, 'Coming Soon')],
+        top_rated: [createTmdbMovie(4, 'Top Rated')],
+        errors: [],
     };
 
     beforeEach(() => {
@@ -45,7 +47,7 @@ describe('MovieService', () => {
             providers: [
                 MovieService,
                 provideHttpClient(),
-                provideHttpClientTesting(), // Modern API for HttpTestingController
+                provideHttpClientTesting(),
             ],
         });
         service = TestBed.inject(MovieService);
@@ -60,117 +62,111 @@ describe('MovieService', () => {
         expect(service).toBeTruthy();
     });
 
-    describe('refreshMovies()', () => {
-        it('should fetch movies from the API and update state', () => {
-            // Initial state
-            expect(service.loading()).toBe(false);
-            expect(service.movies()).toEqual([]);
+    it('refreshMovies should load dashboard sources and map movie state', () => {
+        let received: MovieCatalogResponse | undefined;
 
-            // Trigger request
-            service.refreshMovies().subscribe((res) => {
-                expect(res).toEqual(mockResponse);
-            });
-
-            // Expect request and flush response
-            const req = httpTestingController.expectOne('/api/v1/movies');
-            expect(req.request.method).toBe('GET');
-            expect(service.loading()).toBe(true); // Should be loading while request is pending
-
-            req.flush(mockResponse);
-
-            // Final state
-            expect(service.movies()).toEqual(mockMovies);
-            expect(service.loading()).toBe(false);
+        service.refreshMovies().subscribe((catalog) => {
+            received = catalog;
         });
 
-        it('should use MOCK_MOVIES fallback if the API fails', () => {
-            // We need to access the private MOCK_MOVIES for comparison, or loosely match
-            // But we know it has 3 movies from the implementation.
+        httpTestingController.expectOne('/CineMatch/movies/dashboard/').flush(dashboardResponse);
+        httpTestingController.expectOne('/CineMatch/movies/popular/?page=1').flush(createMovieList(createTmdbMovie(20, 'Popular Live')));
+        httpTestingController.expectOne('/CineMatch/movies/now-playing/?page=1').flush(createMovieList(createTmdbMovie(10, 'Now Live')));
+        httpTestingController.expectOne('/CineMatch/movies/upcoming/?page=1').flush(createMovieList(createTmdbMovie(30, 'Upcoming Live')));
+        httpTestingController.expectOne('/CineMatch/movies/top-rated/?page=1').flush(createMovieList(createTmdbMovie(40, 'Top Live')));
 
-            service.refreshMovies().subscribe((res) => {
-                expect(res.movies.length).toBeGreaterThan(0);
-                expect(res.movies[0].title).toBe('Inception'); // Known from MOCK_MOVIES
-            });
-
-            const req = httpTestingController.expectOne('/api/v1/movies');
-            req.error(new ProgressEvent('Network error')); // Simulate failure
-
-            expect(service.movies().length).toBeGreaterThan(0);
-            expect(service.loading()).toBe(false);
-        });
+        expect(received).toBeDefined();
+        expect(received?.movies.length).toBe(4);
+        expect(received?.dashboard.now_playing[0].title).toBe('Now Live');
+        expect(received?.dashboard.popular[0].title).toBe('Popular Live');
+        expect(service.movies().map((movie) => movie.id)).toEqual([10, 20, 30, 40]);
+        expect(service.loading()).toBe(false);
     });
 
-    describe('getMovies()', () => {
-        it('should fetch from API if state is empty', () => {
-            service.getMovies().subscribe();
-
-            const req = httpTestingController.expectOne('/api/v1/movies');
-            req.flush(mockResponse);
+    it('getMovies should return cached catalog when movies and dashboard are already loaded', () => {
+        (service as any)._movies.set([
+            {
+                id: 11,
+                title: 'Cached Movie',
+                description: 'Cached overview',
+                posterUrl: 'cached.jpg',
+                releaseDate: '2024-01-01',
+                rating: 7.4,
+                genre: [],
+                director: 'CineMatch',
+                cast: [],
+                durationMinutes: 0,
+            },
+        ]);
+        (service as any)._dashboard.set({
+            now_playing: [],
+            popular: [],
+            upcoming: [],
+            top_rated: [],
+            errors: [],
         });
 
-        it('should return cached data and NOT fetch from API if state is populated', () => {
-            // Pre-populate state
-            (service as any)._movies.set(mockMovies); // Accessing private signal for testing
-
-            service.getMovies().subscribe((res) => {
-                expect(res.movies).toEqual(mockMovies);
-            });
-
-            httpTestingController.expectNone('/api/v1/movies');
+        let received: MovieCatalogResponse | undefined;
+        service.getMovies().subscribe((catalog) => {
+            received = catalog;
         });
 
-        it('should NOT fetch from API if already loading', () => {
-            (service as any)._loading.set(true); // Access private signal to simulate pending request
-
-            let emitCount = 0;
-            service.getMovies().subscribe(() => {
-                emitCount++;
-            });
-
-            httpTestingController.expectNone('/api/v1/movies');
-
-            // Should emit cached movies immediately (which is [] in this case)
-            expect(emitCount).toBe(1);
-        });
+        expect(received?.movies.length).toBe(1);
+        expect(received?.dashboard.errors).toEqual([]);
+        httpTestingController.expectNone('/CineMatch/movies/dashboard/');
     });
 
-    describe('getMovieByUUID()', () => {
-        it('should fetch a single movie from API if not in local cache', () => {
-            const requestedId = '123-abc';
-            const mockSingleMovie: Movie = { ...mockMovies[0], id: requestedId };
+    it('getMovieByTmdbId should fetch detail from gateway movie route', () => {
+        let receivedTitle = '';
 
-            service.getMovieByUUID(requestedId).subscribe((movie) => {
-                expect(movie).toEqual(mockSingleMovie);
-            });
-
-            const req = httpTestingController.expectOne(`/api/v1/movies/${requestedId}`);
-            expect(req.request.method).toBe('GET');
-            req.flush(mockSingleMovie);
+        service.getMovieByTmdbId('1523145').subscribe((movie) => {
+            receivedTitle = movie.title;
+            expect(movie.tmdb_id).toBe(1523145);
+            expect(movie.reviews).toEqual([{ rating: 9, content: 'Great', created_at: '2026-03-20T00:00:00Z' }]);
         });
 
-        it('should return immediately from local cache if available', () => {
-            const requestedId = '1';
-            (service as any)._movies.set(mockMovies); // Pre-populate cache
-
-            service.getMovieByUUID(requestedId).subscribe((movie) => {
-                expect(movie).toEqual(mockMovies[0]);
-            });
-
-            httpTestingController.expectNone(`/api/v1/movies/${requestedId}`);
+        const req = httpTestingController.expectOne('/CineMatch/movies/1523145/');
+        expect(req.request.method).toBe('GET');
+        req.flush({
+            ...createTmdbMovie(1523145, 'Detail Movie'),
+            reviews: [{ rating: 9, content: 'Great', created_at: '2026-03-20T00:00:00Z' }],
         });
 
-        it('should throw an error if API call fails for a single movie', () => {
-            const requestedId = 'missing-id';
+        expect(receivedTitle).toBe('Detail Movie');
+    });
 
-            service.getMovieByUUID(requestedId).subscribe({
-                next: () => { throw new Error('Expected an error observable'); },
-                error: (err) => {
-                    expect(err.status).toBe(404);
-                }
-            });
-
-            const req = httpTestingController.expectOne(`/api/v1/movies/${requestedId}`);
-            req.flush('Not Found', { status: 404, statusText: 'Not Found' });
+    it('getMovieByUUID should remain a compatibility alias to TMDB detail fetch', () => {
+        service.getMovieByUUID('44').subscribe((movie) => {
+            expect(movie.id).toBe(44);
         });
+
+        httpTestingController.expectOne('/CineMatch/movies/44/').flush(createTmdbMovie(44, 'Alias Detail'));
+    });
+
+    it('createReview should post to the gateway review route', () => {
+        const payload: CreateReviewRequest = {
+            tmdb_id: 44,
+            rating: 8,
+            content: 'Very solid movie experience.',
+        };
+        let received: ReviewResponse | undefined;
+
+        service.createReview(payload).subscribe((response) => {
+            received = response;
+        });
+
+        const req = httpTestingController.expectOne('/CineMatch/movies/review/');
+        expect(req.request.method).toBe('POST');
+        expect(req.request.body).toEqual(payload);
+
+        req.flush({
+            id: 7,
+            tmdb_id: 44,
+            rating: 8,
+            content: 'Very solid movie experience.',
+            created_at: '2026-03-20T00:00:00Z',
+        });
+
+        expect(received?.id).toBe(7);
     });
 });

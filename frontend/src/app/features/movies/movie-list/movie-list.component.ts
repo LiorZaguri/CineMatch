@@ -21,12 +21,13 @@ export class MovieListComponent implements OnInit, OnDestroy {
     private readonly fadeDurationMs = 450;
 
     readonly movies = this.movieService.movies;
+    readonly dashboard = this.movieService.dashboard;
     readonly loading = this.movieService.loading;
     readonly error = this.movieService.error;
     readonly heroIndex = signal(0);
     readonly isHeroFading = signal(false);
 
-    readonly heroMovies = computed(() => this.movies().slice(0, 6));
+    readonly heroMovies = this.movieService.nowPlaying;
     readonly heroMovie = computed(() => {
         const heroes = this.heroMovies();
         if (heroes.length === 0) {
@@ -35,8 +36,9 @@ export class MovieListComponent implements OnInit, OnDestroy {
 
         return heroes[this.heroIndex() % heroes.length];
     });
-    readonly recommendedMovies = computed(() => this.movies().slice(0, 8));
-    readonly topMatches = computed(() => this.movies().slice(1, 7));
+    readonly recommendedMovies = computed(() => this.movieService.popular().slice(0, 8));
+    readonly topMatches = computed(() => this.movieService.topRated().slice(0, 6));
+    readonly upcomingMovies = computed(() => this.movieService.upcoming().slice(0, 8));
 
     ngOnInit(): void {
         this.loadMovies();
@@ -52,16 +54,20 @@ export class MovieListComponent implements OnInit, OnDestroy {
     }
 
     getYear(movie: Movie): string {
-        return new Date(movie.releaseDate).getFullYear().toString();
+        if (!movie.releaseDate) {
+            return 'TBA';
+        }
+        const year = new Date(movie.releaseDate).getFullYear();
+        return Number.isFinite(year) ? year.toString() : 'TBA';
     }
 
     getGenres(movie: Movie): string {
-        return movie.genre.slice(0, 2).join(' • ');
+        return movie.genre.length > 0 ? movie.genre.slice(0, 2).join(' • ') : 'Featured release';
     }
 
 
     private loadMovies(): void {
-        this.movieService.getMovies().subscribe({
+        this.movieService.getMovies(true).subscribe({
             error: (err) => {
                 console.error('Failed to load movies:', err);
             }
