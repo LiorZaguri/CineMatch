@@ -64,8 +64,25 @@ describe("movie gateway routes", () => {
       });
     });
 
+    coreApp.get("/api/movies/:tmdb_id/summary/", (req, res) => {
+      const id = Number(req.params.tmdb_id);
+
+      if (id === 404) {
+        return res.status(404).json({ detail: "Movie not found" });
+      }
+
+      if (id === 500) {
+        return res.status(500).json({ detail: "AI Summarization failed." });
+      }
+
+      res.json({
+        tmdb_id: id,
+        summary: "Consensus summary text",
+      });
+    });
+
     coreApp.post("/api/movies/review/", (req, res) => {
-      const userId = req.header("user-id");
+      const userId = req.header("x-user-id");
 
       if (!userId) {
         return res.status(401).json({ detail: "Missing user-id" });
@@ -172,6 +189,49 @@ describe("movie gateway routes", () => {
       .expect(404);
 
     expect(res.body.error.code).toBe("MOVIE_NOT_FOUND");
+  });
+
+  it("forwards tmdb_id for movie summary", async () => {
+    const app = await loadApp();
+
+    const res = await request(app)
+      .get("/CineMatch/movies/123/summary/")
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      tmdb_id: 123,
+      summary: "Consensus summary text",
+    });
+  });
+
+  it("returns 400 for invalid tmdb_id on movie summary", async () => {
+    const app = await loadApp();
+
+    const res = await request(app)
+      .get("/CineMatch/movies/0/summary/")
+      .expect(400);
+
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("maps core 404 for movie summary", async () => {
+    const app = await loadApp();
+
+    const res = await request(app)
+      .get("/CineMatch/movies/404/summary/")
+      .expect(404);
+
+    expect(res.body.error.code).toBe("MOVIE_NOT_FOUND");
+  });
+
+  it("maps core 500 for movie summary", async () => {
+    const app = await loadApp();
+
+    const res = await request(app)
+      .get("/CineMatch/movies/500/summary/")
+      .expect(502);
+
+    expect(res.body.error.code).toBe("CORE_REQUEST_FAILED");
   });
 
   it("rejects review submission without authentication", async () => {

@@ -218,6 +218,19 @@ import { env } from "../config/env";
       next(error);
     }
   }
+
+  export async function getMovieSummary(req: Request,res: Response,next: NextFunction) {
+    try {
+      const { tmdb_id } = tmdbIdParamsSchema.parse(req.params);
+      const { status, payload } = await forwardToCore(`/api/movies/ai/${tmdb_id}/summary/`);
+      return handleCoreResponse(res, status, payload);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return sendValidationError(res, error);
+      }
+      next(error);
+    }
+  }
   
   export async function createReview(req: Request,res: Response,next: NextFunction) {
     try {
