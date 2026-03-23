@@ -232,7 +232,7 @@ async def ai_search_movie(request: AISearchRequest):
             error_detail=str(e)
         )
     
-@router.get("/{tmdb_id}/summary/", response_model=ReviewSummaryResponse)
+@router.get("/ai/{tmdb_id}/summary/", response_model=ReviewSummaryResponse)
 async def get_movie_summary(
     tmdb_id: int, 
     db: AsyncSession = Depends(get_db)
@@ -261,7 +261,7 @@ async def get_movie_summary(
     query = select(ReviewSummary).where(ReviewSummary.tmdb_id == tmdb_id)
     result = await db.execute(query)
     existing_summary = result.scalars().first()
-
+    print(tmdb_id, flush=True)
     if existing_summary:
         # Calculate the age of the existing summary
         time_since_updated = datetime.now() - existing_summary.updated_at
