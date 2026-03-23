@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 
 class ReviewInput(BaseModel):
-    rating: int = Field(ge=1, le=10)
+    rating: float = Field(ge=1, le=10)
     content: str = Field(min_length=1, max_length=1000)
 
 

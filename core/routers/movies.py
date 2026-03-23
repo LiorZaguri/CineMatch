@@ -302,26 +302,30 @@ async def get_movie_summary(
             "rating": rev.author_details.rating or 5,
             "content": rev.content[:1000]
         })
+        
 
     payload = {
         "movie_title": movie_data.get('title'),
         "reviews": payload_reviews
     }
-
+    
     try:
         # Send the formatted data to the AI summarization worker via RabbitMQ RPC
         rpc_response = await asyncio.wait_for(
             summary_rpc.call(payload),
             timeout=60
         )
+        
         if not rpc_response.get('ok'):
             error_msg = rpc_response.get("error") or "Unknown AI error"
             raise Exception(error_msg)
+       
         temp_summary = rpc_response.get("summary")
+        
         if temp_summary is None:
             raise ValueError("AI worker returned 'ok' but summary text was missing.")
         new_summary_text: str = temp_summary
-        
+       
     except Exception as e:
         print(f"[Summary Error] {e}", flush=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="AI Summarization failed.")

@@ -17,7 +17,7 @@ class ReviewCreate(BaseModel):
     tmdb_id: int
    
     # The numeric rating (1-10)
-    rating: int = Field(ge=1, le=10, description="The numeric rating (1-10)")
+    rating: float = Field(ge=1, le=10, description="The numeric rating (1-10)")
 
     # The textual content of the review (10-1000 chars)
     content: str = Field(min_length=10, max_length=1000, description="The textual content of the review (10-1000 chars)")
