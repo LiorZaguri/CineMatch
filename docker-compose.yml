@@ -21,7 +21,7 @@ services:
     working_dir: /app
     env_file:
       - ./gateway/.env
-    command: sh -c "npx prisma migrate deploy && node dist/main.js"
+    command: sh -c "npx prisma migrate deploy && node dist/server.js"
     ports:
       - "3001:3000"
     depends_on:
@@ -123,6 +123,11 @@ services:
       - rabbitmq-data:/var/lib/rabbitmq
     networks:
       - cinematch-net
+    healthcheck:                                            
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]   
+      interval: 5s                                         
+      timeout: 5s                                          
+      retries: 10
 
   # AI recommendation service 
   ai-recommender:
@@ -137,9 +142,10 @@ services:
       - "8001:8001"
     depends_on:
       rabbitmq:
-        condition: service_started
+        condition: service_healthy
     networks:
       - cinematch-net
+      
 
   # AI review summarizer worker
   review-summary-ai:
@@ -154,7 +160,7 @@ services:
       - "8002:8002"
     depends_on:
       rabbitmq:
-        condition: service_started
+        condition: service_healthy
     networks:
       - cinematch-net
 

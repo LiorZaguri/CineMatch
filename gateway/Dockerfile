@@ -8,21 +8,26 @@ FROM node:22-alpine AS builder
 # Set the working directory inside the container.
 WORKDIR /app
 
-# Copy package manifests and the Prisma schema first to leverage Docker layer caching.
+# Copy package manifests, Prisma schema, and configuration first.
 COPY package*.json ./
 COPY prisma ./prisma
+COPY prisma.config.ts ./
+COPY .env ./
 
 # Install all dependencies (including devDependencies) exactly as specified in package-lock.json.
 RUN npm ci
 
-# Copy the rest of the application source code into the container.
-COPY . .
-
 # Generate the Prisma Client required for database access.
 RUN npx prisma generate
 
+# Copy the rest of the application source code into the container.
+COPY . .
+
 # Compile the application (e.g., TypeScript to JavaScript) into the /dist directory.
-RUN npm run build
+# Then copy the generated Prisma client to the dist folder so it's included in the final artifacts.
+RUN npm run build && \
+    mkdir -p dist/generated && \
+    cp -r src/generated/prisma dist/generated/prisma
 
 # ==========================================
 # STAGE 2: Production Runner
@@ -43,14 +48,12 @@ RUN apk add --no-cache openssl
 # Copy dependency manifests and Prisma schema from the host.
 COPY package*.json ./
 COPY prisma ./prisma
+COPY prisma.config.ts ./
 
 # Install only production dependencies, omitting devDependencies to keep the image small.
 RUN npm ci --omit=dev
 
-# Generate the Prisma Client again for the production environment.
-RUN npx prisma generate
-
-# Copy the compiled build artifacts from the builder stage.
+# Copy the compiled build artifacts (including the generated Prisma client) from the builder stage.
 # Change ownership to the built-in, non-root 'node' user for security.
 COPY --from=builder --chown=node:node /app/dist ./dist
 
@@ -61,4 +64,4 @@ USER node
 EXPOSE 3000
 
 # Specify the command to start the application.
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/server.js"]
