@@ -16,11 +16,11 @@ dependencies = [
     "sqlalchemy>=2.0.48",
     "sqlmodel>=0.0.37",
     "uvicorn>=0.41.0",
+    "httpx>=0.28.1",
 ]
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28.1",
     "ruff>=0.15.4",
     "pytest>=9.0.2",
 ]
