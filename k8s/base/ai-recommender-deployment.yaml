@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cinematch-ai-recommender
+  labels:
+    app: cinematch-ai-recommender
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cinematch-ai-recommender
+  template:
+    metadata:
+      labels:
+        app: cinematch-ai-recommender
+    spec:
+      containers:
+      - name: ai-recommender
+        image: cinematch-ai-recommender:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8001
+        envFrom:
+        - secretRef:
+            name: ai-recommender-env-secret

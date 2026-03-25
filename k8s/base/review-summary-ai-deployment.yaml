@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cinematch-review-summary-ai
+  labels:
+    app: cinematch-review-summary-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cinematch-review-summary-ai
+  template:
+    metadata:
+      labels:
+        app: cinematch-review-summary-ai
+    spec:
+      containers:
+      - name: review-summary-ai
+        image: cinematch-review-summary-ai:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8002
+        envFrom:
+        - secretRef:
+            name: review-summary-ai-env-secret

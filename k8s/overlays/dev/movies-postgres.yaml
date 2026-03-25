@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-movies-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cinematch-movies-postgres
+  labels:
+    app: cinematch-movies-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cinematch-movies-postgres
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: cinematch-movies-postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          value: "cinematch_movies_admin"
+        - name: POSTGRES_PASSWORD
+          value: "cinematch_movies_password"
+        - name: POSTGRES_DB
+          value: "cinematch_movies_db"
+        volumeMounts:
+        - name: postgres-movies-data
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-movies-data
+        persistentVolumeClaim:
+          claimName: postgres-movies-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: movies-db
+spec:
+  type: LoadBalancer
+  selector:
+    app: cinematch-movies-postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432

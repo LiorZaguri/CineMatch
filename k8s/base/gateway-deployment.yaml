@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cinematch-gateway
+  labels:
+    app: cinematch-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cinematch-gateway
+  template:
+    metadata:
+      labels:
+        app: cinematch-gateway
+    spec:
+      initContainers:
+      - name: gateway-migration
+        image: cinematch-gateway:latest
+        imagePullPolicy: Never
+        command: ["npx", "prisma", "migrate", "deploy"]
+        envFrom:
+        - secretRef:
+            name: gateway-env-secret
+      containers:
+      - name: gateway
+        image: cinematch-gateway:latest
+        imagePullPolicy: Never
+        command: ["node", "dist/server.js"]
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - secretRef:
+            name: gateway-env-secret
+        livenessProbe:
+          httpGet:
+            path: /CineMatch/health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /CineMatch/health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5

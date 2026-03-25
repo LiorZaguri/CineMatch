@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cinematch-review-summary-ai
+spec:
+  type: ClusterIP
+  selector:
+    app: cinematch-review-summary-ai
+  ports:
+    - protocol: TCP
+      port: 8002
+      targetPort: 8002

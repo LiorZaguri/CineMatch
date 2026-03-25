@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cinematch-frontend
+  labels:
+    app: cinematch-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cinematch-frontend
+  template:
+    metadata:
+      labels:
+        app: cinematch-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: cinematch-frontend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 2
+          periodSeconds: 5

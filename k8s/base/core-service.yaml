@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cinematch-core
+spec:
+  type: ClusterIP
+  selector:
+    app: cinematch-core
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000

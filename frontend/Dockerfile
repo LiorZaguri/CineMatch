@@ -48,9 +48,6 @@ RUN chown -R nginx:nginx /usr/share/nginx/html && \
     touch /var/run/nginx.pid && \
     chown -R nginx:nginx /var/run/nginx.pid
 
-# Switch to the unprivileged 'nginx' user
-USER nginx
-
 # Expose port 80 for incoming HTTP traffic
 EXPOSE 80
 

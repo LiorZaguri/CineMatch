@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cinematch-core
+  labels:
+    app: cinematch-core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cinematch-core
+  template:
+    metadata:
+      labels:
+        app: cinematch-core
+    spec:
+      initContainers:
+      - name: core-migration
+        image: cinematch-core:latest
+        imagePullPolicy: Never
+        command: ["alembic", "upgrade", "head"]
+        envFrom:
+        - secretRef:
+            name: core-env-secret
+      containers:
+      - name: core
+        image: cinematch-core:latest
+        imagePullPolicy: Never
+        command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - secretRef:
+            name: core-env-secret
+        livenessProbe:
+          httpGet:
+            path: /api/health/
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health/
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
