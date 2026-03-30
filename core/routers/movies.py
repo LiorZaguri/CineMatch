@@ -275,10 +275,8 @@ async def get_movie_summary(
             )
     
     # Fetch movie metadata and aggregated reviews concurrently
-    movie_task = get_movie_details(tmdb_id)
-    reviews_task = _get_all_reviews(tmdb_id, db)
-
-    movie_data, reviews = await asyncio.gather(movie_task, reviews_task)
+    movie_data = await get_movie_details(tmdb_id)
+    reviews = await _get_all_reviews(tmdb_id, db)
 
     # Ensure the movie actually exists on TMDB
     if not movie_data:
@@ -355,18 +353,12 @@ async def get_movie_page(tmdb_id: int, db: AsyncSession = Depends(get_db)):
     2. Aggregates reviews from TMDB and local database.
     3. Queries local database for cached AI summary.
     """
-    # Prepare the tasks
-    movie_task = get_movie_details(tmdb_id)
-    reviews_task = _get_all_reviews(tmdb_id, db)
+    # Run the tasks
+    movie_data = await get_movie_details(tmdb_id)
+    reviews = await _get_all_reviews(tmdb_id, db)
     summary_query = select(ReviewSummary).where(ReviewSummary.tmdb_id == tmdb_id)
-    db_summary_task = db.execute(summary_query)
+    db_result = await db.execute(summary_query)
 
-    # Run tasks concurrently
-    movie_data, reviews, db_result = await asyncio.gather(
-        movie_task,
-        reviews_task,
-        db_summary_task,
-    )
 
     if not movie_data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Movie not found")
