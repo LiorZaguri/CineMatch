@@ -26,8 +26,9 @@ COPY . .
 # Compile the application (e.g., TypeScript to JavaScript) into the /dist directory.
 # Then copy the generated Prisma client to the dist folder so it's included in the final artifacts.
 RUN npm run build && \
+    rm -rf dist/generated/prisma && \
     mkdir -p dist/generated && \
-    cp -r src/generated/prisma dist/generated/prisma
+    cp -r src/generated/prisma dist/generated/
 
 # ==========================================
 # STAGE 2: Production Runner
@@ -52,6 +53,9 @@ COPY prisma.config.ts ./
 
 # Install only production dependencies, omitting devDependencies to keep the image small.
 RUN npm ci --omit=dev
+
+# Copy the generated Prisma runtime artifacts expected by @prisma/client at runtime.
+COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
 
 # Copy the compiled build artifacts (including the generated Prisma client) from the builder stage.
 # Change ownership to the built-in, non-root 'node' user for security.
