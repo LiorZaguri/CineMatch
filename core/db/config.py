@@ -43,7 +43,7 @@ class Setting(BaseSettings):
         Constructs the SQLAlchemy database URL from individual components.
         The @computed_field decorator ensures this property is included when serialized.
         """
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}?ssl=require"
 
 
 @lru_cache()
