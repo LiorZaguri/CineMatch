@@ -54,9 +54,6 @@ COPY prisma.config.ts ./
 # Install only production dependencies, omitting devDependencies to keep the image small.
 RUN npm ci --omit=dev
 
-# Copy the generated Prisma runtime artifacts expected by @prisma/client at runtime.
-COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
-
 # Copy the compiled build artifacts (including the generated Prisma client) from the builder stage.
 # Change ownership to the built-in, non-root 'node' user for security.
 COPY --from=builder --chown=node:node /app/dist ./dist
