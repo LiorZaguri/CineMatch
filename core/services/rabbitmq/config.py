@@ -43,7 +43,7 @@ class RabbitMQSettings(BaseSettings):
         """
         Constructs the RabbitMQ connection URL.
         """
-        return f"amqp://{self.RABBITMQ_USER}:{self.RABBITMQ_PASSWORD}@{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}/"
+        return f"amqp://{self.RABBITMQ_USER}:{self.RABBITMQ_PASSWORD}@{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}/{self.RABBITMQ_USER}"
     
 @lru_cache
 def get_rabbitmq_settings() -> RabbitMQSettings:

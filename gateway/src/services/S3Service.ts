@@ -103,7 +103,7 @@ export function buildAvatarFileKey(userId: string, contentType: string): string 
 
 export function buildPublicFileUrl(fileKey: string): string {
   const s3Config = getS3Config();
-  return `${s3Config.publicEndpoint}/${s3Config.bucketName}/${fileKey}`;
+  return `${s3Config.publicEndpoint}/${fileKey}`;
 }
 
 export async function ensureAvatarBucketExists() {
@@ -138,7 +138,7 @@ export async function createAvatarUploadUrl(userId: string, contentType: string)
   validateAvatarContentType(contentType);
 
   const s3Config = getS3Config();
-  const s3Client = getPublicS3Client();
+  const s3Client = getInternalS3Client();
   const fileKey = buildAvatarFileKey(userId, contentType);
 
   const command = new PutObjectCommand({
