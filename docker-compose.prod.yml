@@ -1,0 +1,74 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cinematch-frontend
+    ports:
+      - "80:80"
+    networks:
+      - cinematch-net
+    depends_on:
+      - gateway
+      - core
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: cinematch-gateway
+    restart: unless-stopped
+    working_dir: /app
+    env_file:
+      - ./gateway/.env
+    command: sh -c "npx prisma migrate deploy && node dist/server.js"
+    depends_on:
+      core:
+        condition: service_started 
+    networks:
+      - cinematch-net
+
+  core:
+    build: ./core
+    container_name: cinematch-core
+    restart: unless-stopped
+    working_dir: /app
+    env_file:
+      - ./core/.env
+    command: sh -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"
+    environment:
+      - ALLOWED_ORIGINS=http://localhost,http://localhost:4200,http://localhost:3001
+    networks:
+      - cinematch-net
+      
+  # AI recommendation service 
+  ai-recommender:
+    build:
+      context: ./AI recommendation
+      dockerfile: Dockerfile
+    container_name: cinematch-ai-recommender
+    restart: unless-stopped
+    working_dir: /app
+    env_file:
+      - ./AI recommendation/.env
+    networks:
+      - cinematch-net
+      
+
+  # AI review summarizer worker
+  review-summary-ai:
+    build:
+      context: ./review-summary-ai
+      dockerfile: Dockerfile
+    container_name: cinematch-review-summary-ai
+    restart: unless-stopped
+    working_dir: /app
+    env_file:
+      - ./review-summary-ai/.env
+    networks:
+      - cinematch-net
+
+networks:
+  cinematch-net:
+    driver: bridge
