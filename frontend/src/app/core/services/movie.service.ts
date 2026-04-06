@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, forkJoin, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 import {
     Movie,
     MovieCatalogResponse,
@@ -18,7 +19,7 @@ import {
 })
 export class MovieService {
     private readonly http = inject(HttpClient);
-    private readonly gatewayMovieUrl = '/CineMatch/movies';
+    private readonly gatewayMovieUrl = `${environment.apiUrl}/movies`;
     private readonly imageBaseUrl = 'https://image.tmdb.org/t/p';
 
     private readonly _movies = signal<Movie[]>([]);

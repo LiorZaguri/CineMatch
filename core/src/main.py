@@ -61,6 +61,7 @@ async def lifespan(app: FastAPI):
 
 # Initialize the FastAPI application with a title and the lifespan context manager.
 app = FastAPI(
+    root_path="/core",
     title="CineMatch Core API",
     lifespan=lifespan
 )

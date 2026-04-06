@@ -2,6 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { catchError, map, switchMap, throwError, timeout } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 import type {
     AuthResponse,
     AuthUser,
@@ -15,7 +16,7 @@ import type {
 } from '../models/auth.models';
 
 const TOKEN_KEY = 'cm_access_token';
-const API_BASE = '/CineMatch/auth';
+const API_BASE = `${environment.apiUrl}/auth`;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
