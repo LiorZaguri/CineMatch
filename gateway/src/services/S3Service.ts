@@ -103,7 +103,14 @@ export function buildAvatarFileKey(userId: string, contentType: string): string 
 
 export function buildPublicFileUrl(fileKey: string): string {
   const s3Config = getS3Config();
-  return `${s3Config.publicEndpoint}/${fileKey}`;
+
+  // For Cloudflare R2 or AWS S3, the public endpoint often already points to the bucket
+  // or uses subdomain routing. For local MinIO, we usually need the bucket in the path.
+  if (s3Config.publicEndpoint.includes("cloudflare") || s3Config.publicEndpoint.includes("amazonaws")) {
+    return `${s3Config.publicEndpoint}/${fileKey}`;
+  }
+
+  return `${s3Config.publicEndpoint}/${s3Config.bucketName}/${fileKey}`;
 }
 
 export async function ensureAvatarBucketExists() {
@@ -138,7 +145,7 @@ export async function createAvatarUploadUrl(userId: string, contentType: string)
   validateAvatarContentType(contentType);
 
   const s3Config = getS3Config();
-  const s3Client = getInternalS3Client();
+  const s3Client = getPublicS3Client();
   const fileKey = buildAvatarFileKey(userId, contentType);
 
   const command = new PutObjectCommand({
