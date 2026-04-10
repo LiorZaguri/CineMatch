@@ -68,7 +68,6 @@ flowchart LR
 
     %% --- COLUMN 1: The Origin ---
     subgraph Internet [1. The Internet]
-        direction TB
         User((User)) -->|HTTPS| CF[Cloudflare Proxy]
     end
 
@@ -77,7 +76,6 @@ flowchart LR
         Nginx[Nginx Reverse Proxy]
         
         subgraph Docker [Docker Private Network]
-            direction TB
             UI[Angular Frontend]
             Node[Node.js API Gateway]
             Core[FastAPI Core]
@@ -91,7 +89,6 @@ flowchart LR
 
     %% --- COLUMN 3: Data & Outsource ---
     subgraph External [3. External Databases & APIs]
-        direction TB
         R2[Cloudflare R2 Storage]
         NeonUsers[(Neon DB: Users)]
         NeonCore[(Neon DB: Core Data)]
@@ -114,7 +111,7 @@ flowchart LR
     Node -->|Save & Verify User Data| NeonUsers
 
     %% Level 2: FastAPI Core Logic
-    Core -->|1. Check 24h Summary Cache & Read/Write Reviews| NeonCore
+    Core -->|1. Check 24h Cache & Read/Write Reviews| NeonCore
     Core -->|Fetch Metadata| TMDB
     Core <-->|2. On Cache Miss: Publish Task| RabbitMQ
 
