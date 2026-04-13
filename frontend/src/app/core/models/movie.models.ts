@@ -35,6 +35,7 @@ export interface TmdbMovie {
     title: string;
     vote_average: number;
     reviews?: MovieReview[];
+    summary?: string | null;
     review_summary?: {
         summary_text?: string;
     } | null;
@@ -82,3 +83,30 @@ export interface ReviewResponse {
     content: string;
     created_at: string;
 }
+
+export interface ReviewSummaryResponse {
+    tmdb_id: number;
+    summary: string;
+}
+
+export interface AIMovieSearchRequest {
+    prompt: string;
+    page?: number;
+}
+
+export interface AIMovieSearchSuccessResponse {
+    status: 'success';
+    fallback_used: false;
+    movies: TmdbMovie[];
+}
+
+export interface AIMovieSearchFallbackResponse {
+    status: 'fallback';
+    fallback_used: true;
+    original_prompt: string;
+    error_detail: string;
+}
+
+export type AIMovieSearchResponse =
+    | AIMovieSearchSuccessResponse
+    | AIMovieSearchFallbackResponse;

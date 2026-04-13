@@ -64,6 +64,11 @@
                         <span class="material-symbols-outlined">tv</span>
                         Where to Watch
                     </a>
+                    <a [routerLink]="['/movies', movieData.id]" [fragment]="'ai-summary'"
+                        class="action-btn action-btn--secondary">
+                        <span class="material-symbols-outlined">auto_awesome</span>
+                        AI Summary
+                    </a>
                     <button class="action-btn action-btn--secondary" type="button">
                         <span class="material-symbols-outlined">add</span>
                         Add to List
@@ -117,6 +122,52 @@
                         </div>
                     </article>
 
+                    <article class="detail-block" id="ai-summary">
+                        <div class="detail-heading-row">
+                            <h2 class="detail-heading">AI Summary</h2>
+                            @if (!aiSummaryLoading()) {
+                            <button class="review-cta ai-summary__cta" type="button" (click)="generateAiSummary()">
+                                <span class="material-symbols-outlined">auto_awesome</span>
+                                Generate
+                            </button>
+                            }
+                        </div>
+
+                        <div class="review-card ai-summary-card">
+                            <div class="ai-summary-card__header">
+                                <div class="ai-summary-card__icon-shell" aria-hidden="true">
+                                    <div class="ai-summary-card__icon-core">
+                                        <span class="material-symbols-outlined">psychology_alt</span>
+                                    </div>
+                                </div>
+                                <div class="ai-summary-card__meta">
+                                    <div class="ai-summary-card__topline">
+                                        <p class="ai-summary-card__title">AI Summary</p>
+                                        <span class="ai-summary-card__badge">AI-generated</span>
+                                    </div>
+                                    <p class="ai-summary-card__subhead">Generated from user reviews</p>
+                                </div>
+                            </div>
+
+                            @if (aiSummaryLoading()) {
+                            <div class="ai-summary-card__state">
+                                <div class="loader loader--inline"></div>
+                                <p>Generating AI summary...</p>
+                            </div>
+                            } @else if (aiSummary(); as summary) {
+                            <p class="review-body ai-summary-card__text">{{ summary }}</p>
+                            } @else {
+                            <div class="ai-summary-card__empty">
+                                <p>No AI summary yet. Generate one to get a quick consensus view of the reviews.</p>
+                            </div>
+                            }
+
+                            @if (aiSummaryError(); as aiError) {
+                            <p class="ai-summary-card__error">{{ aiError }}</p>
+                            }
+                        </div>
+                    </article>
+
                     <article class="detail-block">
                         <div class="detail-heading-row">
                             <h2 class="detail-heading">User Reviews</h2>
@@ -126,46 +177,6 @@
                             </button>
                         </div>
                         <div class="review-list">
-                            <div class="review-card ai-summary-card">
-                                <div class="ai-summary-card__header">
-                                    <div class="ai-summary-card__icon-shell" aria-hidden="true">
-                                        <div class="ai-summary-card__icon-core">
-                                            <span class="material-symbols-outlined">psychology_alt</span>
-                                        </div>
-                                    </div>
-                                    <div class="ai-summary-card__meta">
-                                        <div class="ai-summary-card__topline">
-                                            <p class="ai-summary-card__title">AI Summary</p>
-                                            <span class="ai-summary-card__badge">AI-generated</span>
-                                        </div>
-                                        <p class="ai-summary-card__subhead">Generated from user reviews</p>
-                                    </div>
-                                    @if (!aiSummaryLoading()) {
-                                    <button class="review-cta ai-summary__cta ai-summary-card__action" type="button" (click)="generateAiSummary()">
-                                        <span class="material-symbols-outlined">auto_awesome</span>
-                                        Generate
-                                    </button>
-                                    }
-                                </div>
-
-                                @if (aiSummaryLoading()) {
-                                <div class="ai-summary-card__state">
-                                    <div class="loader loader--inline"></div>
-                                    <p>Generating AI summary...</p>
-                                </div>
-                                } @else if (aiSummary(); as summary) {
-                                <p class="review-body ai-summary-card__text">{{ summary }}</p>
-                                } @else {
-                                <div class="ai-summary-card__empty">
-                                    <p>No AI summary yet. Generate one to get a quick consensus view of the reviews.</p>
-                                </div>
-                                }
-
-                                @if (aiSummaryError(); as aiError) {
-                                <p class="ai-summary-card__error">{{ aiError }}</p>
-                                }
-                            </div>
-
                             @if (reviewComposerOpen()) {
                             <div class="review-card review-composer-card">
                                 <div class="review-composer-card__header">
@@ -218,7 +229,7 @@
                             </div>
                             }
 
-                            @for (review of displayReviews(); track $index) {
+                            @for (review of displayReviews(); track review.id ?? $index; let reviewIndex = $index) {
                             <div class="review-card">
                                 <div class="review-header">
                                     <div class="review-avatar">
@@ -233,7 +244,12 @@
                                         </div>
                                     </div>
                                 </div>
-                                <p class="review-body">{{ review.content }}</p>
+                                <p class="review-body">{{ getReviewContent(review, reviewIndex) }}</p>
+                                @if (isReviewTruncated(review)) {
+                                <button class="review-read-more" type="button" (click)="toggleReviewExpanded(review, reviewIndex)">
+                                    {{ isReviewExpanded(review, reviewIndex) ? 'Read less' : 'Read more' }}
+                                </button>
+                                }
                             </div>
                             }
                         </div>

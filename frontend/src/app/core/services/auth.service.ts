@@ -17,13 +17,14 @@ import type {
 
 const TOKEN_KEY = 'cm_access_token';
 const API_BASE = `${environment.apiUrl}/auth`;
+type JwtPayload = { exp?: number };
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
     private readonly http = inject(HttpClient);
 
     // ── State ──────────────────────────────────────────────────────────────────
-    private readonly _token = signal<string | null>(localStorage.getItem(TOKEN_KEY));
+    private readonly _token = signal<string | null>(this.loadValidToken());
     private readonly _user = signal<AuthUser | null>(this.loadUser());
 
     /** Read-only token for the interceptor */
@@ -114,6 +115,21 @@ export class AuthService {
         }
     }
 
+    private loadValidToken(): string | null {
+        const token = localStorage.getItem(TOKEN_KEY);
+        if (!token) {
+            return null;
+        }
+
+        if (this.isTokenExpired(token)) {
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem('cm_user');
+            return null;
+        }
+
+        return token;
+    }
+
     // ── Private Helpers ────────────────────────────────────────────────────────
 
     /** Adapter: maps raw API response → internal domain model */
@@ -149,5 +165,30 @@ export class AuthService {
             displayName: user.displayName,
             avatarUrl: user.avatarUrl ?? null,
         };
+    }
+
+    private isTokenExpired(token: string): boolean {
+        try {
+            const payload = this.decodeJwtPayload(token);
+            if (!payload.exp) {
+                return false;
+            }
+
+            const now = Math.floor(Date.now() / 1000);
+            return payload.exp <= now;
+        } catch {
+            return true;
+        }
+    }
+
+    private decodeJwtPayload(token: string): JwtPayload {
+        const [, payload] = token.split('.');
+        if (!payload) {
+            throw new Error('Invalid JWT');
+        }
+
+        const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+        return JSON.parse(atob(padded)) as JwtPayload;
     }
 }

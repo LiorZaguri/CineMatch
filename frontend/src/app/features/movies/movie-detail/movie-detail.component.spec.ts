@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 
+import { provideHttpClient } from '@angular/common/http';
 import { provideRouter, ActivatedRoute, convertToParamMap } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { signal } from '@angular/core';
@@ -47,6 +48,7 @@ describe('MovieDetailComponent', () => {
         await TestBed.configureTestingModule({
             imports: [MovieDetailComponent],
             providers: [
+                provideHttpClient(),
                 provideRouter([]),
                 { provide: MovieService, useValue: mockMovieService },
                 { provide: ActivatedRoute, useValue: mockActivatedRoute }
@@ -80,11 +82,66 @@ describe('MovieDetailComponent', () => {
         expect(component.loading()).toBe(false);
         expect(component.movie()).toEqual(mockMovie);
 
-        const title = fixture.debugElement.query(By.css('h1.title'));
+        const title = fixture.debugElement.query(By.css('.detail-hero__title'));
         expect(title.nativeElement.textContent).toContain('Detail Movie');
 
         const rating = fixture.debugElement.query(By.css('.rating'));
         expect(rating.nativeElement.textContent).toContain('9.5');
+    });
+
+    it('should render the AI summary section before user reviews', () => {
+        const movieWithSummary: Movie = {
+            ...mockMovie,
+            review_summary: {
+                summary_text: 'A sharp consensus summary.'
+            }
+        };
+        mockMovieService.getMovieByTmdbId.mockReturnValue(of(movieWithSummary));
+
+        fixture.detectChanges();
+
+        const aiSummarySection = fixture.debugElement.query(By.css('#ai-summary'));
+        const userReviewsHeading = fixture.debugElement.queryAll(By.css('.detail-heading'))
+            .find((heading) => heading.nativeElement.textContent.trim() === 'User Reviews');
+        const userReviewsSection = userReviewsHeading?.nativeElement.closest('.detail-block');
+
+        expect(aiSummarySection).toBeTruthy();
+        expect(userReviewsHeading).toBeTruthy();
+        expect(userReviewsSection).toBeTruthy();
+        expect(component.aiSummary()).toBe('A sharp consensus summary.');
+
+        expect(
+            aiSummarySection.nativeElement.compareDocumentPosition(userReviewsSection)
+                & Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
+    });
+
+    it('should collapse long reviews behind a read more button', () => {
+        const longReview = 'A'.repeat(320);
+        const movieWithReviews: Movie = {
+            ...mockMovie,
+            reviews: [
+                {
+                    id: 77,
+                    rating: 8,
+                    content: longReview
+                }
+            ]
+        };
+        mockMovieService.getMovieByTmdbId.mockReturnValue(of(movieWithReviews));
+
+        fixture.detectChanges();
+
+        const reviewBody = fixture.debugElement.query(By.css('.review-body'));
+        const readMoreButton = fixture.debugElement.query(By.css('.review-read-more'));
+
+        expect(readMoreButton.nativeElement.textContent).toContain('Read more');
+        expect(reviewBody.nativeElement.textContent.length).toBeLessThan(longReview.length);
+
+        readMoreButton.nativeElement.click();
+        fixture.detectChanges();
+
+        expect(reviewBody.nativeElement.textContent).toContain(longReview);
     });
 
     it('should navigate back to the movie list correctly', () => {
@@ -116,6 +173,7 @@ describe('MovieDetailComponent', () => {
         await TestBed.configureTestingModule({
             imports: [MovieDetailComponent],
             providers: [
+                provideHttpClient(),
                 provideRouter([]),
                 { provide: MovieService, useValue: mockMovieService },
                 { provide: ActivatedRoute, useValue: mockActivatedRoute }

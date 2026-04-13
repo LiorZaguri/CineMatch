@@ -1,16 +1,33 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { TopbarComponent } from './topbar';
+import { signal } from '@angular/core';
+import { of } from 'rxjs';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import { TopbarComponent } from './topbar';
+import { AuthService } from '../../services/auth.service';
+import { MovieService } from '../../services/movie.service';
 
-describe('TopbarComponent (QA Agent)', () => {
+describe('TopbarComponent', () => {
     let component: TopbarComponent;
     let fixture: ComponentFixture<TopbarComponent>;
+
+    const authServiceStub = {
+        isAuthenticated: signal(false),
+        currentUser: signal(null),
+        logout: jasmine.createSpy('logout')
+    };
+
+    const movieServiceStub = {
+        aiSearch: jasmine.createSpy('aiSearch').and.returnValue(of({ status: 'success', fallback_used: false, movies: [] }))
+    };
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [TopbarComponent],
-            providers: [provideRouter([]), provideHttpClient()]
+            providers: [
+                provideRouter([]),
+                { provide: AuthService, useValue: authServiceStub },
+                { provide: MovieService, useValue: movieServiceStub }
+            ]
         }).compileComponents();
 
         fixture = TestBed.createComponent(TopbarComponent);
@@ -22,23 +39,18 @@ describe('TopbarComponent (QA Agent)', () => {
         expect(component).toBeTruthy();
     });
 
-    it('should display the brand text without emojis or icons', () => {
+    it('should render the brand and AI search input', () => {
         const compiled = fixture.nativeElement as HTMLElement;
-        const brandText = compiled.querySelector('.brand');
-        expect(brandText).toBeTruthy();
-        expect(brandText?.textContent).toContain('CineMatch');
-        // Ensure no emojis/icons are used (QA verification)
-        expect(brandText?.textContent?.trim()).toBe('CineMatch');
-        expect(compiled.querySelector('img, svg, i, .icon, mat-icon')).toBeNull();
+
+        expect(compiled.querySelector('.brand')?.textContent).toContain('CineMatch');
+        expect(compiled.querySelector('.ai-search-input')).toBeTruthy();
     });
 
-    it('should contain expected navigation links', () => {
+    it('should disable AI search when the user is not authenticated', () => {
         const compiled = fixture.nativeElement as HTMLElement;
-        const navLinks = compiled.querySelectorAll('.nav-link');
-        const getStartedBtn = compiled.querySelector('.btn-primary');
+        const input = compiled.querySelector('.ai-search-input') as HTMLInputElement;
 
-        expect(navLinks.length).toBeGreaterThanOrEqual(3);
-        expect(getStartedBtn).toBeTruthy();
-        expect(getStartedBtn?.textContent).toContain('Get Started');
+        expect(input.disabled).toBeTrue();
+        expect(input.placeholder).toContain('Sign in');
     });
 });

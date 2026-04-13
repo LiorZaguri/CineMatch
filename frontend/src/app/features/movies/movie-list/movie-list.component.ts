@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MovieService } from '../../../core/services/movie.service';
@@ -26,6 +26,7 @@ export class MovieListComponent implements OnInit, OnDestroy {
     readonly error = this.movieService.error;
     readonly heroIndex = signal(0);
     readonly isHeroFading = signal(false);
+    @ViewChild('recommendationsRow') private recommendationsRow?: ElementRef<HTMLDivElement>;
 
     readonly heroMovies = this.movieService.nowPlaying;
     readonly heroMovie = computed(() => {
@@ -65,6 +66,19 @@ export class MovieListComponent implements OnInit, OnDestroy {
         return movie.genre.length > 0 ? movie.genre.slice(0, 2).join(' • ') : 'Featured release';
     }
 
+
+    scrollRecommendations(direction: 'left' | 'right'): void {
+        const row = this.recommendationsRow?.nativeElement;
+        if (!row) {
+            return;
+        }
+
+        const scrollAmount = Math.max(row.clientWidth * 0.8, 260);
+        row.scrollBy({
+            left: direction === 'left' ? -scrollAmount : scrollAmount,
+            behavior: 'smooth'
+        });
+    }
 
     private loadMovies(): void {
         this.movieService.getMovies(true).subscribe({

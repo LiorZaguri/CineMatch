@@ -28,6 +28,62 @@
         </div>
 
         <div class="auth-actions">
+            <div class="ai-search" #searchPanel>
+                <form class="ai-search-form" (submit)="onSearchSubmit($event)">
+                    <span class="material-symbols-outlined ai-search-icon">auto_awesome</span>
+                    <input
+                        type="search"
+                        class="ai-search-input"
+                        [value]="aiSearchQuery()"
+                        (input)="onSearchInput($event)"
+                        (focus)="onSearchFocus()"
+                        [disabled]="!isAuthenticated()"
+                        [attr.placeholder]="isAuthenticated() ? 'Ask AI for a movie vibe...' : 'Sign in to use AI search'"
+                        aria-label="AI movie search"
+                    />
+
+                    @if (aiSearchQuery()) {
+                        <button type="button" class="ai-search-clear" (click)="clearSearch()" aria-label="Clear AI search">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    } @else {
+                        <button type="submit" class="ai-search-submit" [disabled]="!isAuthenticated()" aria-label="Search with AI">
+                            <span class="material-symbols-outlined">search</span>
+                        </button>
+                    }
+                </form>
+
+                @if (isSearchOpen()) {
+                    <div class="ai-search-dropdown">
+                        @if (aiSearchLoading()) {
+                            <div class="ai-search-state">Searching...</div>
+                        } @else if (aiSearchResults().length > 0) {
+                            <div class="ai-search-dropdown-head">AI Matches</div>
+                            @for (movie of aiSearchResults(); track movie.id) {
+                                <button type="button" class="ai-search-result" (click)="openMovie(movie.id)">
+                                    <div class="ai-search-result-poster">
+                                        @if (movie.posterUrl) {
+                                            <img [src]="movie.posterUrl" [alt]="movie.title" />
+                                        } @else {
+                                            <span class="material-symbols-outlined">movie</span>
+                                        }
+                                    </div>
+
+                                    <div class="ai-search-result-copy">
+                                        <p class="ai-search-result-title">{{ movie.title }}</p>
+                                        <p class="ai-search-result-meta">
+                                            {{ movie.releaseDate ? (movie.releaseDate | slice:0:4) : 'TBA' }}
+                                        </p>
+                                    </div>
+                                </button>
+                            }
+                        } @else {
+                            <div class="ai-search-state">Searching...</div>
+                        }
+                    </div>
+                }
+            </div>
+
             @if (isAuthenticated()) {
                 <details class="profile-menu" #profileMenu>
                     <summary class="user-profile">

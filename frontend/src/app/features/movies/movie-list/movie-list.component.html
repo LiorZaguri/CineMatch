@@ -38,11 +38,7 @@
 
                 <div class="hero-actions" (mouseenter)="pauseHeroCarousel()" (mouseleave)="resumeHeroCarousel()"
                     (focusin)="pauseHeroCarousel()" (focusout)="resumeHeroCarousel()">
-                    <a [routerLink]="['/movies', heroMovie()?.id]" [fragment]="'where-to-watch'" class="btn-primary">
-                        <span class="material-symbols-outlined">tv</span>
-                        Where to Watch
-                    </a>
-                    <a [routerLink]="['/movies', heroMovie()?.id]" class="btn-secondary">
+                    <a [routerLink]="['/movies', heroMovie()?.id]" class="btn-primary">
                         <span class="material-symbols-outlined">info</span>
                         View Details
                     </a>
@@ -51,45 +47,26 @@
         </section>
 
         <div class="content-stack">
-            <section class="filter-bar" appScrollReveal [revealDelay]="70">
-                <div class="filter-group">
-                    <button class="filter-chip filter-chip--active" type="button">All Movies</button>
-                    <button class="filter-chip" type="button">
-                        Genre
-                        <span class="material-symbols-outlined">expand_more</span>
-                    </button>
-                    <button class="filter-chip" type="button">
-                        Release Year
-                        <span class="material-symbols-outlined">expand_more</span>
-                    </button>
-                    <button class="filter-chip" type="button">
-                        Match Score
-                        <span class="material-symbols-outlined">expand_more</span>
-                    </button>
-                    <button class="filter-chip" type="button">
-                        Language
-                        <span class="material-symbols-outlined">expand_more</span>
-                    </button>
-                </div>
-
-                <button class="sort-chip" type="button">
-                    <span class="sort-label">Sort by:</span>
-                    <span class="sort-value">Most Relevant</span>
-                    <span class="material-symbols-outlined">expand_more</span>
-                </button>
-            </section>
-
             <section appScrollReveal [revealDelay]="80">
                 <div class="section-head">
                     <div class="section-title-wrap">
                         <h3>AI Recommendations for You</h3>
                         <span class="material-symbols-outlined">auto_awesome</span>
                     </div>
-                    <a routerLink="/movies" class="section-link">See all</a>
                 </div>
 
                 @if (recommendedMovies().length > 0) {
-                <div class="scroll-row no-scrollbar">
+                <div class="carousel-shell">
+                    <button
+                        type="button"
+                        class="carousel-nav carousel-nav-left"
+                        (click)="scrollRecommendations('left')"
+                        aria-label="Scroll recommendations left"
+                    >
+                        <span class="material-symbols-outlined">chevron_left</span>
+                    </button>
+
+                    <div #recommendationsRow class="scroll-row no-scrollbar recommendations-row">
                     @for (movie of recommendedMovies(); track movie.id) {
                         <a [routerLink]="['/movies', movie.id]" class="poster-card">
                             <div class="poster-wrap">
@@ -100,78 +77,20 @@
                             <p>{{ getGenres(movie) }} • {{ getYear(movie) }}</p>
                         </a>
                     }
+                    </div>
+
+                    <button
+                        type="button"
+                        class="carousel-nav carousel-nav-right"
+                        (click)="scrollRecommendations('right')"
+                        aria-label="Scroll recommendations right"
+                    >
+                        <span class="material-symbols-outlined">chevron_right</span>
+                    </button>
                 </div>
                 } @else {
                 <div class="section-empty">No popular movies are available right now.</div>
                 }
-            </section>
-
-            <section appScrollReveal [revealDelay]="140">
-                <div class="section-head">
-                    <h3>Top Matches for Your Taste</h3>
-                    <a routerLink="/movies" class="section-link">See all</a>
-                </div>
-
-                @if (topMatches().length > 0) {
-                <div class="match-grid">
-                    @for (movie of topMatches(); track movie.id) {
-                        <a [routerLink]="['/movies', movie.id]" class="match-card">
-                            <img [src]="movie.posterUrl" [alt]="movie.title" />
-                            <div class="match-content">
-                                <div class="match-top">
-                                    <span>Because you liked {{ movie.director }}</span>
-                                    <strong>{{ 88 + ($index % 10) }}% Match</strong>
-                                </div>
-                                <h4>{{ movie.title }}</h4>
-                                <p>{{ movie.description }}</p>
-                                <div class="match-actions">
-                                    <span class="watch-chip">Providers</span>
-                                    <span class="material-symbols-outlined">add</span>
-                                </div>
-                            </div>
-                        </a>
-                    }
-                </div>
-                } @else {
-                <div class="section-empty">No top rated movies are available right now.</div>
-                }
-            </section>
-
-            <section class="critics-section" appScrollReveal [revealDelay]="200">
-                <div class="section-head critics-head">
-                    <div class="critics-title">
-                        <span class="material-symbols-outlined trophy">emoji_events</span>
-                        <h3>Coming Soon</h3>
-                    </div>
-                    <a routerLink="/movies" class="section-link">Browse upcoming releases</a>
-                </div>
-
-                @if (upcomingMovies().length > 0) {
-                <div class="critics-row no-scrollbar">
-                    @for (movie of upcomingMovies(); track movie.id) {
-                    <a [routerLink]="['/movies', movie.id]" class="critics-card">
-                        <div class="critics-thumb">
-                            <img [src]="movie.posterUrl" [alt]="movie.title" />
-                        </div>
-                        <span>{{ movie.title }}</span>
-                    </a>
-                    }
-                </div>
-                } @else {
-                <div class="section-empty">No upcoming releases are available right now.</div>
-                }
-            </section>
-
-            <section class="ai-cta" appScrollReveal [revealDelay]="260">
-                <div class="cta-content">
-                    <span class="material-symbols-outlined">psychology</span>
-                    <h2>Can't decide what to watch?</h2>
-                    <p>Our AI assistant understands your mood. Describe what you are feeling, and we will find the perfect match.</p>
-                    <div class="cta-actions">
-                        <button type="button" class="cta-primary">Try AI Search</button>
-                        <button type="button" class="cta-outline">How it works</button>
-                    </div>
-                </div>
             </section>
         </div>
     }

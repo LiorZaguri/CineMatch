@@ -123,6 +123,7 @@ describe('MovieService', () => {
             receivedTitle = movie.title;
             expect(movie.tmdb_id).toBe(1523145);
             expect(movie.reviews).toEqual([{ rating: 9, content: 'Great', created_at: '2026-03-20T00:00:00Z' }]);
+            expect(movie.review_summary).toEqual({ summary_text: 'Crowd favorite.' });
         });
 
         const req = httpTestingController.expectOne('/CineMatch/movies/1523145/');
@@ -130,6 +131,7 @@ describe('MovieService', () => {
         req.flush({
             ...createTmdbMovie(1523145, 'Detail Movie'),
             reviews: [{ rating: 9, content: 'Great', created_at: '2026-03-20T00:00:00Z' }],
+            summary: 'Crowd favorite.'
         });
 
         expect(receivedTitle).toBe('Detail Movie');
@@ -168,5 +170,23 @@ describe('MovieService', () => {
         });
 
         expect(received?.id).toBe(7);
+    });
+
+    it('getMovieSummary should fetch the summary through the gateway movie route', () => {
+        let receivedSummary = '';
+
+        service.getMovieSummary(44).subscribe((response) => {
+            receivedSummary = response.summary;
+        });
+
+        const req = httpTestingController.expectOne('/CineMatch/movies/ai/44/summary/');
+        expect(req.request.method).toBe('GET');
+
+        req.flush({
+            tmdb_id: 44,
+            summary: 'Shared audience consensus.'
+        });
+
+        expect(receivedSummary).toBe('Shared audience consensus.');
     });
 });
