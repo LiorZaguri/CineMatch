@@ -71,6 +71,62 @@ def get_tmdb_client() -> httpx.AsyncClient:
     return _tmdb_client
 
 
+async def _search_tmdb_person(name: str) -> dict | None:
+    """Search TMDB for a person by name and return the first matching result."""
+    settings = get_tmdb_settings()
+    client = get_tmdb_client()
+    response = await client.get(
+        "search/person",
+        params={
+            "query": name,
+            "page": 1,
+            "include_adult": False,
+            "language": settings.TMDB_LANGUAGE,
+        },
+    )
+    response.raise_for_status()
+    data = response.json()
+    results = data.get("results") or []
+    if not results:
+        return None
+
+    exact = next(
+        (
+            person
+            for person in results
+            if isinstance(person.get("name"), str)
+            and person["name"].strip().lower() == name.strip().lower()
+        ),
+        None,
+    )
+    return exact or results[0]
+
+
+async def _normalize_tmdb_person_ids(values: list[int | str]) -> list[int]:
+    normalized: list[int] = []
+    for item in values:
+        if isinstance(item, int):
+            normalized.append(item)
+            continue
+
+        text = item.strip() if isinstance(item, str) else None
+        if not text:
+            continue
+
+        if text.isdigit():
+            normalized.append(int(text))
+            continue
+
+        person = await _search_tmdb_person(text)
+        if person is None:
+            print(f"[TMDB] Could not resolve person name: {text}", flush=True)
+            continue
+
+        normalized.append(int(person["id"]))
+
+    return normalized
+
+
 async def _fetch_movie_list(category: str, page: int) -> Optional[Dict[str, Any]]:
     """
     Internal helper function to fetch a list of movies for a given category.
@@ -187,6 +243,12 @@ async def discover_movies(ai_response: AISearchResponse) -> Optional[Dict[str, A
     setting = get_tmdb_settings()
     client = get_tmdb_client()
     filters = ai_response.filters
+
+    # Resolve any cast or crew names to TMDB IDs before discovery.
+    if filters.with_cast:
+        filters.with_cast = await _normalize_tmdb_person_ids(filters.with_cast)
+    if filters.with_crew:
+        filters.with_crew = await _normalize_tmdb_person_ids(filters.with_crew)
 
     today = date.today().isoformat()
 

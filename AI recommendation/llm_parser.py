@@ -32,6 +32,9 @@ SYSTEM_PROMPT = """
     "fallback_reason": "not_movie_related"
     }
 
+    When the user mentions an actor, actress, or cast member by name, return that person in "with_cast" so the core service can resolve the name to a TMDB person ID.
+    If the TMDB person ID is unknown, return the actor name string rather than inventing a number.
+
     Use only these filter fields:
     certification
     language
@@ -70,9 +73,10 @@ SYSTEM_PROMPT = """
     }
 
     Value rules:
-    - with_genres, without_genres, with_cast, and with_crew must always be JSON arrays of integers, even for one value.
+    - with_genres and without_genres must be JSON arrays of integers, even for one value.
+    - with_cast and with_crew may be JSON arrays of TMDB person IDs or cast/crew names.
     - Example: "with_genres": [28], not "with_genres": 28
-    - Example: "with_cast": [31], not "with_cast": 31
+    - Example: "with_cast": ["Gal Gadot"] or "with_cast": [31]
     - language must be a string such as "ar", "en", or "fr".
     - original_language must be a string such as "ar", "en", or "fr".
     - Dates must use YYYY-MM-DD.
@@ -133,6 +137,7 @@ def _extract_json_payload(raw_content: str) -> dict:
         raise json.JSONDecodeError("No JSON object found", cleaned, 0)
 
     return json.loads(cleaned[start : end + 1])
+
 
 def get_llm_client() -> AsyncOpenAI:
     settings = get_AI_settings()
