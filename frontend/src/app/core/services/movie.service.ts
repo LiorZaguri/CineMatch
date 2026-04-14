@@ -172,6 +172,7 @@ export class MovieService {
             cast: [],
             durationMinutes: movie.runtime ?? 0,
             tmdb_id: movie.id,
+            trailer: typeof movie.trailer === 'string' ? movie.trailer : undefined,
             streaming_services: Array.isArray(movie.streaming_services) ? movie.streaming_services : [],
             country_code: typeof movie.country_code === 'string' ? movie.country_code : undefined,
             reviews: 'reviews' in movie && Array.isArray(movie.reviews) ? movie.reviews : undefined,

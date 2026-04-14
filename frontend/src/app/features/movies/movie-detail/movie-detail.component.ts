@@ -1,7 +1,9 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { DOCUMENT } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
@@ -18,6 +20,13 @@ interface MovieDetailData extends Movie {
     review_summary?: MovieSummaryPayload | null;
 }
 
+interface MediaCard {
+    kind: 'trailer' | 'image';
+    label: string;
+    imageUrl: string;
+    trailerUrl?: string;
+}
+
 @Component({
     selector: 'app-movie-detail',
     standalone: true,
@@ -25,7 +34,7 @@ interface MovieDetailData extends Movie {
     templateUrl: './movie-detail.component.html',
     styleUrls: ['./movie-detail.component.css']
 })
-export class MovieDetailComponent {
+export class MovieDetailComponent implements OnDestroy {
     readonly reviewsPerPage = 5;
     private readonly reviewPreviewLength = 280;
     private readonly tmdbAvatarBaseUrl = 'https://image.tmdb.org/t/p/w185';
@@ -34,6 +43,10 @@ export class MovieDetailComponent {
     private readonly route = inject(ActivatedRoute);
     private readonly movieService = inject(MovieService);
     private readonly authService = inject(AuthService);
+    private readonly sanitizer = inject(DomSanitizer);
+    private readonly document = inject(DOCUMENT);
+    private previousBodyOverflow = '';
+    private previousDocumentOverflow = '';
 
     // Signals for movie, loading, and error
     readonly movie = signal<Movie | null>(null);
@@ -54,6 +67,10 @@ export class MovieDetailComponent {
     readonly reviewEditContent = signal<string>('');
     readonly reviewEditError = signal<string | null>(null);
     readonly reviewEditSubmitting = signal<boolean>(false);
+    readonly mediaModalOpen = signal<boolean>(false);
+    readonly mediaModalKind = signal<'trailer' | 'image'>('trailer');
+    readonly mediaModalUrl = signal<SafeResourceUrl | string | null>(null);
+    readonly mediaModalTitle = signal<string>('Trailer');
     private readonly regionNames =
         typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function'
             ? new Intl.DisplayNames(['en'], { type: 'region' })
@@ -80,6 +97,43 @@ export class MovieDetailComponent {
         return current?.streaming_services ?? [];
     });
 
+    readonly mediaCards = computed<MediaCard[]>(() => {
+        const current = this.movie();
+        if (!current) {
+            return [];
+        }
+
+        const cards: MediaCard[] = [];
+        if (current.trailer) {
+            cards.push({
+                kind: 'trailer',
+                label: 'Official Trailer',
+                imageUrl: current.backdropUrl || current.posterUrl,
+                trailerUrl: current.trailer,
+            });
+        }
+
+        const seenImages = new Set<string>();
+        const imageCandidates = [
+            { label: 'Backdrop Still', imageUrl: current.backdropUrl || '' },
+            { label: 'Poster Art', imageUrl: current.posterUrl || '' },
+        ];
+
+        for (const candidate of imageCandidates) {
+            if (!candidate.imageUrl || seenImages.has(candidate.imageUrl)) {
+                continue;
+            }
+            seenImages.add(candidate.imageUrl);
+            cards.push({
+                kind: 'image',
+                label: candidate.label,
+                imageUrl: candidate.imageUrl,
+            });
+        }
+
+        return cards;
+    });
+
     // Derived signal: related movies based on primary genre
     readonly relatedMovies = computed(() => {
         const current = this.movie();
@@ -103,6 +157,10 @@ export class MovieDetailComponent {
         });
     }
 
+    ngOnDestroy(): void {
+        this.unlockTrailerModalScroll();
+    }
+
     getCountryLabel(countryCode?: string | null): string {
         const normalizedCode = countryCode?.trim().toUpperCase();
         if (!normalizedCode) {
@@ -114,6 +172,42 @@ export class MovieDetailComponent {
 
     trackStreamingService(_index: number, service: StreamingService): string {
         return service.name;
+    }
+
+    isTrailerCard(card: MediaCard): boolean {
+        return card.kind === 'trailer' && !!card.trailerUrl;
+    }
+
+    openMedia(card: MediaCard): void {
+        if (this.isTrailerCard(card) && card.trailerUrl) {
+            const embedUrl = this.buildYouTubeEmbedUrl(card.trailerUrl);
+            if (!embedUrl) {
+                return;
+            }
+
+            this.mediaModalKind.set('trailer');
+            this.mediaModalTitle.set(card.label);
+            this.mediaModalUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl));
+            this.mediaModalOpen.set(true);
+            this.lockTrailerModalScroll();
+            return;
+        }
+
+        if (card.kind !== 'image' || !card.imageUrl) {
+            return;
+        }
+
+        this.mediaModalKind.set('image');
+        this.mediaModalTitle.set(card.label);
+        this.mediaModalUrl.set(card.imageUrl);
+        this.mediaModalOpen.set(true);
+        this.lockTrailerModalScroll();
+    }
+
+    closeMediaModal(): void {
+        this.mediaModalOpen.set(false);
+        this.mediaModalUrl.set(null);
+        this.unlockTrailerModalScroll();
     }
 
     nextReviewPage(): void {
@@ -310,6 +404,7 @@ export class MovieDetailComponent {
         this.reviewEditContent.set('');
         this.reviewEditError.set(null);
         this.reviewEditSubmitting.set(false);
+        this.closeMediaModal();
 
         this.movieService.getMovieByTmdbId(tmdbId, true).subscribe({
             next: (movie: Movie) => {
@@ -561,5 +656,39 @@ export class MovieDetailComponent {
     private normalizeReviewRating(rating: number): number {
         const normalized = rating > 10 ? rating / 10 : rating;
         return Math.max(0, Math.min(10, normalized));
+    }
+
+    private buildYouTubeEmbedUrl(trailerUrl: string): string | null {
+        try {
+            const url = new URL(trailerUrl);
+            const host = url.hostname.replace(/^www\./, '');
+            let videoId = '';
+
+            if (host === 'youtube.com' || host === 'm.youtube.com') {
+                videoId = url.searchParams.get('v') ?? '';
+            } else if (host === 'youtu.be') {
+                videoId = url.pathname.replace('/', '');
+            }
+
+            if (!videoId) {
+                return null;
+            }
+
+            return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+        } catch {
+            return null;
+        }
+    }
+
+    private lockTrailerModalScroll(): void {
+        this.previousBodyOverflow = this.document.body.style.overflow;
+        this.previousDocumentOverflow = this.document.documentElement.style.overflow;
+        this.document.body.style.overflow = 'hidden';
+        this.document.documentElement.style.overflow = 'hidden';
+    }
+
+    private unlockTrailerModalScroll(): void {
+        this.document.body.style.overflow = this.previousBodyOverflow;
+        this.document.documentElement.style.overflow = this.previousDocumentOverflow;
     }
 }
