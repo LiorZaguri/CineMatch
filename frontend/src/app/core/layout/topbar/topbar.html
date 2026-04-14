@@ -42,21 +42,18 @@
                         aria-label="AI movie search"
                     />
 
-                    @if (aiSearchQuery()) {
-                        <button type="button" class="ai-search-clear" (click)="clearSearch()" aria-label="Clear AI search">
-                            <span class="material-symbols-outlined">close</span>
-                        </button>
-                    } @else {
-                        <button type="submit" class="ai-search-submit" [disabled]="!isAuthenticated()" aria-label="Search with AI">
-                            <span class="material-symbols-outlined">search</span>
-                        </button>
-                    }
+                    <button type="submit" class="ai-search-submit" [disabled]="!isAuthenticated() || !aiSearchQuery()" aria-label="Search with AI">
+                        <span class="material-symbols-outlined">search</span>
+                    </button>
                 </form>
 
                 @if (isSearchOpen()) {
                     <div class="ai-search-dropdown">
                         @if (aiSearchLoading()) {
-                            <div class="ai-search-state">Searching...</div>
+                            <div class="ai-search-state">
+                                <span class="ai-search-spinner" aria-hidden="true"></span>
+                                <span>Searching for AI matches...</span>
+                            </div>
                         } @else if (aiSearchResults().length > 0) {
                             <div class="ai-search-dropdown-head">AI Matches</div>
                             @for (movie of aiSearchResults(); track movie.id) {
@@ -78,7 +75,7 @@
                                 </button>
                             }
                         } @else {
-                            <div class="ai-search-state">Searching...</div>
+                            <div class="ai-search-state">No AI matches found.</div>
                         }
                     </div>
                 }
