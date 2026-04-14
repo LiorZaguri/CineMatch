@@ -16,6 +16,7 @@ class SearchFilters(BaseModel):
     without_genres: list[int] = Field(default_factory=list, description="Genre IDs that must be excluded from the results.")
     with_cast: list[int | str] = Field(default_factory=list, description="Cast member person IDs or names that should appear in the movie.")
     with_crew: list[int | str] = Field(default_factory=list, description="Crew member person IDs or names that should be associated with the movie.")
+    with_keywords: list[int | str] = Field(default_factory=list, description="Keyword IDs or names that should be included in the movie results.")
     year: int | None = Field(default=None, ge=1874, description="General release year to match.")
     primary_release_year: int | None = Field(default=None, ge=1874, description="Primary release year to match.")
     primary_release_date_gte: str | None = Field(default=None, description="Earliest allowed primary release date in YYYY-MM-DD format.")
