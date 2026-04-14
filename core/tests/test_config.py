@@ -58,7 +58,7 @@ def test_database_url_construction(raw_env, settings):
     expected_url = (
         f"postgresql+asyncpg://{raw_env['POSTGRES_USER']}:"
         f"{raw_env['POSTGRES_PASSWORD']}@{raw_env['POSTGRES_HOST']}:"
-        f"{raw_env['POSTGRES_PORT']}/{raw_env['POSTGRES_DB']}"
+        f"{raw_env['POSTGRES_PORT']}/{raw_env['POSTGRES_DB']}?ssl=require"
     )
 
     assert settings.database_url == expected_url

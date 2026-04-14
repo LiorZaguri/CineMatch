@@ -228,6 +228,7 @@ def test_update_review_success(client, mock_db_session):
     review.rating = 7
     review.content = "Original content."
     review.created_at = datetime.now()
+    review.author_details = None
 
     mock_result = MagicMock()
     mock_result.scalars.return_value.first.return_value = review
@@ -331,17 +332,19 @@ def test_get_movie_page_success(mock_get_details, client, mock_db_session):
     }
 
     # Mock DB response for reviews
+    mock_review = MagicMock()
+    mock_review.id = 1
+    mock_review.tmdb_id = tmdb_id
+    mock_review.content = "Great!"
+    mock_review.rating = 10
+    mock_review.user_id = "user-1"
+    mock_review.created_at = datetime.now()
+    mock_review.author_details = None
+
     mock_result = MagicMock()
     # Simulate scalar result of reviews (list of Review objects)
-    mock_result.scalars.return_value.all.return_value = [
-        {
-            "id": 1,
-            "content": "Great!",
-            "rating": 10,
-            "user_id": 1,
-            "created_at": datetime.now()
-        }
-    ]
+    mock_result.scalars.return_value.all.return_value = [mock_review]
+    mock_result.scalars.return_value.first.return_value = None
     mock_db_session.execute.return_value = mock_result
 
     response = client.get(f"/api/movies/{tmdb_id}/")
@@ -355,7 +358,8 @@ def test_get_movie_page_success(mock_get_details, client, mock_db_session):
 
 
 @patch("routers.dependencies.get_movie_reviews")
-def test_get_movie_page_sorts_reviews_by_most_recent(mock_get_movie_reviews, client, mock_db_session):
+@pytest.mark.anyio
+async def test_get_movie_page_sorts_reviews_by_most_recent(mock_get_movie_reviews, client, mock_db_session):
     mock_get_movie_reviews.return_value = {
         "results": [
             {
@@ -369,27 +373,29 @@ def test_get_movie_page_sorts_reviews_by_most_recent(mock_get_movie_reviews, cli
         ]
     }
 
+    mock_review = MagicMock()
+    mock_review.tmdb_id = 999
+    mock_review.content = "Newest local review"
+    mock_review.rating = 9
+    mock_review.user_id = "user-1"
+    mock_review.created_at = datetime(2024, 2, 1, 12, 0, 0)
+    mock_review.author_details = None
+
     mock_result = MagicMock()
-    mock_result.scalars.return_value.all.return_value = [
-        MagicMock(
-            tmdb_id=999,
-            content="Newest local review",
-            rating=9,
-            user_id="user-1",
-            created_at=datetime(2024, 2, 1, 12, 0, 0),
-        )
-    ]
+    mock_result.scalars.return_value.all.return_value = [mock_review]
     mock_db_session.execute.return_value = mock_result
 
     from routers.dependencies import _get_all_reviews
 
-    reviews = asyncio.run(_get_all_reviews(999, mock_db_session))
+    reviews = await _get_all_reviews(999, mock_db_session)
 
     assert reviews[0].content == "Newest local review"
 
 
+@patch("routers.movies._get_streaming_service")
+@patch("routers.movies._get_all_reviews")
 @patch("routers.movies.get_movie_details")
-def test_get_movie_page_not_found(mock_get_details, client, mock_db_session):
+def test_get_movie_page_not_found(mock_get_details, mock_get_all_reviews, mock_get_streaming, client, mock_db_session):
     """
     Test GET /api/movies/{tmdb_id}/ when movie does not exist in TMDB.
     
