@@ -5,6 +5,13 @@ import { MovieService } from '../../../core/services/movie.service';
 import { Movie } from '../../../core/models/movie.models';
 import { ScrollRevealDirective } from '../../../core/directives/scroll-reveal.directive';
 
+interface MovieSection {
+    key: string;
+    title: string;
+    description: string;
+    movies: Movie[];
+}
+
 @Component({
     selector: 'app-movie-list',
     standalone: true,
@@ -40,6 +47,32 @@ export class MovieListComponent implements OnInit, OnDestroy {
     readonly recommendedMovies = computed(() => this.movieService.popular().slice(0, 8));
     readonly topMatches = computed(() => this.movieService.topRated().slice(0, 6));
     readonly upcomingMovies = computed(() => this.movieService.upcoming().slice(0, 8));
+    readonly dashboardSections = computed<MovieSection[]>(() => [
+        {
+            key: 'now-playing',
+            title: 'Now Playing',
+            description: 'Movies that are in theaters and trending now.',
+            movies: this.movieService.nowPlaying().slice(0, 10)
+        },
+        {
+            key: 'popular',
+            title: 'Popular Right Now',
+            description: 'The titles getting the most attention across the catalog.',
+            movies: this.movieService.popular().slice(0, 10)
+        },
+        {
+            key: 'upcoming',
+            title: 'Coming Soon',
+            description: 'Upcoming releases worth keeping an eye on.',
+            movies: this.movieService.upcoming().slice(0, 10)
+        },
+        {
+            key: 'top-rated',
+            title: 'Top Rated',
+            description: 'Critically loved movies with the strongest scores.',
+            movies: this.movieService.topRated().slice(0, 10)
+        }
+    ].filter((section) => section.movies.length > 0));
 
     ngOnInit(): void {
         this.loadMovies();
@@ -66,9 +99,15 @@ export class MovieListComponent implements OnInit, OnDestroy {
         return movie.genre.length > 0 ? movie.genre.slice(0, 2).join(' • ') : 'Featured release';
     }
 
+    getScore(movie: Movie): string {
+        return Number.isFinite(movie.rating) ? movie.rating.toFixed(1) : '0.0';
+    }
 
     scrollRecommendations(direction: 'left' | 'right'): void {
-        const row = this.recommendationsRow?.nativeElement;
+        this.scrollRow(this.recommendationsRow?.nativeElement, direction);
+    }
+
+    scrollRow(row: HTMLDivElement | undefined, direction: 'left' | 'right'): void {
         if (!row) {
             return;
         }

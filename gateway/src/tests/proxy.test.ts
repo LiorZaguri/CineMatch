@@ -105,6 +105,26 @@ describe("movie gateway routes", () => {
       });
     });
 
+    coreApp.patch("/api/movies/review/:review_id/", (req, res) => {
+      const userId = req.header("x-user-id");
+      const reviewId = Number(req.params.review_id);
+
+      if (!userId) {
+        return res.status(401).json({ detail: "Missing user-id" });
+      }
+
+      if (reviewId === 404) {
+        return res.status(404).json({ detail: "Review not found." });
+      }
+
+      res.json({
+        id: reviewId,
+        userId,
+        ...req.body,
+        created_at: "2026-04-14T13:00:00Z",
+      });
+    });
+
     await new Promise<void>((resolve) => {
       coreServer = coreApp.listen(0, () => {
         const address = coreServer.address();
@@ -290,6 +310,40 @@ describe("movie gateway routes", () => {
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("rejects review body with blocked profanity", async () => {
+    const app = await loadApp();
+    const token = makeToken("user-123");
+
+    const res = await request(app)
+      .post("/CineMatch/movies/review/")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        tmdb_id: 123,
+        rating: 8,
+        content: "This movie was fucking terrible and insulting.",
+      })
+      .expect(400);
+
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("strips external links before forwarding a review to core", async () => {
+    const app = await loadApp();
+    const token = makeToken("user-123");
+
+    const res = await request(app)
+      .post("/CineMatch/movies/review/")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        tmdb_id: 123,
+        rating: 8,
+        content: "Great movie review at https://spam.example.com definitely worth watching.",
+      })
+      .expect(201);
+
+    expect(res.body.body.content).toBe("Great movie review at definitely worth watching.");
+  });
+
   it("maps duplicate review error from core", async () => {
     const app = await loadApp();
     const token = makeToken("user-123");
@@ -322,5 +376,26 @@ describe("movie gateway routes", () => {
       .expect(502);
 
     expect(res.body.error.code).toBe("CORE_TMDB_UNAVAILABLE");
+  });
+
+  it("forwards authenticated review updates with user-id", async () => {
+    const app = await loadApp();
+    const token = makeToken("user-123");
+
+    const res = await request(app)
+      .patch("/CineMatch/movies/review/7/")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        rating: 9,
+        content: "Updated review copy.",
+      })
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      id: 7,
+      userId: "user-123",
+      rating: 9,
+      content: "Updated review copy.",
+    });
   });
 });

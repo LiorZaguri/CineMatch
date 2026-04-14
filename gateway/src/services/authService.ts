@@ -179,3 +179,19 @@ export async function updateUserAvatar(userId: string, avatarUrl: string): Promi
     throw err;
   }
 }
+
+export async function getUsersByIds(userIds: string[]): Promise<SafeUser[]> {
+  const uniqueIds = Array.from(new Set(userIds.filter(Boolean)));
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  return prisma.user.findMany({
+    where: {
+      id: {
+        in: uniqueIds,
+      },
+    },
+    select: safeUserSelect,
+  });
+}

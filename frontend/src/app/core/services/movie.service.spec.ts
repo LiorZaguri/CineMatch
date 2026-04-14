@@ -8,7 +8,8 @@ import {
     RawMovieDashboardResponse,
     ReviewResponse,
     TmdbMovie,
-    TmdbMovieListResponse
+    TmdbMovieListResponse,
+    UpdateReviewRequest
 } from '../models/movie.models';
 
 describe('MovieService', () => {
@@ -24,6 +25,7 @@ describe('MovieService', () => {
         poster_path: `/poster-${id}.jpg`,
         backdrop_path: `/backdrop-${id}.jpg`,
         release_date: '2024-01-01',
+        runtime: 123,
         vote_average: 8.1,
     });
 
@@ -79,6 +81,7 @@ describe('MovieService', () => {
         expect(received?.movies.length).toBe(4);
         expect(received?.dashboard.now_playing[0].title).toBe('Now Live');
         expect(received?.dashboard.popular[0].title).toBe('Popular Live');
+        expect(received?.dashboard.now_playing[0].durationMinutes).toBe(123);
         expect(service.movies().map((movie) => movie.id)).toEqual([10, 20, 30, 40]);
         expect(service.loading()).toBe(false);
     });
@@ -122,6 +125,7 @@ describe('MovieService', () => {
         service.getMovieByTmdbId('1523145').subscribe((movie) => {
             receivedTitle = movie.title;
             expect(movie.tmdb_id).toBe(1523145);
+            expect(movie.durationMinutes).toBe(123);
             expect(movie.reviews).toEqual([{ rating: 9, content: 'Great', created_at: '2026-03-20T00:00:00Z' }]);
             expect(movie.review_summary).toEqual({ summary_text: 'Crowd favorite.' });
         });
@@ -170,6 +174,32 @@ describe('MovieService', () => {
         });
 
         expect(received?.id).toBe(7);
+    });
+
+    it('updateReview should patch the gateway review route', () => {
+        const payload: UpdateReviewRequest = {
+            rating: 9,
+            content: 'Updated review text.',
+        };
+        let received: ReviewResponse | undefined;
+
+        service.updateReview(7, payload).subscribe((response) => {
+            received = response;
+        });
+
+        const req = httpTestingController.expectOne('/CineMatch/movies/review/7/');
+        expect(req.request.method).toBe('PATCH');
+        expect(req.request.body).toEqual(payload);
+
+        req.flush({
+            id: 7,
+            tmdb_id: 44,
+            rating: 9,
+            content: 'Updated review text.',
+            created_at: '2026-03-20T00:00:00Z',
+        });
+
+        expect(received?.rating).toBe(9);
     });
 
     it('getMovieSummary should fetch the summary through the gateway movie route', () => {

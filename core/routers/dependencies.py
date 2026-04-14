@@ -2,6 +2,7 @@
 This module defines dependencies used across the FastAPI application.
 """
 
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import Header, HTTPException, status
@@ -9,11 +10,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from models.review import Review
-from schemas.review import TmdbAuthorDetails, TmdbReview
+from schemas.review import TmdbAuthorDetails, TmdbReview, sanitize_review_for_display
 from schemas.tmdbmovie import StreamingService
 from services.tmdb.tmdbservice import get_movie_reviews, get_movie_watch_providers
 
 TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/original/"
+
+
+def _review_sort_key(review: TmdbReview) -> datetime:
+    created_at = review.created_at
+    if created_at is None:
+        return datetime.min.replace(tzinfo=timezone.utc)
+
+    if created_at.tzinfo is None:
+        return created_at.replace(tzinfo=timezone.utc)
+
+    return created_at.astimezone(timezone.utc)
 
 
 async def get_user_id(x_user_id: Annotated[str | None, Header()] = None) -> str:
@@ -82,19 +94,38 @@ async def _get_all_reviews(tmdb_id: int, db: AsyncSession) -> list[TmdbReview]:
     # Map TMDB reviews to the TmdbReview schema
     for rev in raw_tmdb_reviews:
         # TMDB review items don't typically include the movie ID, so we inject it
-        all_reviews.append(TmdbReview(**{**rev, "tmdb_id": tmdb_id}))
+        author_details = rev.get("author_details", {}) if isinstance(rev.get("author_details"), dict) else {}
+        all_reviews.append(TmdbReview(**{
+            **rev,
+            "id": None,
+            "tmdb_id": tmdb_id,
+            "rating": author_details.get("rating"),
+            "content": sanitize_review_for_display(rev.get("content", "")),
+            "author_details": {
+                **author_details,
+                "name": author_details.get("name") or rev.get("author"),
+                "username": author_details.get("username") or rev.get("author"),
+                "source": "tmdb",
+            },
+        }))
 
     # Map local database reviews to the TmdbReview schema
     for lr in local_reviews:
         all_reviews.append(TmdbReview(
+            id=lr.id,
             tmdb_id=lr.tmdb_id,
-            content=lr.content,
+            rating=float(lr.rating),
+            content=sanitize_review_for_display(lr.content),
+            created_at=lr.created_at,
             author_details=TmdbAuthorDetails(
-                name="Local User",
-                rating=float(lr.rating)
-            )
+                name="CineMatch User",
+                rating=float(lr.rating),
+                user_id=str(lr.user_id),
+                source="local",
+            ),
         ))
         
+    all_reviews.sort(key=_review_sort_key, reverse=True)
     return all_reviews
 
 

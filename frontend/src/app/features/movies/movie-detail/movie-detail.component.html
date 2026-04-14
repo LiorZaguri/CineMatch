@@ -53,22 +53,11 @@
                     </span>
                     <span class="meta-item rating">
                         <span class="material-symbols-outlined">star</span>
-                        {{ movieData.rating }}
+                        {{ movieData.rating | number:'1.1-1' }}
                     </span>
-                    <span class="meta-tag">{{ movieData.genre[0] }}</span>
                 </div>
 
                 <div class="detail-hero__actions">
-                    <a [routerLink]="['/movies', movieData.id]" [fragment]="'where-to-watch'"
-                        class="action-btn action-btn--primary">
-                        <span class="material-symbols-outlined">tv</span>
-                        Where to Watch
-                    </a>
-                    <a [routerLink]="['/movies', movieData.id]" [fragment]="'ai-summary'"
-                        class="action-btn action-btn--secondary">
-                        <span class="material-symbols-outlined">auto_awesome</span>
-                        AI Summary
-                    </a>
                     <button class="action-btn action-btn--secondary" type="button">
                         <span class="material-symbols-outlined">add</span>
                         Add to List
@@ -90,15 +79,25 @@
 
                     <article class="detail-block" id="where-to-watch">
                         <h2 class="detail-heading">Where to Watch</h2>
-                        <p class="provider-note">Providers coming soon. We are finalizing streaming availability for
-                            this title.</p>
+                        @if (streamingServices().length > 0) {
+                        <p class="provider-note">
+                            Streaming availability for {{ getCountryLabel(movieData.country_code) }}.
+                        </p>
                         <div class="provider-list">
-                            <button class="provider-chip" type="button" disabled>Netflix</button>
-                            <button class="provider-chip" type="button" disabled>Prime Video</button>
-                            <button class="provider-chip" type="button" disabled>Disney+</button>
-                            <button class="provider-chip" type="button" disabled>Max</button>
-                            <button class="provider-chip" type="button" disabled>Apple TV</button>
+                            @for (provider of streamingServices(); track trackStreamingService($index, provider)) {
+                            <div class="provider-chip">
+                                @if (provider.logo_path) {
+                                <img [src]="provider.logo_path" [alt]="provider.name + ' logo'" class="provider-chip__logo">
+                                }
+                                <span>{{ provider.name }}</span>
+                            </div>
+                            }
                         </div>
+                        } @else {
+                        <p class="provider-note">
+                            No streaming providers are currently available for {{ getCountryLabel(movieData.country_code) }}.
+                        </p>
+                        }
                     </article>
 
                     <article class="detail-block">
@@ -229,27 +228,92 @@
                             </div>
                             }
 
-                            @for (review of displayReviews(); track review.id ?? $index; let reviewIndex = $index) {
+                            @for (review of paginatedReviews(); track review.id ?? $index; let reviewIndex = $index) {
                             <div class="review-card">
                                 <div class="review-header">
-                                    <div class="review-avatar">
-                                        <span class="material-symbols-outlined">person</span>
-                                    </div>
-                                    <div>
-                                        <p class="review-name">CineMatch Viewer</p>
-                                        <div class="review-stars">
-                                            @for (star of starsForReview(review.rating); track star) {
-                                            <span class="material-symbols-outlined">star</span>
+                                    <div class="review-header__main">
+                                        <div class="review-avatar">
+                                            @if (getReviewAvatarUrl(review); as avatarUrl) {
+                                            <img [src]="avatarUrl" [alt]="getReviewAuthorName(review)" class="review-avatar__image">
+                                            } @else {
+                                            <span class="review-avatar__initials">{{ getReviewInitials(review) }}</span>
+                                            }
+                                        </div>
+                                        <div class="review-author">
+                                            <p class="review-name">{{ getReviewAuthorName(review) }}</p>
+                                            <p class="review-source">{{ getReviewSourceLabel(review) }}</p>
+                                            @if (formatReviewTimestamp(review); as reviewTimestamp) {
+                                            <p class="review-time">{{ reviewTimestamp | date:'MMM d, y • h:mm a' }}</p>
                                             }
                                         </div>
                                     </div>
+                                    <div class="review-header__side">
+                                        <div class="review-stars">
+                                            @for (star of starsForReview(getReviewRating(review)); track star) {
+                                            <span class="material-symbols-outlined">star</span>
+                                            }
+                                        </div>
+                                        @if (canEditReview(review)) {
+                                        <button class="review-edit" type="button" (click)="openEditReview(review)">
+                                            Edit
+                                        </button>
+                                        }
+                                    </div>
                                 </div>
+                                @if (isEditingReview(review)) {
+                                <div class="review-edit-form">
+                                    <div class="review-edit-form__rating">
+                                        @for (rating of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; track rating) {
+                                        <button
+                                            class="review-composer-card__rating-chip"
+                                            [class.review-composer-card__rating-chip--active]="reviewEditRating() === rating"
+                                            type="button"
+                                            (click)="setReviewEditRating(rating)">
+                                            {{ rating }}
+                                        </button>
+                                        }
+                                    </div>
+                                    <textarea
+                                        class="review-composer-card__textarea"
+                                        rows="3"
+                                        maxlength="1000"
+                                        [ngModel]="reviewEditContent()"
+                                        (ngModelChange)="reviewEditContent.set($event)"
+                                        (input)="autoResizeReviewComposer($event)"></textarea>
+                                    @if (reviewEditError(); as editError) {
+                                    <p class="review-composer-card__error">{{ editError }}</p>
+                                    }
+                                    <div class="review-edit-form__actions">
+                                        <button class="review-cta review-composer-card__submit" type="button" [disabled]="reviewEditSubmitting()" (click)="saveEditedReview(review)">
+                                            {{ reviewEditSubmitting() ? 'Saving...' : 'Save changes' }}
+                                        </button>
+                                        <button class="review-composer-card__cancel" type="button" [disabled]="reviewEditSubmitting()" (click)="cancelEditReview()">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                                } @else {
                                 <p class="review-body">{{ getReviewContent(review, reviewIndex) }}</p>
                                 @if (isReviewTruncated(review)) {
                                 <button class="review-read-more" type="button" (click)="toggleReviewExpanded(review, reviewIndex)">
                                     {{ isReviewExpanded(review, reviewIndex) ? 'Read less' : 'Read more' }}
                                 </button>
                                 }
+                                }
+                            </div>
+                            }
+
+                            @if (displayReviews().length > reviewsPerPage) {
+                            <div class="review-pagination">
+                                <button class="review-pagination__button" type="button" [disabled]="reviewPage() === 1" (click)="previousReviewPage()">
+                                    Previous
+                                </button>
+                                <p class="review-pagination__status">
+                                    Page {{ reviewPage() }} of {{ totalReviewPages() }}
+                                </p>
+                                <button class="review-pagination__button" type="button" [disabled]="reviewPage() === totalReviewPages()" (click)="nextReviewPage()">
+                                    Next
+                                </button>
                             </div>
                             }
                         </div>

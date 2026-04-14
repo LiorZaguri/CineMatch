@@ -2,6 +2,17 @@ import { z, ZodError } from "zod";
 import { Request, Response, NextFunction} from "express";
 import { AuthenticatedRequest } from "../types/authRequest";
 import { env } from "../config/env";
+import { getUsersByIds } from "../services/authService";
+
+  const reviewExternalLinkPattern = /\b(?:https?:\/\/\S+|www\.\S+|(?:[a-z0-9-]+\.)+(?:com|net|org|io|co|tv|app|dev|info|biz|me|gg|xyz)(?:\/\S*)?)/gi;
+  const reviewBadWordsPattern = /\b(?:asshole|bastard|bitch|bullshit|cunt|dick|douchebag|fuck|fucker|fucking|motherfucker|piss(?:ed)?\s*off|shit|slut|whore)\b/i;
+
+  function sanitizeReviewContent(content: string): string {
+    return content
+      .replace(reviewExternalLinkPattern, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
 
   
   const pageQuerySchema = z.object({
@@ -11,11 +22,32 @@ import { env } from "../config/env";
   const tmdbIdParamsSchema = z.object({
     tmdb_id: z.coerce.number().int().min(1),
   });
+
+  const reviewIdParamsSchema = z.object({
+    review_id: z.coerce.number().int().min(1),
+  });
   
   const reviewBodySchema = z.object({
     tmdb_id: z.coerce.number().int().min(1),
     rating: z.number().int().min(1).max(10),
-    content: z.string().trim().min(10).max(1000),
+    content: z.string()
+      .trim()
+      .transform(sanitizeReviewContent)
+      .pipe(z.string().min(10).max(1000))
+      .refine((value) => !reviewBadWordsPattern.test(value), {
+        message: "Review contains inappropriate language",
+      }),
+  });
+
+  const reviewUpdateBodySchema = z.object({
+    rating: z.number().int().min(1).max(10),
+    content: z.string()
+      .trim()
+      .transform(sanitizeReviewContent)
+      .pipe(z.string().min(10).max(1000))
+      .refine((value) => !reviewBadWordsPattern.test(value), {
+        message: "Review contains inappropriate language",
+      }),
   });
 
   const aiSearchBodySchema = z.object({
@@ -146,6 +178,60 @@ import { env } from "../config/env";
     return res.status(mapped.status).json(mapped.body);
   }
 
+  async function enrichMovieDetailsPayload(payload: unknown) {
+    if (!payload || typeof payload !== "object" || !("reviews" in payload) || !Array.isArray((payload as { reviews?: unknown[] }).reviews)) {
+      return payload;
+    }
+
+    const moviePayload = payload as {
+      reviews: Array<{
+        author_details?: {
+          user_id?: string;
+          source?: string;
+          name?: string | null;
+          avatar_url?: string | null;
+        };
+      }>;
+    };
+
+    const userIds = moviePayload.reviews
+      .map((review) => review.author_details?.source === "local" ? review.author_details?.user_id : undefined)
+      .filter((userId): userId is string => typeof userId === "string" && userId.length > 0);
+
+    if (userIds.length === 0) {
+      return payload;
+    }
+
+    let users = [];
+    try {
+      users = await getUsersByIds(userIds);
+    } catch {
+      return payload;
+    }
+    const usersById = new Map(users.map((user) => [user.id, user]));
+
+    return {
+      ...moviePayload,
+      reviews: moviePayload.reviews.map((review) => {
+        const userId = review.author_details?.user_id;
+        const user = userId ? usersById.get(userId) : undefined;
+
+        if (!user || review.author_details?.source !== "local") {
+          return review;
+        }
+
+        return {
+          ...review,
+          author_details: {
+            ...review.author_details,
+            name: user.displayName,
+            avatar_url: user.avatarUrl,
+          },
+        };
+      }),
+    };
+  }
+
   export async function getDashboard(req: Request,res: Response,next: NextFunction) {
     try {
       const { status, payload } = await forwardToCore("/api/movies/dashboard/");
@@ -219,7 +305,8 @@ import { env } from "../config/env";
     try {
       const { tmdb_id } = tmdbIdParamsSchema.parse(req.params);
       const { status, payload } = await forwardToCore(`/api/movies/${tmdb_id}/`, req);
-      return handleCoreResponse(res, status, payload);
+      const enrichedPayload = status >= 200 && status < 300 ? await enrichMovieDetailsPayload(payload) : payload;
+      return handleCoreResponse(res, status, enrichedPayload);
     } catch (error) {
       if (error instanceof ZodError) {
         return sendValidationError(res, error);
@@ -266,6 +353,41 @@ import { env } from "../config/env";
         body: JSON.stringify(body),
       });
   
+      return handleCoreResponse(res, status, payload);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return sendValidationError(res, error);
+      }
+      next(error);
+    }
+  }
+
+  export async function updateReview(req: Request, res: Response, next: NextFunction) {
+    try {
+      const authReq = req as AuthenticatedRequest;
+
+      if (!authReq.user?.userId) {
+        return res.status(401).json({
+          error: {
+            code: "UNAUTHORIZED",
+            message: "Authentication is required",
+            details: null,
+          },
+        });
+      }
+
+      const { review_id } = reviewIdParamsSchema.parse(req.params);
+      const body = reviewUpdateBodySchema.parse(req.body);
+
+      const { status, payload } = await forwardToCore(`/api/movies/review/${review_id}/`, undefined, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": authReq.user.userId,
+        },
+        body: JSON.stringify(body),
+      });
+
       return handleCoreResponse(res, status, payload);
     } catch (error) {
       if (error instanceof ZodError) {

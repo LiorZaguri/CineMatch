@@ -11,6 +11,7 @@ import {
     MovieDashboardResponse,
     RawMovieDashboardResponse,
     CreateReviewRequest,
+    UpdateReviewRequest,
     ReviewResponse,
     ReviewSummaryResponse,
     TmdbMovie,
@@ -119,6 +120,10 @@ export class MovieService {
         return this.http.post<ReviewResponse>(`${this.gatewayMovieUrl}/review/`, payload);
     }
 
+    updateReview(reviewId: number, payload: UpdateReviewRequest): Observable<ReviewResponse> {
+        return this.http.patch<ReviewResponse>(`${this.gatewayMovieUrl}/review/${reviewId}/`, payload);
+    }
+
     getMovieSummary(tmdbId: number): Observable<ReviewSummaryResponse> {
         return this.http.get<ReviewSummaryResponse>(`${this.gatewayMovieUrl}/ai/${tmdbId}/summary/`);
     }
@@ -165,8 +170,10 @@ export class MovieService {
             genre: [],
             director: 'CineMatch',
             cast: [],
-            durationMinutes: 0,
+            durationMinutes: movie.runtime ?? 0,
             tmdb_id: movie.id,
+            streaming_services: Array.isArray(movie.streaming_services) ? movie.streaming_services : [],
+            country_code: typeof movie.country_code === 'string' ? movie.country_code : undefined,
             reviews: 'reviews' in movie && Array.isArray(movie.reviews) ? movie.reviews : undefined,
             review_summary: movie.review_summary ?? (movie.summary ? { summary_text: movie.summary } : null)
         };
