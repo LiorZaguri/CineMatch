@@ -92,6 +92,53 @@
                 <div class="section-empty">No popular movies are available right now.</div>
                 }
             </section>
+
+            @for (section of dashboardSections(); track section.key) {
+            <section class="catalog-section" appScrollReveal [revealDelay]="100">
+                <div class="section-head">
+                    <div class="section-title-wrap">
+                        <h3>{{ section.title }}</h3>
+                    </div>
+                    <p class="section-copy">{{ section.description }}</p>
+                </div>
+
+                <div class="carousel-shell">
+                    <button
+                        type="button"
+                        class="carousel-nav carousel-nav-left"
+                        (click)="scrollRow(catalogRow, 'left')"
+                        [attr.aria-label]="'Scroll ' + section.title + ' left'"
+                    >
+                        <span class="material-symbols-outlined">chevron_left</span>
+                    </button>
+
+                    <div #catalogRow class="scroll-row no-scrollbar catalog-row">
+                        @for (movie of section.movies; track movie.id) {
+                        <a [routerLink]="['/movies', movie.id]" class="poster-card catalog-card">
+                            <div class="poster-wrap">
+                                <img [src]="movie.posterUrl" [alt]="movie.title" />
+                                <div class="rating-pill">
+                                    <span class="material-symbols-outlined">star</span>
+                                    <span>{{ getScore(movie) }}</span>
+                                </div>
+                            </div>
+                            <h4>{{ movie.title }}</h4>
+                            <p>{{ getGenres(movie) }} • {{ getYear(movie) }}</p>
+                        </a>
+                        }
+                    </div>
+
+                    <button
+                        type="button"
+                        class="carousel-nav carousel-nav-right"
+                        (click)="scrollRow(catalogRow, 'right')"
+                        [attr.aria-label]="'Scroll ' + section.title + ' right'"
+                    >
+                        <span class="material-symbols-outlined">chevron_right</span>
+                    </button>
+                </div>
+            </section>
+            }
         </div>
     }
 
