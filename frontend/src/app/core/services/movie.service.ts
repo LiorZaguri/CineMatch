@@ -168,8 +168,9 @@ export class MovieService {
             releaseDate: movie.release_date || '',
             rating: movie.vote_average ?? 0,
             genre: [],
-            director: 'CineMatch',
-            cast: [],
+            director: '',
+            cast: Array.isArray(movie.cast) ? [...movie.cast].sort((a, b) => a.order - b.order) : [],
+
             durationMinutes: movie.runtime ?? 0,
             tmdb_id: movie.id,
             trailer: typeof movie.trailer === 'string' ? movie.trailer : undefined,

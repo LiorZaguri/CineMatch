@@ -375,6 +375,14 @@ export class MovieDetailComponent implements OnDestroy {
         return `${this.tmdbAvatarBaseUrl}/${normalizedPath}`;
     }
 
+    getActorProfileUrl(profilePath: string | null | undefined): string | null {
+        if (!profilePath) {
+            return null;
+        }
+        const normalizedPath = profilePath.startsWith('/') ? profilePath.slice(1) : profilePath;
+        return `${this.tmdbAvatarBaseUrl}/${normalizedPath}`;
+    }
+
     getReviewInitials(review: MovieReview): string {
         const initials = this.getReviewAuthorName(review)
             .split(' ')

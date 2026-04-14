@@ -328,24 +328,20 @@
                 <aside class="detail-sidebar">
                     <div class="sidebar-card">
                         <h3 class="sidebar-title">Cast &amp; Crew</h3>
-                        <div class="crew-list">
+                        <div class="crew-list crew-list--scrollable">
+                            @for (actor of movieData.cast; track actor.id) {
                             <div class="crew-item">
                                 <div class="crew-avatar">
+                                    @if (getActorProfileUrl(actor.profile_path); as profileUrl) {
+                                    <img [src]="profileUrl" [alt]="actor.name" class="actor-img">
+                                    } @else {
                                     <span class="material-symbols-outlined">person</span>
+                                    }
                                 </div>
                                 <div class="crew-meta">
-                                    <p class="crew-name">{{ movieData.director }}</p>
-                                    <p class="crew-role">Director / Producer</p>
-                                </div>
-                            </div>
-                            @for (actor of movieData.cast | slice:0:2; track actor) {
-                            <div class="crew-item">
-                                <div class="crew-avatar">
-                                    <span class="material-symbols-outlined">person</span>
-                                </div>
-                                <div class="crew-meta">
-                                    <p class="crew-name">{{ actor }}</p>
-                                    <p class="crew-role">Cast</p>
+                                    <p class="crew-name">{{ actor.name }}</p>
+                                    <p class="crew-role">{{ actor.character }}</p>
+                                    <p class="crew-dept">{{ actor.known_for_department }}</p>
                                 </div>
                             </div>
                             }

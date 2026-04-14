@@ -75,6 +75,18 @@ class StreamingService(BaseModel):
     logo_path: Optional[str] = Field(None, description="The path to the provider's logo")
 
 
+class CastMember(BaseModel):
+    """
+    Represents a cast member of a movie.
+    """
+    id: int = Field(..., description="Unique identifier for the cast member")
+    known_for_department: str = Field(..., description="The department they are known for (e.g., Acting)")
+    name: str = Field(..., description="The name of the cast member")
+    profile_path: Optional[str] = Field(None, description="Path to the profile image")
+    character: str = Field(..., description="The character they played in the movie")
+    order: int = Field(..., description="The order in the cast list")
+
+
 class MovieDetailWithReviews(TmdbMovie):
     """
     Extended movie schema that includes a list of user reviews.
@@ -86,4 +98,6 @@ class MovieDetailWithReviews(TmdbMovie):
     
     streaming_services: List[StreamingService] = Field(default_factory=list, description="List of streaming services available for the movie")
     
+    cast: List[CastMember] = Field(default_factory=list, description="List of top billed cast members for the movie")
+
     country_code: str = Field("US", description="The country code used for localized content")

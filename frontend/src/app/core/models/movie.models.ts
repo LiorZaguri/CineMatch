@@ -19,6 +19,15 @@ export interface StreamingService {
     logo_path?: string | null;
 }
 
+export interface CastMember {
+    id: number;
+    known_for_department: string;
+    name: string;
+    profile_path?: string | null;
+    character: string;
+    order: number;
+}
+
 export interface Movie {
     id: number;
     tmdb_id?: number;
@@ -29,7 +38,7 @@ export interface Movie {
     rating: number;
     genre: string[];
     director: string;
-    cast: string[];
+    cast: CastMember[];
     durationMinutes: number;
     backdropUrl?: string;
     trailer?: string;
@@ -57,6 +66,7 @@ export interface TmdbMovie {
     country_code?: string;
     reviews?: MovieReview[];
     summary?: string | null;
+    cast?: CastMember[];
     review_summary?: {
         summary_text?: string;
     } | null;

@@ -72,9 +72,6 @@ def get_tmdb_client() -> httpx.AsyncClient:
     return _tmdb_client
 
 
-
-
-
 async def _fetch_movie_list(category: str, page: int) -> Optional[Dict[str, Any]]:
     """
     Internal helper function to fetch a list of movies for a given category.
@@ -329,6 +326,43 @@ async def get_movie_reviews(tmdb_id: int, page: int = 1):
     # TMDB didn't even respond (e.g., DNS failure, timeout)
     except httpx.RequestError as e:
         print(f"[TMDB] Network error while fetching reviews for {tmdb_id}: {e}", flush=True)
+        return None
+
+
+async def get_movie_credits(tmdb_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves the cast and crew for a specific movie by its TMDB ID.
+    Returns only the first 25 cast members to keep the payload manageable.
+
+    Args:
+        tmdb_id (int): The unique The Movie Database (TMDB) identifier.
+
+    Returns:
+        Optional[Dict[str, Any]]: A dictionary containing the sliced cast list,
+                                  or None if the movie is not found or an error occurs.
+    """
+    client = get_tmdb_client()
+
+    try:
+        response = await client.get(
+            f"movie/{tmdb_id}/credits",
+            params={"language": "en-US"},
+        )
+
+        if response.status_code == status.HTTP_404_NOT_FOUND:
+            return None
+
+        response.raise_for_status()
+        data = response.json()
+
+        # Slice the cast to the first 25 members
+        if "cast" in data and isinstance(data["cast"], list):
+            data["cast"] = data["cast"][:25]
+
+        return data
+
+    except (httpx.HTTPStatusError, httpx.RequestError) as e:
+        print(f"[TMDB] Error while fetching credits for {tmdb_id}: {e}", flush=True)
         return None
 
 

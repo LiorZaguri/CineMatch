@@ -32,6 +32,7 @@ from schemas.tmdbmovie import MovieDashboard, MovieDetailWithReviews, TmdbMovie,
 from services.rabbitmq.rpc import recommendation_rpc, summary_rpc
 from services.tmdb.tmdbservice import (
     discover_movies,
+    get_movie_credits,
     get_movie_details,
     get_now_playing_movies,
     get_popular_movies,
@@ -480,35 +481,51 @@ async def get_movie_page(
     country_code: str = Depends(get_user_country_code)
 ):
     """
-    Fetches detailed information for a movie along with aggregated reviews.
+    Fetches detailed information for a movie along with aggregated reviews, 
+    AI summaries, and cast information.
 
-    Performs a concurrent fetch:
+    Performs a concurrent fetch to minimize response time:
     1. Calls TMDB API for movie metadata.
     2. Aggregates reviews from TMDB and local database.
-    3. Queries local database for cached AI summary.
+    3. Fetches movie cast from TMDB.
+    4. Queries local database for cached AI summary.
+    5. Fetches localized streaming availability.
     """
-    # Run the tasks
-    movie_data = await get_movie_details(tmdb_id)
-    reviews = await _get_all_reviews(tmdb_id, db)
-    summary_query = select(ReviewSummary).where(ReviewSummary.tmdb_id == tmdb_id)
-    db_result = await db.execute(summary_query)
+    # Run all data retrieval tasks concurrently
+    movie_data, reviews, credits_data, db_result, streaming_services = await asyncio.gather(
+        get_movie_details(tmdb_id),
+        _get_all_reviews(tmdb_id, db),
+        get_movie_credits(tmdb_id),
+        db.execute(select(ReviewSummary).where(ReviewSummary.tmdb_id == tmdb_id)),
+        _get_streaming_service(tmdb_id, country_code),
+        return_exceptions=True
+    )
 
-    streaming_services = await _get_streaming_service(tmdb_id, country_code)
-
-    
-    if not movie_data:
+    # Check for critical failure in movie metadata fetch
+    if isinstance(movie_data, Exception) or not movie_data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Movie not found")
 
-    # Extract summary if it exists
-    summary_obj = db_result.scalars().first()
-    summary_text = summary_obj.summary_text if summary_obj else None
+    # Extract summary if it exists (handling potential DB exceptions)
+    summary_text = None
+    if not isinstance(db_result, Exception):
+        summary_obj = db_result.scalars().first()
+        summary_text = summary_obj.summary_text if summary_obj else None
 
+    # Safely extract cast list
+    cast = []
+    if not isinstance(credits_data, Exception) and credits_data:
+        cast = credits_data.get("cast", [])
 
-    # Combine data
+    # Ensure other aggregated data defaults to empty lists on failure
+    final_reviews = reviews if not isinstance(reviews, Exception) else []
+    final_streaming = streaming_services if not isinstance(streaming_services, Exception) else []
+
+    # Combine all data into the response schema format
     return {
         **movie_data,
-        "reviews": reviews,
+        "reviews": final_reviews,
         "summary": summary_text,
-        "streaming_services": streaming_services,
+        "streaming_services": final_streaming,
+        "cast": cast,
         "country_code": country_code
     }

@@ -653,6 +653,27 @@
     gap: 1.3rem;
 }
 
+.crew-list--scrollable {
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--detail-accent) transparent;
+}
+
+.crew-list--scrollable::-webkit-scrollbar {
+    width: 4px;
+}
+
+.crew-list--scrollable::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.crew-list--scrollable::-webkit-scrollbar-thumb {
+    background: var(--detail-accent);
+    border-radius: 10px;
+}
+
 .crew-item {
     display: flex;
     gap: 0.9rem;
@@ -671,6 +692,13 @@
 .crew-avatar .material-symbols-outlined,
 .review-avatar .material-symbols-outlined {
     color: #fff;
+}
+
+.actor-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
 .crew-avatar {
@@ -692,6 +720,15 @@
     text-transform: uppercase;
     letter-spacing: 0.12em;
     color: var(--color-text-tertiary);
+}
+
+.crew-dept {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--detail-accent);
+    margin-top: 0.1rem;
+    font-weight: 600;
 }
 
 .production-list {

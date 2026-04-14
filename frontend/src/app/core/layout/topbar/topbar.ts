@@ -180,7 +180,7 @@ export class TopbarComponent implements OnDestroy {
             releaseDate: movie.release_date || '',
             rating: movie.vote_average ?? 0,
             genre: [],
-            director: 'CineMatch',
+            director: '',
             cast: [],
             durationMinutes: 0,
             review_summary: null
