@@ -61,6 +61,14 @@ class MovieDashboard(BaseModel):
     errors: List[str] = Field(default_factory=list, description="Error indicator for each list")
 
 
+class StreamingService(BaseModel):
+    """
+    Represents a streaming service provider.
+    """
+    name: str = Field(..., description="The name of the streaming service")
+    logo_path: Optional[str] = Field(None, description="The path to the provider's logo")
+
+
 class MovieDetailWithReviews(TmdbMovie):
     """
     Extended movie schema that includes a list of user reviews.
@@ -69,3 +77,7 @@ class MovieDetailWithReviews(TmdbMovie):
     reviews: List[TmdbReview] = Field(default_factory=list, description="List of reviews associated with this movie")
 
     summary: Optional[str] = Field(None, description="Optional AI-generated summary of the reviews")
+    
+    streaming_services: List[StreamingService] = Field(default_factory=list, description="List of streaming services available for the movie")
+    
+    country_code: str = Field("US", description="The country code used for localized content")

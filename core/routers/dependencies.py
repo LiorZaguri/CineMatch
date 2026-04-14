@@ -10,7 +10,10 @@ from sqlalchemy.future import select
 
 from models.review import Review
 from schemas.review import TmdbAuthorDetails, TmdbReview
-from services.tmdb.tmdbservice import get_movie_reviews
+from schemas.tmdbmovie import StreamingService
+from services.tmdb.tmdbservice import get_movie_reviews, get_movie_watch_providers
+
+TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/original/"
 
 
 async def get_user_id(x_user_id: Annotated[str | None, Header()] = None) -> str:
@@ -36,6 +39,22 @@ async def get_user_id(x_user_id: Annotated[str | None, Header()] = None) -> str:
         )
 
     return x_user_id
+
+
+async def get_user_country_code(CF_IPCountry: Annotated[str | None, Header()] = None) -> str:
+    """
+    Dependency to retrieve the user's country code from the request headers.
+
+    This dependency expects the API Gateway to have forwarded the user's
+    country code via the 'CF-IPCountry' header. Defaults to 'US'.
+
+    Args:
+        CF_IPCountry (str | None): The country code extracted from the 'CF-IPCountry' header.
+
+    Returns:
+        str: The user's country code or 'US' if not present.
+    """
+    return CF_IPCountry or "US"
 
 
 async def _get_all_reviews(tmdb_id: int, db: AsyncSession) -> list[TmdbReview]:
@@ -77,3 +96,38 @@ async def _get_all_reviews(tmdb_id: int, db: AsyncSession) -> list[TmdbReview]:
         ))
         
     return all_reviews
+
+
+async def _get_streaming_service(tmdb_id: int, country_code: str) -> list[StreamingService]:
+    """
+    Helper function to fetch streaming services (flatrate providers) for a movie 
+    in a specific country.
+
+    Args:
+        tmdb_id (int): The unique TMDB identifier for the movie.
+        country_code (str): The ISO 3166-1 country code.
+
+    Returns:
+        list[StreamingService]: A list of streaming services available in that country.
+    """
+    data = await get_movie_watch_providers(tmdb_id)
+    if not data or "results" not in data:
+        return []
+
+    results = data.get("results", {})
+    country_data = results.get(country_code.upper())
+
+    if not country_data or "flatrate" not in country_data:
+        return []
+
+    streaming_services = []
+    for provider in country_data.get("flatrate", []):
+        name = provider.get("provider_name")
+        logo_path = provider.get("logo_path")
+        
+        if name:
+            # Construct full URL for logo if it exists
+            full_logo_url = f"{TMDB_IMAGE_BASE_URL}{logo_path.lstrip('/')}" if logo_path else None
+            streaming_services.append(StreamingService(name=name, logo_path=full_logo_url))
+            
+    return streaming_services

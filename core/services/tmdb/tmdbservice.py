@@ -268,3 +268,30 @@ async def get_movie_reviews(tmdb_id: int, page: int = 1):
     except httpx.RequestError as e:
         print(f"[TMDB] Network error while fetching reviews for {tmdb_id}: {e}", flush=True)
         return None
+
+
+async def get_movie_watch_providers(tmdb_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves watch providers for a specific movie by its TMDB ID.
+
+    Args:
+        tmdb_id (int): The unique The Movie Database (TMDB) identifier.
+
+    Returns:
+        Optional[Dict[str, Any]]: A dictionary containing watch provider details if found,
+                                  or None if the movie does not exist or an error occurs.
+    """
+    client = get_tmdb_client()
+
+    try:
+        response = await client.get(f"movie/{tmdb_id}/watch/providers")
+
+        if response.status_code == status.HTTP_404_NOT_FOUND:
+            return None
+
+        response.raise_for_status()
+        return response.json()
+
+    except (httpx.HTTPStatusError, httpx.RequestError) as e:
+        print(f"[TMDB] Error while fetching watch providers for {tmdb_id}: {e}", flush=True)
+        return None
