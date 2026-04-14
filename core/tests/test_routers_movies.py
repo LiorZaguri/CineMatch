@@ -19,7 +19,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Import dependencies to override
 from db.db import get_db
 from routers.dependencies import get_user_id
-from schemas.review import sanitize_review_for_display
+from schemas.review import (
+    is_review_usable_for_summary,
+    normalize_summary_text,
+    sanitize_review_for_display,
+)
 
 # Import the main app (assuming it mounts the router)
 from src.main import app
@@ -286,6 +290,24 @@ def test_sanitize_review_for_display_removes_links_and_redacts_profanity():
     assert "*******" in sanitized
 
 
+def test_is_review_usable_for_summary_rejects_short_or_spam_content():
+    assert is_review_usable_for_summary("Great movie!") is False
+    assert is_review_usable_for_summary(
+        "Visit my site for the full review and use promo code SAVE20 for a discount on merch."
+    ) is False
+    assert is_review_usable_for_summary(
+        "The pacing is slow at first, but the performances and final act make the story land well."
+    ) is True
+
+
+def test_normalize_summary_text_trims_to_complete_sentence():
+    raw_summary = "Audience consensus is positive. The cast is charming and the pacing is strong but the final act"
+
+    normalized = normalize_summary_text(raw_summary, max_words=600)
+
+    assert normalized == "Audience consensus is positive."
+
+
 @patch("routers.movies.get_movie_details")
 def test_get_movie_page_success(mock_get_details, client, mock_db_session):
     """
@@ -377,3 +399,65 @@ def test_get_movie_page_not_found(mock_get_details, client, mock_db_session):
     
     response = client.get("/api/movies/0/")
     assert response.status_code == 404
+
+
+@patch("routers.movies.summary_rpc.call", new_callable=AsyncMock)
+@patch("routers.movies._get_all_reviews", new_callable=AsyncMock)
+@patch("routers.movies.get_movie_details", new_callable=AsyncMock)
+def test_get_movie_summary_filters_recent_reviews_and_trims_output(
+    mock_get_details,
+    mock_get_all_reviews,
+    mock_summary_call,
+    client,
+    mock_db_session,
+):
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.first.return_value = None
+    mock_db_session.execute.return_value = mock_result
+
+    mock_get_details.return_value = {"title": "Mock Movie"}
+
+    recent_reviews = []
+    for index in range(10):
+        content = (
+            f"This is thoughtful review number {index} with specific opinions about pacing, acting, visuals, "
+            "and the ending that make it clearly substantive."
+        )
+        if index in {1, 4, 8}:
+            content = "Visit my site and use promo code SAVE20 for more content."
+
+        recent_reviews.append(
+            MagicMock(
+                content=content,
+                rating=8.0,
+                created_at=datetime(2024, 2, 10 - index, 12, 0, 0),
+                author_details=MagicMock(rating=8.0, source="tmdb" if index % 2 == 0 else "local"),
+            )
+        )
+
+    mock_get_all_reviews.return_value = recent_reviews
+    mock_summary_call.return_value = {
+        "ok": True,
+        "summary": " ".join(f"word{i}" for i in range(170)),
+    }
+
+    response = client.get("/api/movies/ai/550/summary/")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["summary"].split()) == 120
+
+    payload = mock_summary_call.await_args.args[0]
+    assert payload["movie_title"] == "Mock Movie"
+    assert payload["max_reviews"] == 5
+    assert payload["max_words"] == 120
+    assert payload["max_output_tokens"] == 300
+    assert payload["max_tokens"] == 300
+    assert payload["max_completion_tokens"] == 300
+    assert "Ignore spam" in payload["instructions"]
+    assert "3 to 5 sentences" in payload["instructions"]
+    assert "End with a complete sentence" in payload["instructions"]
+    assert len(payload["reviews"]) == 5
+    assert all("promo code" not in review["content"].lower() for review in payload["reviews"])
+    mock_db_session.add.assert_called_once()
+    mock_db_session.commit.assert_called_once()
