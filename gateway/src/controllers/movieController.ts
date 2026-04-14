@@ -35,15 +35,24 @@ import { env } from "../config/env";
   
   async function forwardToCore(
     path: string,
+    req?: Request,
     init?: RequestInit,
   ) {
-    const response = await fetch(`${env.CORE_SERVICE_URL}${path}`, {
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      ...(init?.headers as Record<string, string> ?? {}),
+    };
 
+    if (req) {
+      const country = req.headers["cf-ipcountry"];
+      if (country) {
+        headers["cf-ipcountry"] = country as string;
+      }
+    }
+
+    const response = await fetch(`${env.CORE_SERVICE_URL}${path}`, {
       ...init,
-      headers: {
-        Accept: "application/json",
-        ...(init?.headers ?? {}),
-      },
+      headers,
     });
   
     const contentType = response.headers.get("content-type") ?? "";
@@ -209,7 +218,7 @@ import { env } from "../config/env";
   export async function getMovieDetails(req: Request,res: Response,next: NextFunction) {
     try {
       const { tmdb_id } = tmdbIdParamsSchema.parse(req.params);
-      const { status, payload } = await forwardToCore(`/api/movies/${tmdb_id}/`);
+      const { status, payload } = await forwardToCore(`/api/movies/${tmdb_id}/`, req);
       return handleCoreResponse(res, status, payload);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -248,7 +257,7 @@ import { env } from "../config/env";
   
       const body = reviewBodySchema.parse(req.body);
   
-      const { status, payload } = await forwardToCore("/api/movies/review/", {
+      const { status, payload } = await forwardToCore("/api/movies/review/", undefined, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -270,7 +279,7 @@ import { env } from "../config/env";
   try {
     const body = aiSearchBodySchema.parse(req.body);
 
-    const { status, payload } = await forwardToCore("/api/movies/ai/search/", {
+    const { status, payload } = await forwardToCore("/api/movies/ai/search/", undefined, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

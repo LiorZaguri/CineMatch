@@ -32,7 +32,7 @@ from services.tmdb.tmdbservice import (
     get_upcoming_movies,
 )
 
-from .dependencies import _get_all_reviews, get_user_id
+from .dependencies import _get_all_reviews, _get_streaming_service, get_user_country_code, get_user_id
 
 router = APIRouter(
     prefix="/api/movies",
@@ -342,7 +342,11 @@ async def get_movie_summary(
         
         
 @router.get("/{tmdb_id}/", response_model=MovieDetailWithReviews)
-async def get_movie_page(tmdb_id: int, db: AsyncSession = Depends(get_db)):
+async def get_movie_page(
+    tmdb_id: int, 
+    db: AsyncSession = Depends(get_db),
+    country_code: str = Depends(get_user_country_code)
+):
     """
     Fetches detailed information for a movie along with aggregated reviews.
 
@@ -357,7 +361,9 @@ async def get_movie_page(tmdb_id: int, db: AsyncSession = Depends(get_db)):
     summary_query = select(ReviewSummary).where(ReviewSummary.tmdb_id == tmdb_id)
     db_result = await db.execute(summary_query)
 
+    streaming_services = await _get_streaming_service(tmdb_id, country_code)
 
+    
     if not movie_data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Movie not found")
 
@@ -369,5 +375,7 @@ async def get_movie_page(tmdb_id: int, db: AsyncSession = Depends(get_db)):
     return {
         **movie_data,
         "reviews": reviews,
-        "summary": summary_text
+        "summary": summary_text,
+        "streaming_services": streaming_services,
+        "country_code": country_code
     }
