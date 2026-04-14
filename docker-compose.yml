@@ -146,12 +146,12 @@ services:
   # AI recommendation service 
   ai-recommender:
     build:
-      context: ./AI recommendation
+      context: ./recommendation-ai
       dockerfile: Dockerfile
     container_name: cinematch-ai-recommender
     working_dir: /app
     env_file:
-      - ./AI recommendation/.env
+      - ./recommendation-ai/.env
     ports:
       - "8001:8000"
     depends_on:
