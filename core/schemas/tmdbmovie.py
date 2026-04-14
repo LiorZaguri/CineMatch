@@ -35,6 +35,8 @@ class TmdbMovie(BaseModel):
     
     vote_average: float = Field(..., description="Average user rating (0-10)")
 
+    trailer: Optional[str] = Field(None, description="The URL to the movie's trailer")
+
 
 class TmdbMovieList(BaseModel):
     """

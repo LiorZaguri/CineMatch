@@ -8,6 +8,7 @@ as well as detailed information for specific movies.
 """
 
 from datetime import date
+import asyncio
 from typing import Any, Dict, Optional
 
 import httpx
@@ -180,7 +181,7 @@ async def get_top_rated_movies(page: int = 1) -> Optional[Dict[str, Any]]:
 
 async def get_movie_details(tmdb_id: int) -> Optional[Dict[str, Any]]:
     """
-    Retrieves detailed metadata for a specific movie by its TMDB ID.
+    Retrieves detailed metadata for a specific movie by its TMDB ID, including the trailer.
 
     This function handles the external API call to TMDB. It manages error
     translation, converting upstream HTTP errors or network failures into
@@ -200,16 +201,36 @@ async def get_movie_details(tmdb_id: int) -> Optional[Dict[str, Any]]:
     client = get_tmdb_client()
 
     try:
-        response = await client.get(
-            f"movie/{tmdb_id}",
-            params={"language": setting.TMDB_LANGUAGE},
+        # Fetch movie details and videos concurrently
+        response, video_response = await asyncio.gather(
+            client.get(f"movie/{tmdb_id}", params={"language": setting.TMDB_LANGUAGE}),
+            get_movie_videos(tmdb_id),
+            return_exceptions=True
         )
+
+        if isinstance(response, Exception):
+            raise response
 
         if response.status_code == status.HTTP_404_NOT_FOUND:
             return None
 
         response.raise_for_status()
-        return response.json()
+        movie_data = response.json()
+
+        # Extract trailer from video results
+        trailer_url = None
+        if isinstance(video_response, dict) and "results" in video_response:
+            # Find the first YouTube video of type "Trailer"
+            trailer = next(
+                (v for v in video_response["results"] 
+                 if v.get("site") == "YouTube" and v.get("type") == "Trailer"),
+                None
+            )
+            if trailer:
+                trailer_url = f"https://www.youtube.com/watch?v={trailer['key']}"
+        
+        movie_data["trailer"] = trailer_url
+        return movie_data
         
     except httpx.HTTPStatusError as e:
         # TMDB responded, but with an error (e.g., 500 Internal Server Error)
@@ -225,6 +246,36 @@ async def get_movie_details(tmdb_id: int) -> Optional[Dict[str, Any]]:
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="TMDB unreachable"
         )
+
+
+async def get_movie_videos(tmdb_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves videos associated with a specific movie by its TMDB ID.
+
+    Args:
+        tmdb_id (int): The unique The Movie Database (TMDB) identifier.
+
+    Returns:
+        Optional[Dict[str, Any]]: A dictionary containing video details if found,
+                                  or None if the movie does not exist or an error occurs.
+    """
+    client = get_tmdb_client()
+
+    try:
+        response = await client.get(
+            f"movie/{tmdb_id}/videos",
+            params={"language": "en-US"},
+        )
+
+        if response.status_code == status.HTTP_404_NOT_FOUND:
+            return None
+
+        response.raise_for_status()
+        return response.json()
+
+    except (httpx.HTTPStatusError, httpx.RequestError) as e:
+        print(f"[TMDB] Error while fetching videos for {tmdb_id}: {e}", flush=True)
+        return None
 
 
 async def discover_movies(ai_response: AISearchResponse) -> Optional[Dict[str, Any]]:

@@ -396,6 +396,7 @@ async def get_movie_page(
     summary_obj = db_result.scalars().first()
     summary_text = summary_obj.summary_text if summary_obj else None
 
+
     # Combine data
     return {
         **movie_data,
