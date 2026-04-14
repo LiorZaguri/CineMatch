@@ -7,6 +7,7 @@ Tests cover:
 - TMDB movie list wrappers (popular, now-playing, etc.).
 - Movie detail page with reviews.
 """
+import asyncio
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -18,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Import dependencies to override
 from db.db import get_db
 from routers.dependencies import get_user_id
+from schemas.review import sanitize_review_for_display
 
 # Import the main app (assuming it mounts the router)
 from src.main import app
@@ -214,6 +216,76 @@ def test_add_review_failure(client, mock_db_session):
     mock_db_session.rollback.assert_called_once()
 
 
+def test_update_review_success(client, mock_db_session):
+    review = MagicMock()
+    review.id = 3
+    review.user_id = "1"
+    review.tmdb_id = 550
+    review.rating = 7
+    review.content = "Original content."
+    review.created_at = datetime.now()
+
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.first.return_value = review
+    mock_db_session.execute.return_value = mock_result
+
+    payload = {
+        "rating": 9,
+        "content": "Updated review content."
+    }
+
+    response = client.patch("/api/movies/review/3/", json=payload)
+
+    assert response.status_code == 200
+    assert review.rating == 9
+    assert review.content == "Updated review content."
+    mock_db_session.commit.assert_called_once()
+    mock_db_session.refresh.assert_called_once_with(review)
+
+
+def test_add_review_rejects_profanity(client, mock_db_session):
+    payload = {
+        "tmdb_id": 550,
+        "rating": 8,
+        "content": "This movie was fucking awful and gross."
+    }
+
+    response = client.post("/api/movies/review/", json=payload)
+
+    assert response.status_code == 422
+    mock_db_session.add.assert_not_called()
+
+
+def test_add_review_strips_external_links(client, mock_db_session):
+    def simulate_refresh(instance):
+        instance.id = 2
+        instance.created_at = datetime.now()
+
+    mock_db_session.refresh.side_effect = simulate_refresh
+
+    payload = {
+        "tmdb_id": 550,
+        "rating": 9,
+        "content": "Watch this and skip https://spam.example.com because the movie itself is excellent."
+    }
+
+    response = client.post("/api/movies/review/", json=payload)
+
+    assert response.status_code == 201
+    added_review = mock_db_session.add.call_args.args[0]
+    assert added_review.content == "Watch this and skip because the movie itself is excellent."
+
+
+def test_sanitize_review_for_display_removes_links_and_redacts_profanity():
+    review = "Visit https://spam.example.com because this fucking review should not advertise."
+
+    sanitized = sanitize_review_for_display(review)
+
+    assert "https://spam.example.com" not in sanitized
+    assert "fucking" not in sanitized.lower()
+    assert "*******" in sanitized
+
+
 @patch("routers.movies.get_movie_details")
 def test_get_movie_page_success(mock_get_details, client, mock_db_session):
     """
@@ -258,6 +330,40 @@ def test_get_movie_page_success(mock_get_details, client, mock_db_session):
     # Check that reviews are included in the response
     assert len(data["reviews"]) == 1
     assert data["reviews"][0]["content"] == "Great!"
+
+
+@patch("routers.dependencies.get_movie_reviews")
+def test_get_movie_page_sorts_reviews_by_most_recent(mock_get_movie_reviews, client, mock_db_session):
+    mock_get_movie_reviews.return_value = {
+        "results": [
+            {
+                "author": "Older TMDB Reviewer",
+                "content": "Older TMDB review",
+                "created_at": "2024-01-01T00:00:00.000Z",
+                "author_details": {
+                    "rating": 6,
+                },
+            }
+        ]
+    }
+
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [
+        MagicMock(
+            tmdb_id=999,
+            content="Newest local review",
+            rating=9,
+            user_id="user-1",
+            created_at=datetime(2024, 2, 1, 12, 0, 0),
+        )
+    ]
+    mock_db_session.execute.return_value = mock_result
+
+    from routers.dependencies import _get_all_reviews
+
+    reviews = asyncio.run(_get_all_reviews(999, mock_db_session))
+
+    assert reviews[0].content == "Newest local review"
 
 
 @patch("routers.movies.get_movie_details")

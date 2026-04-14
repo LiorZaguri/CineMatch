@@ -3,6 +3,20 @@ export interface MovieReview {
     rating: number;
     content: string;
     created_at?: string;
+    author_details?: {
+        name?: string | null;
+        username?: string | null;
+        rating?: number | null;
+        avatar_path?: string | null;
+        avatar_url?: string | null;
+        user_id?: string | null;
+        source?: 'tmdb' | 'local' | string | null;
+    };
+}
+
+export interface StreamingService {
+    name: string;
+    logo_path?: string | null;
 }
 
 export interface Movie {
@@ -18,6 +32,8 @@ export interface Movie {
     cast: string[];
     durationMinutes: number;
     backdropUrl?: string;
+    streaming_services?: StreamingService[];
+    country_code?: string;
     reviews?: MovieReview[];
     review_summary?: {
         summary_text?: string;
@@ -32,8 +48,11 @@ export interface TmdbMovie {
     poster_path?: string | null;
     backdrop_path?: string | null;
     release_date?: string | null;
+    runtime?: number | null;
     title: string;
     vote_average: number;
+    streaming_services?: StreamingService[];
+    country_code?: string;
     reviews?: MovieReview[];
     summary?: string | null;
     review_summary?: {
@@ -76,12 +95,18 @@ export interface CreateReviewRequest {
     content: string;
 }
 
+export interface UpdateReviewRequest {
+    rating: number;
+    content: string;
+}
+
 export interface ReviewResponse {
     id: number;
     tmdb_id: number;
     rating: number;
     content: string;
     created_at: string;
+    author_details?: MovieReview['author_details'];
 }
 
 export interface ReviewSummaryResponse {

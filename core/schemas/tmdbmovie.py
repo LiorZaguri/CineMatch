@@ -24,8 +24,12 @@ class TmdbMovie(BaseModel):
     overview: str = Field(..., description="Short plot summary")
     
     poster_path: Optional[str] = Field(None, description="The path to the poster image on TMDB's servers")
+
+    backdrop_path: Optional[str] = Field(None, description="The path to the backdrop image on TMDB's servers")
     
     release_date: Optional[str] = Field(None, description="Release date in YYYY-MM-DD format")
+
+    runtime: Optional[int] = Field(None, description="Movie runtime in minutes")
     
     title: str = Field(..., description="English (or requested language) title")
     

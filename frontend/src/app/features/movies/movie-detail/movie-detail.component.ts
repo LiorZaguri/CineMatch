@@ -4,16 +4,10 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
+import { AuthService } from '../../../core/services/auth.service';
 import { MovieService } from '../../../core/services/movie.service';
-import { CreateReviewRequest, Movie } from '../../../core/models/movie.models';
+import { CreateReviewRequest, Movie, MovieReview, StreamingService } from '../../../core/models/movie.models';
 import { ScrollRevealDirective } from '../../../core/directives/scroll-reveal.directive';
-
-interface MovieReview {
-    id?: number;
-    rating: number;
-    content: string;
-    created_at?: string;
-}
 
 interface MovieSummaryPayload {
     summary_text?: string;
@@ -32,9 +26,14 @@ interface MovieDetailData extends Movie {
     styleUrls: ['./movie-detail.component.css']
 })
 export class MovieDetailComponent {
+    readonly reviewsPerPage = 5;
     private readonly reviewPreviewLength = 280;
+    private readonly tmdbAvatarBaseUrl = 'https://image.tmdb.org/t/p/w185';
+    private readonly reviewExternalLinkPattern = /\b(?:https?:\/\/\S+|www\.\S+|(?:[a-z0-9-]+\.)+(?:com|net|org|io|co|tv|app|dev|info|biz|me|gg|xyz)(?:\/\S*)?)/gi;
+    private readonly reviewBadWordsPattern = /\b(?:asshole|bastard|bitch|bullshit|cunt|dick|douchebag|fuck|fucker|fucking|motherfucker|piss(?:ed)?\s*off|shit|slut|whore)\b/i;
     private readonly route = inject(ActivatedRoute);
     private readonly movieService = inject(MovieService);
+    private readonly authService = inject(AuthService);
 
     // Signals for movie, loading, and error
     readonly movie = signal<Movie | null>(null);
@@ -49,6 +48,16 @@ export class MovieDetailComponent {
     readonly reviewComposerError = signal<string | null>(null);
     readonly reviewComposerSubmitting = signal<boolean>(false);
     readonly expandedReviews = signal<Record<string, boolean>>({});
+    readonly reviewPage = signal<number>(1);
+    readonly reviewEditingId = signal<number | null>(null);
+    readonly reviewEditRating = signal<number>(4);
+    readonly reviewEditContent = signal<string>('');
+    readonly reviewEditError = signal<string | null>(null);
+    readonly reviewEditSubmitting = signal<boolean>(false);
+    private readonly regionNames =
+        typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function'
+            ? new Intl.DisplayNames(['en'], { type: 'region' })
+            : null;
 
     readonly displayReviews = computed(() => {
         const current = this.movie() as MovieDetailData | null;
@@ -57,6 +66,18 @@ export class MovieDetailComponent {
             return reviews;
         }
         return [];
+    });
+
+    readonly totalReviewPages = computed(() => Math.max(1, Math.ceil(this.displayReviews().length / this.reviewsPerPage)));
+
+    readonly paginatedReviews = computed(() => {
+        const startIndex = (this.reviewPage() - 1) * this.reviewsPerPage;
+        return this.displayReviews().slice(startIndex, startIndex + this.reviewsPerPage);
+    });
+
+    readonly streamingServices = computed(() => {
+        const current = this.movie() as MovieDetailData | null;
+        return current?.streaming_services ?? [];
     });
 
     // Derived signal: related movies based on primary genre
@@ -82,6 +103,195 @@ export class MovieDetailComponent {
         });
     }
 
+    getCountryLabel(countryCode?: string | null): string {
+        const normalizedCode = countryCode?.trim().toUpperCase();
+        if (!normalizedCode) {
+            return 'your region';
+        }
+
+        return this.regionNames?.of(normalizedCode) ?? normalizedCode;
+    }
+
+    trackStreamingService(_index: number, service: StreamingService): string {
+        return service.name;
+    }
+
+    nextReviewPage(): void {
+        this.reviewPage.update((page) => Math.min(page + 1, this.totalReviewPages()));
+    }
+
+    previousReviewPage(): void {
+        this.reviewPage.update((page) => Math.max(page - 1, 1));
+    }
+
+    getReviewAuthorName(review: MovieReview): string {
+        if (review.author_details?.source === 'local') {
+            return review.author_details.name?.trim() || 'CineMatch User';
+        }
+
+        return review.author_details?.name?.trim()
+            || review.author_details?.username?.trim()
+            || 'TMDB Reviewer';
+    }
+
+    getReviewSourceLabel(review: MovieReview): string {
+        return review.author_details?.source === 'local' ? 'CineMatch user' : 'TMDB review';
+    }
+
+    isLocalReview(review: MovieReview): boolean {
+        return review.author_details?.source === 'local';
+    }
+
+    getReviewRating(review: MovieReview): number {
+        const topLevelRating = typeof review.rating === 'number' ? review.rating : null;
+        if (topLevelRating !== null && Number.isFinite(topLevelRating)) {
+            return this.normalizeReviewRating(topLevelRating);
+        }
+
+        const authorRating = typeof review.author_details?.rating === 'number' ? review.author_details.rating : null;
+        if (authorRating !== null && Number.isFinite(authorRating)) {
+            return this.normalizeReviewRating(authorRating);
+        }
+
+        return 0;
+    }
+
+    canEditReview(review: MovieReview): boolean {
+        const currentUserId = this.authService.currentUser()?.id;
+        return !!currentUserId
+            && this.isLocalReview(review)
+            && review.author_details?.user_id === currentUserId
+            && typeof review.id === 'number';
+    }
+
+    isEditingReview(review: MovieReview): boolean {
+        return typeof review.id === 'number' && this.reviewEditingId() === review.id;
+    }
+
+    openEditReview(review: MovieReview): void {
+        if (!this.canEditReview(review) || typeof review.id !== 'number') {
+            return;
+        }
+
+        this.reviewEditingId.set(review.id);
+        this.reviewEditRating.set(Math.max(1, Math.min(10, Math.round(this.getReviewRating(review)))));
+        this.reviewEditContent.set(review.content);
+        this.reviewEditError.set(null);
+    }
+
+    cancelEditReview(force = false): void {
+        if (!force && this.reviewEditSubmitting()) {
+            return;
+        }
+
+        this.reviewEditingId.set(null);
+        this.reviewEditRating.set(4);
+        this.reviewEditContent.set('');
+        this.reviewEditError.set(null);
+    }
+
+    saveEditedReview(review: MovieReview): void {
+        if (!this.canEditReview(review) || typeof review.id !== 'number') {
+            return;
+        }
+
+        const rawContent = this.reviewEditContent().trim();
+        const content = this.sanitizeReviewContent(rawContent);
+        const rating = this.reviewEditRating();
+
+        if (!content) {
+            this.reviewEditError.set('Please write a short review before saving.');
+            return;
+        }
+
+        if (content.length < 10) {
+            this.reviewEditError.set('Please write at least 10 characters after removing links.');
+            return;
+        }
+
+        if (this.reviewBadWordsPattern.test(content)) {
+            this.reviewEditError.set('Please remove inappropriate language from your review.');
+            return;
+        }
+
+        if (rating < 1 || rating > 10) {
+            this.reviewEditError.set('Please choose a rating between 1 and 10.');
+            return;
+        }
+
+        if (content !== rawContent) {
+            this.reviewEditContent.set(content);
+        }
+
+        this.reviewEditError.set(null);
+        this.reviewEditSubmitting.set(true);
+
+        this.movieService.updateReview(review.id, { rating, content }).pipe(
+            finalize(() => this.reviewEditSubmitting.set(false))
+        ).subscribe({
+            next: (updatedReview) => {
+                const detail = this.movie() as MovieDetailData | null;
+                if (!detail?.reviews) {
+                    this.cancelEditReview();
+                    return;
+                }
+
+                this.movie.set({
+                    ...detail,
+                    reviews: detail.reviews.map((existingReview) => existingReview.id === review.id
+                        ? {
+                            ...existingReview,
+                            rating: updatedReview.rating,
+                            content: updatedReview.content,
+                            created_at: updatedReview.created_at ?? existingReview.created_at,
+                        }
+                        : existingReview)
+                });
+                this.expandedReviews.set({});
+                this.cancelEditReview(true);
+            },
+            error: (err: HttpErrorResponse) => {
+                const detailMessage = typeof err.error?.detail === 'string' ? err.error.detail : null;
+                this.reviewEditError.set(detailMessage || 'Failed to update review. Please try again.');
+            }
+        });
+    }
+
+    formatReviewTimestamp(review: MovieReview): string | null {
+        const createdAt = review.created_at?.trim();
+        return createdAt || null;
+    }
+
+    getReviewAvatarUrl(review: MovieReview): string | null {
+        const avatarUrl = review.author_details?.avatar_url?.trim();
+        if (avatarUrl) {
+            return avatarUrl;
+        }
+
+        const avatarPath = review.author_details?.avatar_path?.trim();
+        if (!avatarPath) {
+            return null;
+        }
+
+        const normalizedPath = avatarPath.startsWith('/') ? avatarPath.slice(1) : avatarPath;
+        if (normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) {
+            return normalizedPath;
+        }
+
+        return `${this.tmdbAvatarBaseUrl}/${normalizedPath}`;
+    }
+
+    getReviewInitials(review: MovieReview): string {
+        const initials = this.getReviewAuthorName(review)
+            .split(' ')
+            .filter(Boolean)
+            .map((part) => part[0]?.toUpperCase())
+            .slice(0, 2)
+            .join('');
+
+        return initials || 'CM';
+    }
+
     private fetchMovie(tmdbId: string): void {
         this.loading.set(true);
         this.error.set(null);
@@ -94,6 +304,12 @@ export class MovieDetailComponent {
         this.reviewComposerContent.set('');
         this.reviewComposerSubmitting.set(false);
         this.expandedReviews.set({});
+        this.reviewPage.set(1);
+        this.reviewEditingId.set(null);
+        this.reviewEditRating.set(4);
+        this.reviewEditContent.set('');
+        this.reviewEditError.set(null);
+        this.reviewEditSubmitting.set(false);
 
         this.movieService.getMovieByTmdbId(tmdbId, true).subscribe({
             next: (movie: Movie) => {
@@ -166,11 +382,22 @@ export class MovieDetailComponent {
     }
 
     submitReview(): void {
-        const content = this.reviewComposerContent().trim();
+        const rawContent = this.reviewComposerContent().trim();
+        const content = this.sanitizeReviewContent(rawContent);
         const rating = this.reviewComposerRating();
 
         if (!content) {
             this.reviewComposerError.set('Please write a short review before submitting.');
+            return;
+        }
+
+        if (content.length < 10) {
+            this.reviewComposerError.set('Please write at least 10 characters after removing links.');
+            return;
+        }
+
+        if (this.reviewBadWordsPattern.test(content)) {
+            this.reviewComposerError.set('Please remove inappropriate language from your review.');
             return;
         }
 
@@ -189,6 +416,10 @@ export class MovieDetailComponent {
         if (!tmdbId) {
             this.reviewComposerError.set('This movie cannot be reviewed right now.');
             return;
+        }
+
+        if (content !== rawContent) {
+            this.reviewComposerContent.set(content);
         }
 
         this.reviewComposerError.set(null);
@@ -217,12 +448,19 @@ export class MovieDetailComponent {
                             id: review.id,
                             rating: review.rating,
                             content: review.content,
-                            created_at: review.created_at
+                            created_at: review.created_at,
+                            author_details: review.author_details ?? {
+                                name: this.authService.currentUser()?.displayName ?? 'CineMatch User',
+                                avatar_url: this.authService.currentUser()?.avatarUrl ?? null,
+                                user_id: this.authService.currentUser()?.id ?? null,
+                                source: 'local',
+                            }
                         },
                         ...(detail.reviews ?? [])
                     ]
                 });
                 this.expandedReviews.set({});
+                this.reviewPage.set(1);
                 this.cancelReviewComposer();
             },
             error: (err: HttpErrorResponse) => {
@@ -236,6 +474,10 @@ export class MovieDetailComponent {
         this.reviewComposerRating.set(rating);
     }
 
+    setReviewEditRating(rating: number): void {
+        this.reviewEditRating.set(rating);
+    }
+
     autoResizeReviewComposer(event: Event): void {
         const textarea = event.target as HTMLTextAreaElement | null;
         if (!textarea) {
@@ -247,11 +489,11 @@ export class MovieDetailComponent {
     }
 
     starsForReview(rating: number): number[] {
-        return Array.from({ length: Math.max(1, Math.min(5, Math.round(rating / 2))) }, (_, index) => index);
+        return Array.from({ length: Math.max(1, Math.min(10, Math.round(this.normalizeReviewRating(rating)))) }, (_, index) => index);
     }
 
     getReviewContent(review: MovieReview, index: number): string {
-        const content = review.content.trim();
+        const content = this.sanitizeReviewForDisplay(review.content);
         if (!this.isReviewTruncated(review) || this.isReviewExpanded(review, index)) {
             return content;
         }
@@ -260,7 +502,7 @@ export class MovieDetailComponent {
     }
 
     isReviewTruncated(review: MovieReview): boolean {
-        return review.content.trim().length > this.reviewPreviewLength;
+        return this.sanitizeReviewForDisplay(review.content).length > this.reviewPreviewLength;
     }
 
     isReviewExpanded(review: MovieReview, index: number): boolean {
@@ -297,6 +539,27 @@ export class MovieDetailComponent {
     }
 
     private reviewKey(review: MovieReview, index: number): string {
-        return typeof review.id === 'number' ? `review-${review.id}` : `review-index-${index}`;
+        if (typeof review.id === 'number') {
+            return `review-${review.id}`;
+        }
+
+        const author = review.author_details?.user_id ?? review.author_details?.username ?? review.author_details?.name ?? 'anonymous';
+        return `review-${author}-${review.created_at ?? 'undated'}-${index}`;
+    }
+
+    private sanitizeReviewContent(content: string): string {
+        return content
+            .replace(this.reviewExternalLinkPattern, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    private sanitizeReviewForDisplay(content: string): string {
+        return this.sanitizeReviewContent(content).replace(this.reviewBadWordsPattern, (match) => '*'.repeat(match.length));
+    }
+
+    private normalizeReviewRating(rating: number): number {
+        const normalized = rating > 10 ? rating / 10 : rating;
+        return Math.max(0, Math.min(10, normalized));
     }
 }

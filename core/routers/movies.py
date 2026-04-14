@@ -19,7 +19,7 @@ from sqlalchemy.future import select
 from db.db import get_db
 from models.review import Review, ReviewSummary
 from schemas.Ai import AISearchFallback, AISearchRequest, AISearchResponse, AISearchSuccess
-from schemas.review import ReviewCreate, ReviewRead
+from schemas.review import ReviewCreate, ReviewRead, ReviewUpdate
 from schemas.summary import ReviewSummaryResponse
 from schemas.tmdbmovie import MovieDashboard, MovieDetailWithReviews, TmdbMovie, TmdbMovieList
 from services.rabbitmq.rpc import recommendation_rpc, summary_rpc
@@ -87,6 +87,31 @@ async def add_review(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="You have already reviewed this movie."
         )
+
+
+@router.patch("/review/{review_id}/", response_model=ReviewRead)
+async def update_review(
+    review_id: int,
+    payload: ReviewUpdate,
+    user_id: Annotated[str, Depends(get_user_id)],
+    db: AsyncSession = Depends(get_db),
+):
+    review_query = select(Review).where(Review.id == review_id, Review.user_id == user_id)
+    review_result = await db.execute(review_query)
+    review = review_result.scalars().first()
+
+    if review is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Review not found."
+        )
+
+    review.rating = int(payload.rating)
+    review.content = payload.content
+
+    await db.commit()
+    await db.refresh(review)
+    return review
     
 
 @router.get("/dashboard/", response_model=MovieDashboard)
