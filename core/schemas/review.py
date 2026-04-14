@@ -16,6 +16,11 @@ REVIEW_BAD_WORDS_PATTERN = re.compile(
     r"\b(?:asshole|bastard|bitch|bullshit|cunt|dick|douchebag|fuck|fucker|fucking|motherfucker|piss(?:ed)?\s*off|shit|slut|whore)\b",
     re.IGNORECASE,
 )
+REVIEW_SPAM_PATTERN = re.compile(
+    r"\b(?:buy now|cheap|click here|discount|dm me|follow me|free\s+gift|giveaway|join my|promo(?:\s+code)?|subscribe|telegram|visit my|whatsapp)\b",
+    re.IGNORECASE,
+)
+REVIEW_WORD_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9'’-]*")
 
 
 def sanitize_review_content(value: str) -> str:
@@ -28,6 +33,50 @@ def redact_review_profanity(value: str) -> str:
 
 def sanitize_review_for_display(value: str) -> str:
     return redact_review_profanity(sanitize_review_content(value))
+
+
+def is_review_usable_for_summary(value: str) -> bool:
+    sanitized = sanitize_review_content(value)
+    if len(sanitized) < 40:
+        return False
+
+    words = REVIEW_WORD_PATTERN.findall(sanitized)
+    if len(words) < 8:
+        return False
+
+    if REVIEW_SPAM_PATTERN.search(sanitized):
+        return False
+
+    unique_words = {word.lower() for word in words}
+    if len(unique_words) < max(5, len(words) // 3):
+        return False
+
+    return True
+
+
+def trim_summary_words(value: str, max_words: int = 600) -> str:
+    words = value.split()
+    if len(words) <= max_words:
+        return value.strip()
+    return " ".join(words[:max_words]).strip()
+
+
+def normalize_summary_text(value: str, max_words: int = 600) -> str:
+    trimmed = trim_summary_words(re.sub(r"\s+", " ", value).strip(), max_words=max_words)
+    if not trimmed:
+        return ""
+
+    if trimmed[-1] in ".!?":
+        return trimmed
+
+    sentence_endings = [trimmed.rfind("."), trimmed.rfind("!"), trimmed.rfind("?")]
+    last_sentence_end = max(sentence_endings)
+    if last_sentence_end >= 0:
+        completed = trimmed[: last_sentence_end + 1].strip()
+        if completed:
+            return completed
+
+    return f"{trimmed.rstrip(' ,;:')}."
 
 
 class ReviewPayloadBase(BaseModel):

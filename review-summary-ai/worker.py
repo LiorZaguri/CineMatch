@@ -52,11 +52,20 @@ class ReviewSummaryWorker:
                 try:
                     if self.pipeline is None:
                         raise RuntimeError("worker_not_initialized")
-                    summary = self.pipeline.summarize_with_fallback(
+                    summary = self.pipeline.summarize(
                         payload.reviews,
                         movie_title=payload.movie_title,
+                        instructions=payload.instructions,
+                        max_output_tokens=(
+                            payload.max_output_tokens
+                            or payload.max_completion_tokens
+                            or payload.max_tokens
+                            or 300
+                        ),
+                        max_words=payload.max_words or 120,
                     )
-                except Exception:
+                except Exception as exc:
+                    print(f"[ReviewSummaryWorker] summarization_failed: {exc}", flush=True)
                     response = SummaryResponse(
                         ok=False,
                         error="summarization_failed",

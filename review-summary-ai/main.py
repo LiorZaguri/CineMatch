@@ -40,11 +40,20 @@ async def summarize_reviews(payload: SummaryRequest):
     try:
         if worker.pipeline is None:
             raise RuntimeError("worker_not_initialized")
-        summary = worker.pipeline.summarize_with_fallback(
+        summary = worker.pipeline.summarize(
             payload.reviews,
             movie_title=payload.movie_title,
+            instructions=payload.instructions,
+            max_output_tokens=(
+                payload.max_output_tokens
+                or payload.max_completion_tokens
+                or payload.max_tokens
+                or 300
+            ),
+            max_words=payload.max_words or 120,
         )
     except Exception as exc:
+        print(f"[ReviewSummaryAPI] summarization_failed: {exc}", flush=True)
         raise HTTPException(
             status_code=500,
             detail={

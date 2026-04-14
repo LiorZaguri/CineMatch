@@ -19,7 +19,14 @@ from sqlalchemy.future import select
 from db.db import get_db
 from models.review import Review, ReviewSummary
 from schemas.Ai import AISearchFallback, AISearchRequest, AISearchResponse, AISearchSuccess
-from schemas.review import ReviewCreate, ReviewRead, ReviewUpdate
+from schemas.review import (
+    ReviewCreate,
+    ReviewRead,
+    ReviewUpdate,
+    is_review_usable_for_summary,
+    normalize_summary_text,
+    trim_summary_words,
+)
 from schemas.summary import ReviewSummaryResponse
 from schemas.tmdbmovie import MovieDashboard, MovieDetailWithReviews, TmdbMovie, TmdbMovieList
 from services.rabbitmq.rpc import recommendation_rpc, summary_rpc
@@ -39,6 +46,11 @@ router = APIRouter(
     tags=["movies & reviews"],
     responses={404: {"description": "Not found"}},
 )
+
+SUMMARY_REVIEW_LOOKBACK = 10
+SUMMARY_MAX_REVIEWS = 5
+SUMMARY_MAX_WORDS = 120
+SUMMARY_MAX_OUTPUT_TOKENS = 300
 
 
 @router.post("/review/",response_model=ReviewRead ,status_code=status.HTTP_201_CREATED)
@@ -315,19 +327,48 @@ async def get_movie_summary(
             summary=f"No reviews available for '{movie_data.get('title')}' yet."
         )
 
-    # Prepare the payload for the AI worker. 
-    # Limit content to 1000 characters per review to avoid exceeding context windows.
+    recent_reviews = reviews[:SUMMARY_REVIEW_LOOKBACK]
     payload_reviews = []
-    for rev in reviews:
+    for rev in recent_reviews:
+        if len(payload_reviews) >= SUMMARY_MAX_REVIEWS:
+            break
+
+        if not is_review_usable_for_summary(rev.content):
+            continue
+
         payload_reviews.append({
-            "rating": rev.author_details.rating or 5,
-            "content": rev.content[:1000]
+            "rating": rev.rating or rev.author_details.rating or 5,
+            "content": rev.content[:1000],
+            "source": rev.author_details.source if rev.author_details else None,
+            "created_at": rev.created_at.isoformat() if rev.created_at else None,
         })
-        
+
+    if not payload_reviews:
+        return ReviewSummaryResponse(
+            tmdb_id=tmdb_id,
+            summary=f"Not enough substantive reviews are available for '{movie_data.get('title')}' yet."
+        )
 
     payload = {
         "movie_title": movie_data.get('title'),
-        "reviews": payload_reviews
+        "reviews": payload_reviews,
+        "max_reviews": SUMMARY_MAX_REVIEWS,
+        "max_words": SUMMARY_MAX_WORDS,
+        "max_output_tokens": SUMMARY_MAX_OUTPUT_TOKENS,
+        "max_tokens": SUMMARY_MAX_OUTPUT_TOKENS,
+        "max_completion_tokens": SUMMARY_MAX_OUTPUT_TOKENS,
+        "instructions": (
+            "You are summarizing movie audience reviews. Only use real review content. "
+            "Ignore spam, ads, self-promotion, copied text, off-topic comments, memes, "
+            "one-line non-reviews, and anything that is not genuine feedback about the movie. "
+            f"The reviews are ordered from most recent to older. Consider at most the first "
+            f"{SUMMARY_MAX_REVIEWS} valid reviews from the {SUMMARY_REVIEW_LOOKBACK} most recent reviews. "
+            "Write one concise audience-consensus summary in 3 to 5 sentences, focusing on sentiment, common praise, "
+            "common criticism, and notable disagreements. Keep it concise and synthesized; do not paste long quotes "
+            "or large chunks of review text. End with a complete sentence. Do not mention usernames, review sources, "
+            "or that you filtered reviews. Do not invent facts not supported by the selected reviews. "
+            f"Keep the summary under {SUMMARY_MAX_WORDS} words."
+        ),
     }
     
     try:
@@ -345,7 +386,10 @@ async def get_movie_summary(
         
         if temp_summary is None:
             raise ValueError("AI worker returned 'ok' but summary text was missing.")
-        new_summary_text: str = temp_summary
+        new_summary_text = normalize_summary_text(
+            trim_summary_words(str(temp_summary), max_words=SUMMARY_MAX_WORDS),
+            max_words=SUMMARY_MAX_WORDS,
+        )
        
     except Exception as e:
         print(f"[Summary Error] {e}", flush=True)
