@@ -103,21 +103,26 @@
                     <article class="detail-block">
                         <h2 class="detail-heading">Trailers &amp; Extras</h2>
                         <div class="trailers-grid">
-                            <div class="trailer-card">
-                                <img [src]="movieData.backdropUrl || movieData.posterUrl" alt="Official teaser"
-                                    class="trailer-image">
-                                <div class="trailer-overlay">
+                            @for (card of mediaCards(); track card.label) {
+                            <div
+                                class="trailer-card"
+                                [class.trailer-card--playable]="isTrailerCard(card)"
+                                [class.trailer-card--zoomable]="!isTrailerCard(card)"
+                                [attr.role]="isTrailerCard(card) ? null : 'button'"
+                                [attr.tabindex]="isTrailerCard(card) ? null : '0'"
+                                (click)="!isTrailerCard(card) && openMedia(card)"
+                                (keydown.enter)="!isTrailerCard(card) && openMedia(card)"
+                                (keydown.space)="!isTrailerCard(card) && openMedia(card); $event.preventDefault()">
+                                <img [src]="card.imageUrl" [alt]="card.label" class="trailer-image">
+                                @if (isTrailerCard(card)) {
+                                <button class="trailer-play" type="button" (click)="openMedia(card)"
+                                    [attr.aria-label]="'Play ' + card.label">
                                     <span class="material-symbols-outlined">play_circle</span>
-                                </div>
-                                <div class="trailer-label">Official Teaser</div>
+                                </button>
+                                }
+                                <div class="trailer-label">{{ card.label }}</div>
                             </div>
-                            <div class="trailer-card">
-                                <img [src]="movieData.posterUrl" alt="Behind the scenes" class="trailer-image">
-                                <div class="trailer-overlay">
-                                    <span class="material-symbols-outlined">play_circle</span>
-                                </div>
-                                <div class="trailer-label">The Making Of</div>
-                            </div>
+                            }
                         </div>
                     </article>
 
@@ -390,5 +395,33 @@
         </section>
         }
     </main>
+    }
+
+    @if (mediaModalOpen()) {
+    <div class="trailer-modal" (click)="closeMediaModal()">
+        <div class="trailer-modal__dialog" [class.trailer-modal__dialog--image]="mediaModalKind() === 'image'" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" [attr.aria-label]="mediaModalTitle()">
+            <div class="trailer-modal__header">
+                <h3>{{ mediaModalTitle() }}</h3>
+                <button type="button" class="trailer-modal__close" (click)="closeMediaModal()" aria-label="Close media viewer">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            @if (mediaModalKind() === 'trailer' && mediaModalUrl(); as trailerUrl) {
+            <div class="trailer-modal__frame-wrap">
+                <iframe
+                    class="trailer-modal__frame"
+                    [src]="trailerUrl"
+                    title="Movie trailer"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen
+                ></iframe>
+            </div>
+            } @else if (mediaModalKind() === 'image' && mediaModalUrl(); as imageUrl) {
+            <div class="trailer-modal__image-wrap">
+                <img class="trailer-modal__image" [src]="$any(imageUrl)" [alt]="mediaModalTitle()">
+            </div>
+            }
+        </div>
+    </div>
     }
 </div>

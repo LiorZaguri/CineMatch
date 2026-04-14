@@ -32,6 +32,7 @@ export interface Movie {
     cast: string[];
     durationMinutes: number;
     backdropUrl?: string;
+    trailer?: string;
     streaming_services?: StreamingService[];
     country_code?: string;
     reviews?: MovieReview[];
@@ -51,6 +52,7 @@ export interface TmdbMovie {
     runtime?: number | null;
     title: string;
     vote_average: number;
+    trailer?: string | null;
     streaming_services?: StreamingService[];
     country_code?: string;
     reviews?: MovieReview[];

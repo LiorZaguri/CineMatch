@@ -32,6 +32,7 @@ describe('MovieDetailComponent', () => {
         director: 'Detail Dir',
         cast: ['Actor 1'],
         durationMinutes: 150,
+        trailer: 'https://www.youtube.com/watch?v=abc123xyz',
         country_code: 'US',
         streaming_services: [
             {
@@ -118,6 +119,41 @@ describe('MovieDetailComponent', () => {
 
         const providerChip = fixture.debugElement.query(By.css('.provider-chip'));
         expect(providerChip.nativeElement.textContent).toContain('Netflix');
+
+        const trailerPlayButton = fixture.debugElement.query(By.css('.trailer-play'));
+        expect(trailerPlayButton).toBeTruthy();
+    });
+
+    it('should open the trailer in a modal and keep image extras without play buttons', () => {
+        fixture.detectChanges();
+
+        const mediaCards = fixture.debugElement.queryAll(By.css('.trailer-card'));
+        expect(mediaCards.length).toBeGreaterThan(1);
+
+        const playButtons = fixture.debugElement.queryAll(By.css('.trailer-play'));
+        expect(playButtons.length).toBe(1);
+
+        playButtons[0].nativeElement.click();
+        fixture.detectChanges();
+
+        expect(component.mediaModalOpen()).toBe(true);
+        const trailerFrame = fixture.debugElement.query(By.css('.trailer-modal__frame'));
+        expect(trailerFrame).toBeTruthy();
+    });
+
+    it('should open image extras in the same modal viewer without a play button', () => {
+        fixture.detectChanges();
+
+        const mediaCards = fixture.debugElement.queryAll(By.css('.trailer-card'));
+        const imageCard = mediaCards[1];
+
+        imageCard.nativeElement.click();
+        fixture.detectChanges();
+
+        expect(component.mediaModalOpen()).toBe(true);
+        expect(component.mediaModalKind()).toBe('image');
+        const modalImage = fixture.debugElement.query(By.css('.trailer-modal__image'));
+        expect(modalImage).toBeTruthy();
     });
 
     it('should render the AI summary section before user reviews', () => {
