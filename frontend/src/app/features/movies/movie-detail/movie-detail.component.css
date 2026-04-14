@@ -222,6 +222,10 @@
     gap: 1.4rem;
 }
 
+.detail-block[id] {
+    scroll-margin-top: 7rem;
+}
+
 .detail-heading {
     font-size: 1.75rem;
     font-weight: 700;
@@ -384,6 +388,19 @@
 .review-body {
     color: var(--detail-muted);
     line-height: 1.7;
+    margin: 0;
+}
+
+.review-read-more {
+    margin-top: 0.9rem;
+    align-self: flex-start;
+    background: transparent;
+    border: 0;
+    color: var(--detail-accent);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
 }
 
 .detail-sidebar {

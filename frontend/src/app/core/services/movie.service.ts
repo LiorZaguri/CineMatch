@@ -4,12 +4,15 @@ import { Observable, forkJoin, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
+    AIMovieSearchRequest,
+    AIMovieSearchResponse,
     Movie,
     MovieCatalogResponse,
     MovieDashboardResponse,
     RawMovieDashboardResponse,
-    ReviewResponse,
     CreateReviewRequest,
+    ReviewResponse,
+    ReviewSummaryResponse,
     TmdbMovie,
     TmdbMovieListResponse
 } from '../models/movie.models';
@@ -116,6 +119,14 @@ export class MovieService {
         return this.http.post<ReviewResponse>(`${this.gatewayMovieUrl}/review/`, payload);
     }
 
+    getMovieSummary(tmdbId: number): Observable<ReviewSummaryResponse> {
+        return this.http.get<ReviewSummaryResponse>(`${this.gatewayMovieUrl}/ai/${tmdbId}/summary/`);
+    }
+
+    aiSearch(payload: AIMovieSearchRequest): Observable<AIMovieSearchResponse> {
+        return this.http.post<AIMovieSearchResponse>(`${this.gatewayMovieUrl}/ai/search`, payload);
+    }
+
     getMovieFromState(idOrUuid: string): Movie | undefined {
         return this._movies().find((movie) => String(movie.id) === idOrUuid);
     }
@@ -157,7 +168,7 @@ export class MovieService {
             durationMinutes: 0,
             tmdb_id: movie.id,
             reviews: 'reviews' in movie && Array.isArray(movie.reviews) ? movie.reviews : undefined,
-            review_summary: movie.review_summary ?? null
+            review_summary: movie.review_summary ?? (movie.summary ? { summary_text: movie.summary } : null)
         };
     }
 

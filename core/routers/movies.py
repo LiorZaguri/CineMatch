@@ -201,11 +201,9 @@ async def ai_search_movie(request: AISearchRequest):
         # Validate the response against the expected schema
         ai_filters = AISearchResponse(**response)
         
-        # Check if the filters are effectively empty
-        # We ignore 'query' and 'include_adult' because they don't count as structured filters 
-        # for TMDB discovery, or they are just echoing the prompt.
+        # Check if the filters are effectively empty.
+        # A query-only AI response is still valid because TMDB keyword search can use it.
         filters_check = ai_filters.filters.model_dump(exclude_defaults=True)
-        filters_check.pop("query", None)
         filters_check.pop("include_adult", None)
 
         if not filters_check:
@@ -216,7 +214,7 @@ async def ai_search_movie(request: AISearchRequest):
         # Map raw JSON results to TmdbMovie objects for validation
         validated_movies = []
         if ai_recommended_movies and "results" in ai_recommended_movies:
-            validated_movies = [TmdbMovie(**m) for m in ai_recommended_movies["results"]]
+            validated_movies = [TmdbMovie(**m) for m in ai_recommended_movies["results"][:7]]
 
         return AISearchSuccess(status="success", fallback_used=False, movies=validated_movies)
 

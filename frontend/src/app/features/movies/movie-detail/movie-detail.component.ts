@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { MovieService } from '../../../core/services/movie.service';
@@ -24,18 +24,6 @@ interface MovieDetailData extends Movie {
     review_summary?: MovieSummaryPayload | null;
 }
 
-interface AiSummaryResponse {
-    ok: boolean;
-    summary: string | null;
-    error: string | null;
-}
-
-interface AiSummaryRequest {
-    movie_title: string;
-    tmdb_id: number;
-    reviews: Array<Pick<MovieReview, 'rating' | 'content'>>;
-}
-
 @Component({
     selector: 'app-movie-detail',
     standalone: true,
@@ -44,11 +32,9 @@ interface AiSummaryRequest {
     styleUrls: ['./movie-detail.component.css']
 })
 export class MovieDetailComponent {
+    private readonly reviewPreviewLength = 280;
     private readonly route = inject(ActivatedRoute);
     private readonly movieService = inject(MovieService);
-    private readonly http = inject(HttpClient);
-    // Temporary direct worker endpoint until summary generation is routed through gateway/core.
-    private readonly aiSummaryUrl = 'http://localhost:8002/summarize';
 
     // Signals for movie, loading, and error
     readonly movie = signal<Movie | null>(null);
@@ -62,6 +48,7 @@ export class MovieDetailComponent {
     readonly reviewComposerContent = signal<string>('');
     readonly reviewComposerError = signal<string | null>(null);
     readonly reviewComposerSubmitting = signal<boolean>(false);
+    readonly expandedReviews = signal<Record<string, boolean>>({});
 
     readonly displayReviews = computed(() => {
         const current = this.movie() as MovieDetailData | null;
@@ -106,6 +93,7 @@ export class MovieDetailComponent {
         this.reviewComposerRating.set(4);
         this.reviewComposerContent.set('');
         this.reviewComposerSubmitting.set(false);
+        this.expandedReviews.set({});
 
         this.movieService.getMovieByTmdbId(tmdbId, true).subscribe({
             next: (movie: Movie) => {
@@ -137,12 +125,7 @@ export class MovieDetailComponent {
             return;
         }
 
-        const reviews = this.displayReviews().map(review => ({
-            rating: review.rating,
-            content: review.content
-        }));
-
-        if (reviews.length === 0) {
+        if (this.displayReviews().length === 0) {
             this.aiSummaryError.set('No reviews are available yet for AI summarization.');
             return;
         }
@@ -150,13 +133,9 @@ export class MovieDetailComponent {
         this.aiSummaryLoading.set(true);
         this.aiSummaryError.set(null);
 
-        this.requestAiSummary({
-            movie_title: currentMovie.title,
-            tmdb_id: tmdbId,
-            reviews
-        }).subscribe({
+        this.movieService.getMovieSummary(tmdbId).subscribe({
             next: (response) => {
-                if (response.ok && response.summary) {
+                if (response.summary?.trim()) {
                     this.aiSummary.set(response.summary);
                     this.aiSummaryError.set(null);
                 } else {
@@ -243,6 +222,7 @@ export class MovieDetailComponent {
                         ...(detail.reviews ?? [])
                     ]
                 });
+                this.expandedReviews.set({});
                 this.cancelReviewComposer();
             },
             error: (err: HttpErrorResponse) => {
@@ -270,14 +250,37 @@ export class MovieDetailComponent {
         return Array.from({ length: Math.max(1, Math.min(5, Math.round(rating / 2))) }, (_, index) => index);
     }
 
-    private setInitialSummary(movie: Movie): void {
-        const detail = movie as MovieDetailData;
-        const summary = detail.review_summary?.summary_text?.trim();
-        this.aiSummary.set(summary || null);
+    getReviewContent(review: MovieReview, index: number): string {
+        const content = review.content.trim();
+        if (!this.isReviewTruncated(review) || this.isReviewExpanded(review, index)) {
+            return content;
+        }
+
+        return `${content.slice(0, this.reviewPreviewLength).trimEnd()}...`;
     }
 
-    private requestAiSummary(payload: AiSummaryRequest) {
-        return this.http.post<AiSummaryResponse>(this.aiSummaryUrl, payload);
+    isReviewTruncated(review: MovieReview): boolean {
+        return review.content.trim().length > this.reviewPreviewLength;
+    }
+
+    isReviewExpanded(review: MovieReview, index: number): boolean {
+        return this.expandedReviews()[this.reviewKey(review, index)] ?? false;
+    }
+
+    toggleReviewExpanded(review: MovieReview, index: number): void {
+        const key = this.reviewKey(review, index);
+        const expandedReviews = this.expandedReviews();
+
+        this.expandedReviews.set({
+            ...expandedReviews,
+            [key]: !expandedReviews[key]
+        });
+    }
+
+    private setInitialSummary(movie: Movie): void {
+        const detail = movie as MovieDetailData & { summary?: string | null };
+        const summary = detail.review_summary?.summary_text?.trim() ?? detail.summary?.trim();
+        this.aiSummary.set(summary || null);
     }
 
     private resolveTmdbId(movie: Movie): number | null {
@@ -291,5 +294,9 @@ export class MovieDetailComponent {
         }
 
         return null;
+    }
+
+    private reviewKey(review: MovieReview, index: number): string {
+        return typeof review.id === 'number' ? `review-${review.id}` : `review-index-${index}`;
     }
 }
