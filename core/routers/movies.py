@@ -96,6 +96,25 @@ async def update_review(
     user_id: Annotated[str, Depends(get_user_id)],
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Updates an existing movie review.
+
+    This endpoint allows a user to modify their previously submitted rating
+    and content for a specific review. It verifies that the review belongs
+    to the authenticated user before applying changes.
+
+    Args:
+        review_id (int): The unique identifier of the review to update.
+        payload (ReviewUpdate): The updated rating and content.
+        user_id (str): The authenticated user's ID.
+        db (AsyncSession): The database session dependency.
+
+    Returns:
+        Review: The updated review object.
+
+    Raises:
+        HTTPException: 404 Not Found if the review doesn't exist or doesn't belong to the user.
+    """
     review_query = select(Review).where(Review.id == review_id, Review.user_id == user_id)
     review_result = await db.execute(review_query)
     review = review_result.scalars().first()
@@ -165,7 +184,18 @@ async def get_movie_dashboard():
 
 @router.get("/popular/", response_model=TmdbMovieList)
 async def get_popular(page: int = Query(1, ge=1)):
-    """Fetches a paginated list of popular movies."""
+    """
+    Fetches a paginated list of popular movies from TMDB.
+
+    Args:
+        page (int): The page number of results to retrieve (default is 1).
+
+    Returns:
+        TmdbMovieList: A paginated list of popular movies.
+
+    Raises:
+        HTTPException: 502 Bad Gateway if TMDB API is unreachable.
+    """
     data = await get_popular_movies(page=page)
     if not data:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="TMDB unreachable")
@@ -174,7 +204,18 @@ async def get_popular(page: int = Query(1, ge=1)):
 
 @router.get("/now-playing/", response_model=TmdbMovieList)
 async def now_playing(page: int = Query(1, ge=1)):
-    """Fetches a paginated list of movies currently in theaters."""
+    """
+    Fetches a paginated list of movies currently playing in theaters from TMDB.
+
+    Args:
+        page (int): The page number of results to retrieve (default is 1).
+
+    Returns:
+        TmdbMovieList: A paginated list of now playing movies.
+
+    Raises:
+        HTTPException: 502 Bad Gateway if TMDB API is unreachable.
+    """
     data = await get_now_playing_movies(page=page)
     if not data:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="TMDB unreachable")
@@ -183,7 +224,18 @@ async def now_playing(page: int = Query(1, ge=1)):
 
 @router.get("/upcoming/", response_model=TmdbMovieList)
 async def upcoming(page: int = Query(1, ge=1)):
-    """Fetches a paginated list of upcoming movies."""
+    """
+    Fetches a paginated list of upcoming movies from TMDB.
+
+    Args:
+        page (int): The page number of results to retrieve (default is 1).
+
+    Returns:
+        TmdbMovieList: A paginated list of upcoming movies.
+
+    Raises:
+        HTTPException: 502 Bad Gateway if TMDB API is unreachable.
+    """
     data = await get_upcoming_movies(page=page)
     if not data:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="TMDB unreachable")
@@ -192,7 +244,18 @@ async def upcoming(page: int = Query(1, ge=1)):
 
 @router.get("/top-rated/", response_model=TmdbMovieList)
 async def top_rated(page: int = Query(1, ge=1)):
-    """Fetches a paginated list of top-rated movies."""
+    """
+    Fetches a paginated list of top-rated movies from TMDB.
+
+    Args:
+        page (int): The page number of results to retrieve (default is 1).
+
+    Returns:
+        TmdbMovieList: A paginated list of top-rated movies.
+
+    Raises:
+        HTTPException: 502 Bad Gateway if TMDB API is unreachable.
+    """
     data = await get_top_rated_movies(page=page)
     if not data:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="TMDB unreachable")

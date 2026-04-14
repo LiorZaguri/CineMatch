@@ -26,7 +26,7 @@ class AIFilters(BaseModel):
 
     certification: str | None = Field(None, description="Movie certification (e.g., PG-13)")
     language: str | None = Field(None, description="ISO 639-1 language code for translations (the 'language' parameter)")
-    original_language: str | None = Field(None, description="ISO 639-1 language code to filter by original language (the 'with_original_language' parameter)")
+    original_language: str | None = Field(None, description="ISO 639-1 code for original language")
     with_genres: list[int] = Field(default_factory=list, description="List of genre IDs to include")
     without_genres: list[int] = Field(default_factory=list, description="List of genre IDs to exclude")
     with_cast: list[int | str] = Field(default_factory=list, description="List of actor IDs or names to include")

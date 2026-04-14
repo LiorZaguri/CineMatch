@@ -7,8 +7,8 @@ a clean interface for fetching movie data like popular, upcoming, and top-rated 
 as well as detailed information for specific movies.
 """
 
-from datetime import date
 import asyncio
+from datetime import date
 from typing import Any, Dict, Optional
 
 import httpx
@@ -336,12 +336,17 @@ async def get_movie_watch_providers(tmdb_id: int) -> Optional[Dict[str, Any]]:
     """
     Retrieves watch providers for a specific movie by its TMDB ID.
 
+    This function queries TMDB's watch providers endpoint to find where a movie
+    is available for streaming, rent, or purchase. The response is localized
+    by country codes.
+
     Args:
         tmdb_id (int): The unique The Movie Database (TMDB) identifier.
 
     Returns:
-        Optional[Dict[str, Any]]: A dictionary containing watch provider details if found,
-                                  or None if the movie does not exist or an error occurs.
+        Optional[Dict[str, Any]]: A dictionary containing watch provider details 
+                                  organized by country, or None if the movie 
+                                  is not found or an error occurs.
     """
     client = get_tmdb_client()
 
@@ -379,6 +384,17 @@ _PROPERTY_SEARCH_CONFIG = {
 }
 
 def _build_search_params(settings: Any, property_name: str, text: str) -> dict[str, object]:
+    """
+    Constructs the query parameters for TMDB search endpoints.
+
+    Args:
+        settings (Any): The TMDB settings object containing language preferences.
+        property_name (str): The name of the property being searched (e.g., 'with_cast').
+        text (str): The search query text.
+
+    Returns:
+        dict[str, object]: A dictionary of query parameters tailored for the specific property.
+    """
     config = _PROPERTY_SEARCH_CONFIG[property_name]
     params: dict[str, object] = {"query": text, "page": 1}
 
@@ -389,10 +405,20 @@ def _build_search_params(settings: Any, property_name: str, text: str) -> dict[s
     return params
 
 async def _find_exact_match(results: list[dict], text: str) -> dict | None:
-    """Return the best matching TMDB search result by name.
+    """
+    Identifies the best matching TMDB search result for a given query string.
 
-    Prefer exact case-insensitive matches, then partial substring matches,
-    and finally keyword overlap if no exact hit exists.
+    This function employs a scoring mechanism to evaluate search results:
+    - 100 points for an exact case-insensitive match.
+    - 90 points for partial substring matches.
+    - 50+ points for keyword token overlap.
+
+    Args:
+        results (list[dict]): A list of search results returned by TMDB.
+        text (str): The original search query to match against.
+
+    Returns:
+        dict | None: The best matching result object, or None if no results exist.
     """
     def normalize(value: str) -> str:
         cleaned = "".join(ch if ch.isalnum() or ch.isspace() else " " for ch in value.lower())
@@ -434,7 +460,22 @@ async def _find_exact_match(results: list[dict], text: str) -> dict | None:
     return best_match or (results[0] if results else None)
 
 async def _normalize_tmdb_ids(values: list[int | str], property_name: str) -> list[int]:
-    """Normalize property values to TMDB numeric IDs using centralized property config."""
+    """
+    Converts a list of mixed names and IDs into a list of verified TMDB numeric IDs.
+
+    This function processes search criteria (like actor names or keywords) and
+    resolves them to their corresponding TMDB identifiers. It handles:
+    - Direct integers (passed through).
+    - Stringified numeric IDs (converted to int).
+    - Textual names (searched via TMDB API and matched for accuracy).
+
+    Args:
+        values (list[int | str]): The input values to normalize.
+        property_name (str): The category of the values (e.g., 'with_cast', 'with_keywords').
+
+    Returns:
+        list[int]: A list of resolved and verified numeric TMDB IDs.
+    """
     config = _PROPERTY_SEARCH_CONFIG.get(property_name)
     if config is None:
         return []

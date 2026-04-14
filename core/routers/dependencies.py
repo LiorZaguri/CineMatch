@@ -71,14 +71,20 @@ async def get_user_country_code(CF_IPCountry: Annotated[str | None, Header()] = 
 
 async def _get_all_reviews(tmdb_id: int, db: AsyncSession) -> list[TmdbReview]:
     """
-    Helper function to fetch and aggregate reviews from both TMDB and the local database.
-    
+    Fetches and aggregates movie reviews from both TMDB and the local database.
+
+    This helper function retrieves reviews from the external TMDB API and combines them
+    with user-submitted reviews stored in the local CineMatch database. It maps both
+    sources to a unified `TmdbReview` schema, ensuring consistent data structures for
+    the frontend. Local reviews are enriched with placeholder author details to match
+    the TMDB format, and the final list is sorted by creation date in descending order.
+
     Args:
         tmdb_id (int): The unique TMDB identifier for the movie.
-        db (AsyncSession): The database session.
-        
+        db (AsyncSession): The database session dependency.
+
     Returns:
-        list[TmdbReview]: A list of aggregated reviews mapped to the TmdbReview schema.
+        list[TmdbReview]: A sorted list of aggregated reviews from all sources.
     """
     # 1. Fetch reviews from TMDB
     tmdb_reviews_data = await get_movie_reviews(tmdb_id)
@@ -119,7 +125,10 @@ async def _get_all_reviews(tmdb_id: int, db: AsyncSession) -> list[TmdbReview]:
             created_at=lr.created_at,
             author_details=TmdbAuthorDetails(
                 name="CineMatch User",
+                username="cinematch_user",
                 rating=float(lr.rating),
+                avatar_path=None,
+                avatar_url=None,
                 user_id=str(lr.user_id),
                 source="local",
             ),
