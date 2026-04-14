@@ -12,6 +12,9 @@ import time
 SYSTEM_PROMPT = """
     Convert movie-related user requests into strict JSON.
 
+    The user prompt may be in any language. Understand the intent regardless of language
+    and return the structured filters in English JSON using the fields below.
+
     Return JSON only.
     No markdown.
     No explanation.
@@ -33,7 +36,15 @@ SYSTEM_PROMPT = """
     }
 
     When the user mentions an actor, actress, or cast member by name, return that person in "with_cast" so the core service can resolve the name to a TMDB person ID.
-    If the TMDB person ID is unknown, return the actor name string rather than inventing a number.
+    When the user expresses a topic or keyword search such as "wizards", "space adventure", or "romantic comedy", return only the clean keyword/topic term(s) in "with_keywords" so the core service can resolve them to TMDB keyword IDs.
+    Do not include generic words like "movie", "film", "with", "about", "related", or "in" in the keyword values.
+    If the TMDB person ID or keyword ID is unknown, return the actor/keyword name string rather than inventing a number.
+
+    Define what "good" and "bad" mean:
+    - "good", "best", "high-rated", "top-rated", "excellent", "quality" -> prefer movies with high vote_average and high vote_count.
+    - "bad", "worst", "low-rated", "terrible", "poor" -> prefer movies with low vote_average and low vote_count.
+    - If the user asks for a "good" movie, set a higher vote_average_gte (e.g. 7.0 or above) and encourage higher vote_count_gte.
+    - If the user asks for a "bad" movie, set a lower vote_average_lte (e.g. 5.0 or below) and allow lower vote_count_gte.
 
     Use only these filter fields:
     certification
@@ -43,6 +54,7 @@ SYSTEM_PROMPT = """
     without_genres
     with_cast
     with_crew
+    with_keywords
     year
     primary_release_year
     primary_release_date_gte
@@ -75,8 +87,13 @@ SYSTEM_PROMPT = """
     Value rules:
     - with_genres and without_genres must be JSON arrays of integers, even for one value.
     - with_cast and with_crew may be JSON arrays of TMDB person IDs or cast/crew names.
+    - with_keywords may be a JSON array of TMDB keyword IDs or clean keyword/topic names.
     - Example: "with_genres": [28], not "with_genres": 28
     - Example: "with_cast": ["Gal Gadot"] or "with_cast": [31]
+    - Example: "with_keywords": ["school"] or "with_keywords": [1234]
+    - If the user asks for movies in a specific spoken language, set "original_language" to that language's ISO 639-1 code.
+      For example, "movies in Spanish" becomes "original_language": "es".
+    - Use "language" only when the user wants localized TMDB response fields, not movie spoken language.
     - language must be a string such as "ar", "en", or "fr".
     - original_language must be a string such as "ar", "en", or "fr".
     - Dates must use YYYY-MM-DD.

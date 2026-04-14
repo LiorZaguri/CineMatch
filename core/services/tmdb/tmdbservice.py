@@ -72,60 +72,7 @@ def get_tmdb_client() -> httpx.AsyncClient:
     return _tmdb_client
 
 
-async def _search_tmdb_person(name: str) -> dict | None:
-    """Search TMDB for a person by name and return the first matching result."""
-    settings = get_tmdb_settings()
-    client = get_tmdb_client()
-    response = await client.get(
-        "search/person",
-        params={
-            "query": name,
-            "page": 1,
-            "include_adult": False,
-            "language": settings.TMDB_LANGUAGE,
-        },
-    )
-    response.raise_for_status()
-    data = response.json()
-    results = data.get("results") or []
-    if not results:
-        return None
 
-    exact = next(
-        (
-            person
-            for person in results
-            if isinstance(person.get("name"), str)
-            and person["name"].strip().lower() == name.strip().lower()
-        ),
-        None,
-    )
-    return exact or results[0]
-
-
-async def _normalize_tmdb_person_ids(values: list[int | str]) -> list[int]:
-    normalized: list[int] = []
-    for item in values:
-        if isinstance(item, int):
-            normalized.append(item)
-            continue
-
-        text = item.strip() if isinstance(item, str) else None
-        if not text:
-            continue
-
-        if text.isdigit():
-            normalized.append(int(text))
-            continue
-
-        person = await _search_tmdb_person(text)
-        if person is None:
-            print(f"[TMDB] Could not resolve person name: {text}", flush=True)
-            continue
-
-        normalized.append(int(person["id"]))
-
-    return normalized
 
 
 async def _fetch_movie_list(category: str, page: int) -> Optional[Dict[str, Any]]:
@@ -295,11 +242,12 @@ async def discover_movies(ai_response: AISearchResponse) -> Optional[Dict[str, A
     client = get_tmdb_client()
     filters = ai_response.filters
 
-    # Resolve any cast or crew names to TMDB IDs before discovery.
-    if filters.with_cast:
-        filters.with_cast = await _normalize_tmdb_person_ids(filters.with_cast)
-    if filters.with_crew:
-        filters.with_crew = await _normalize_tmdb_person_ids(filters.with_crew)
+    # Resolve any named TMDB filter values to numeric IDs before discovery.
+    for property_name in ("with_cast", "with_crew", "with_keywords"):
+        values = getattr(filters, property_name)
+        if values:
+            normalized_values = await _normalize_tmdb_ids(values, property_name)
+            setattr(filters, property_name, normalized_values)
 
     today = date.today().isoformat()
 
@@ -318,6 +266,7 @@ async def discover_movies(ai_response: AISearchResponse) -> Optional[Dict[str, A
         "without_genres": ",".join(map(str, filters.without_genres)) if filters.without_genres else None,
         "with_cast": ",".join(map(str, filters.with_cast)) if filters.with_cast else None,
         "with_crew": ",".join(map(str, filters.with_crew)) if filters.with_crew else None,
+        "with_keywords": ",".join(map(str, filters.with_keywords)) if filters.with_keywords else None,
         "year": filters.year,
         "primary_release_year": filters.primary_release_year,
         "primary_release_date.gte": filters.primary_release_date_gte,
@@ -408,3 +357,127 @@ async def get_movie_watch_providers(tmdb_id: int) -> Optional[Dict[str, Any]]:
     except (httpx.HTTPStatusError, httpx.RequestError) as e:
         print(f"[TMDB] Error while fetching watch providers for {tmdb_id}: {e}", flush=True)
         return None
+
+# --- Internal Helper Functions for Discovery ---
+
+_PROPERTY_SEARCH_CONFIG = {
+    "with_cast": {
+        "endpoint": "search/person",
+        "entity_type": "person",
+        "include_adult": False,
+    },
+    "with_crew": {
+        "endpoint": "search/person",
+        "entity_type": "person",
+        "include_adult": False,
+    },
+    "with_keywords": {
+        "endpoint": "search/keyword",
+        "entity_type": "keyword",
+        "include_adult": None,
+    },
+}
+
+def _build_search_params(settings: Any, property_name: str, text: str) -> dict[str, object]:
+    config = _PROPERTY_SEARCH_CONFIG[property_name]
+    params: dict[str, object] = {"query": text, "page": 1}
+
+    if config["entity_type"] == "person":
+        params["include_adult"] = config["include_adult"]
+        params["language"] = settings.TMDB_LANGUAGE
+
+    return params
+
+async def _find_exact_match(results: list[dict], text: str) -> dict | None:
+    """Return the best matching TMDB search result by name.
+
+    Prefer exact case-insensitive matches, then partial substring matches,
+    and finally keyword overlap if no exact hit exists.
+    """
+    def normalize(value: str) -> str:
+        cleaned = "".join(ch if ch.isalnum() or ch.isspace() else " " for ch in value.lower())
+        return " ".join(cleaned.split())
+
+    def score(name: str, query: str) -> int:
+        if name == query:
+            return 100
+        if name in query or query in name:
+            return 90
+
+        name_tokens = set(name.split())
+        query_tokens = set(query.split())
+        overlap = len(name_tokens & query_tokens)
+        if overlap > 0:
+            return 50 + overlap
+
+        return 0
+
+    normalized_query = normalize(text)
+    best_match = None
+    best_score = -1
+
+    for item in results:
+        name = item.get("name")
+        if not isinstance(name, str):
+            continue
+
+        normalized_name = normalize(name)
+        current_score = score(normalized_name, normalized_query)
+
+        if current_score > best_score:
+            best_score = current_score
+            best_match = item
+
+        if current_score == 100:
+            break
+
+    return best_match or (results[0] if results else None)
+
+async def _normalize_tmdb_ids(values: list[int | str], property_name: str) -> list[int]:
+    """Normalize property values to TMDB numeric IDs using centralized property config."""
+    config = _PROPERTY_SEARCH_CONFIG.get(property_name)
+    if config is None:
+        return []
+
+    settings = get_tmdb_settings()
+    client = get_tmdb_client()
+    normalized: list[int] = []
+    endpoint = config["endpoint"]
+
+    for item in values:
+        if isinstance(item, int):
+            normalized.append(item)
+            continue
+
+        text = item.strip() if isinstance(item, str) else None
+        if not text:
+            continue
+
+        if text.isdigit():
+            normalized.append(int(text))
+            continue
+
+        params = _build_search_params(settings, property_name, text)
+        response = await client.get(endpoint, params=params)
+        response.raise_for_status()
+        data = response.json()
+        results = data.get("results") or []
+
+        if not results:
+            print(f"[TMDB] Could not resolve {property_name} name: {text}", flush=True)
+            continue
+
+        match = await _find_exact_match(results, text)
+        if match is None:
+            print(f"[TMDB] No match found for {property_name} name: {text}", flush=True)
+            continue
+
+        try:
+            normalized.append(int(match["id"]))
+        except (TypeError, ValueError, KeyError) as exc:
+            print(
+                f"[TMDB] Invalid TMDB ID for {property_name} result: {match!r} ({exc})",
+                flush=True,
+            )
+
+    return normalized

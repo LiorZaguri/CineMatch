@@ -120,8 +120,11 @@ describe('MovieListComponent', () => {
         fixture.detectChanges();
 
         expect(fixture.debugElement.query(By.css('.hero-section h1')).nativeElement.textContent).toContain('Movie 1');
-        expect(fixture.debugElement.query(By.css('.poster-card h4')).nativeElement.textContent).toContain('Movie 2');
-        expect(fixture.debugElement.query(By.css('.critics-card span')).nativeElement.textContent).toContain('Movie 1');
+        expect(fixture.debugElement.query(By.css('.recommendations-row .poster-card h4')).nativeElement.textContent).toContain('Movie 2');
+        expect(fixture.nativeElement.textContent).toContain('Now Playing');
+        expect(fixture.nativeElement.textContent).toContain('Popular Right Now');
+        expect(fixture.nativeElement.textContent).toContain('Coming Soon');
+        expect(fixture.nativeElement.textContent).toContain('Top Rated');
     });
 
     it('should display empty state when no movies are available', () => {
