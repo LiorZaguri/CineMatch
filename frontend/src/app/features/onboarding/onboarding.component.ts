@@ -5,8 +5,17 @@ import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { DiscoveryMode } from '../../core/models/onboarding.models';
 import { Movie } from '../../core/models/movie.models';
+import {
+  UpdateUserPreferenceRequest,
+  UserPreferenceDiscoveryMode,
+  UserPreferenceEra,
+  UserPreferenceGenre,
+  UserPreferenceLanguage,
+  UserPreferenceRuntime,
+} from '../../core/models/user-preference.models';
 import { MovieService } from '../../core/services/movie.service';
 import { OnboardingService } from '../../core/services/onboarding.service';
+import { UserPreferenceService } from '../../core/services/user-preference.service';
 import { MovieSeedCardComponent } from './components/movie-seed-card/movie-seed-card.component';
 import { OnboardingMovieCard } from './movie-card.models';
 
@@ -257,6 +266,57 @@ const MOVIE_SEED_LOOKUP = MOVIE_SEEDS.reduce<Record<number, OnboardingMovieCard>
   {},
 );
 
+const GENRE_TO_API: Record<string, UserPreferenceGenre> = {
+  thriller: 'Thriller',
+  drama: 'Drama',
+  'sci-fi': 'Sci-fi',
+  crime: 'Crime',
+  mystery: 'Mystery',
+  comedy: 'Comedy',
+  romance: 'Romance',
+  horror: 'Horror',
+  animation: 'Animation',
+  fantasy: 'Fantasy',
+  documentary: 'Documentary',
+  action: 'Action',
+};
+
+const LANGUAGE_TO_API: Record<string, UserPreferenceLanguage> = {
+  en: 'English',
+  ko: 'Korean',
+  ja: 'Japanese',
+  fr: 'French',
+  es: 'Spanish',
+  any: 'Open to anything',
+};
+
+const RUNTIME_TO_API: Record<string, UserPreferenceRuntime> = {
+  under_100: '100',
+  '100_140': '100-140',
+  '140_plus': '140+',
+  any: 'No preference',
+};
+
+const DISCOVERY_TO_API: Record<DiscoveryMode, UserPreferenceDiscoveryMode> = {
+  mainstream: 'mainstream confident',
+  hidden_gems: 'hidden gems',
+  mix: 'best mix',
+};
+
+const MOOD_TO_API: Record<string, string> = MOOD_OPTIONS.reduce<Record<string, string>>(
+  (lookup, mood) => ({ ...lookup, [mood.value]: mood.label }),
+  {},
+);
+
+const ERA_TO_API: Record<string, UserPreferenceEra> = {
+  '1970s': '1970',
+  '1980s': '1980',
+  '1990s': '1990',
+  '2000s': '2000',
+  '2010s': '2010',
+  '2020s': '2020',
+};
+
 @Component({
   selector: 'app-onboarding',
   standalone: true,
@@ -268,9 +328,12 @@ export class OnboardingComponent implements OnDestroy {
   private readonly router = inject(Router);
   private readonly movieService = inject(MovieService);
   protected readonly onboarding = inject(OnboardingService);
+  private readonly userPreferences = inject(UserPreferenceService);
   private searchSubscription: Subscription | null = null;
 
   protected readonly currentStep = signal(0);
+  protected readonly isSavingPreferences = signal(false);
+  protected readonly saveError = signal<string | null>(null);
   protected readonly movieSearch = signal('');
   protected readonly isMovieSearchLoading = signal(false);
   protected readonly movieSearchResults = signal<OnboardingMovieCard[]>([]);
@@ -468,13 +531,11 @@ export class OnboardingComponent implements OnDestroy {
   }
 
   protected skipForNow(): void {
-    this.onboarding.skip();
-    this.router.navigate(['/movies']);
+    this.persistPreferences('skipped');
   }
 
   protected finishSetup(): void {
-    this.onboarding.complete();
-    this.router.navigate(['/movies']);
+    this.persistPreferences('completed');
   }
 
   ngOnDestroy(): void {
@@ -503,5 +564,54 @@ export class OnboardingComponent implements OnDestroy {
       }
       return nextCache;
     });
+  }
+
+  private persistPreferences(status: 'completed' | 'skipped'): void {
+    if (this.isSavingPreferences()) {
+      return;
+    }
+
+    this.isSavingPreferences.set(true);
+    this.saveError.set(null);
+
+    this.userPreferences.updatePreferences(this.toUserPreferencePayload()).subscribe({
+      next: () => {
+        if (status === 'completed') {
+          this.onboarding.complete();
+        } else {
+          this.onboarding.skip();
+        }
+        this.isSavingPreferences.set(false);
+        this.router.navigate(['/movies']);
+      },
+      error: () => {
+        this.isSavingPreferences.set(false);
+        this.saveError.set('Unable to save your preferences. Please try again.');
+      },
+    });
+  }
+
+  private toUserPreferencePayload(): UpdateUserPreferenceRequest {
+    const draft = this.draft();
+    return {
+      discovery_mode: draft.discoveryMode ? DISCOVERY_TO_API[draft.discoveryMode] : 'best mix',
+      languages: draft.preferredLanguages
+        .map((language) => LANGUAGE_TO_API[language])
+        .filter((language): language is UserPreferenceLanguage => Boolean(language)),
+      runtime: draft.runtimePreset ? RUNTIME_TO_API[draft.runtimePreset] : null,
+      eras: draft.eraPreferences
+        .map((era) => ERA_TO_API[era])
+        .filter((era): era is UserPreferenceEra => Boolean(era)),
+      chosen_movies: draft.selectedMovieIds.map((tmdbId) => ({ tmdb_id: tmdbId })),
+      liked_genres: draft.favoriteGenres
+        .map((genre) => GENRE_TO_API[genre])
+        .filter((genre): genre is UserPreferenceGenre => Boolean(genre))
+        .map((name) => ({ name })),
+      disliked_genres: draft.avoidedGenres
+        .map((genre) => GENRE_TO_API[genre])
+        .filter((genre): genre is UserPreferenceGenre => Boolean(genre))
+        .map((name) => ({ name })),
+      moods: draft.moodTags.map((mood) => ({ name: MOOD_TO_API[mood] ?? mood })),
+    };
   }
 }

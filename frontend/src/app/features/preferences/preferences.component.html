@@ -1,0 +1,236 @@
+<main class="preferences-page">
+  <section class="preferences-hero">
+    <div>
+      <span class="eyebrow">Taste Profile</span>
+      <h1>Update what CineMatch knows about you.</h1>
+      <p>Change the movie signals, genres, moods, and defaults that shape your recommendations.</p>
+    </div>
+
+    <div class="hero-actions">
+      <a routerLink="/movies" class="btn-secondary">
+        <span class="material-symbols-outlined">arrow_back</span>
+        Back to movies
+      </a>
+      <button type="button" class="btn-primary" [disabled]="isSaving()" (click)="savePreferences()">
+        @if (isSaving()) {
+          Saving...
+        } @else {
+          Save preferences
+        }
+      </button>
+    </div>
+  </section>
+
+  @if (feedback()) {
+    <div class="status-banner" [class.error]="feedback()!.type === 'error'">
+      {{ feedback()!.message }}
+    </div>
+  }
+
+  @if (isLoading()) {
+    <section class="preferences-card loading-card">
+      <span class="loader"></span>
+      <p>Loading your taste profile...</p>
+    </section>
+  } @else {
+    <section class="preferences-grid">
+      <article class="preferences-card preferences-card--wide">
+        <div class="card-header">
+          <div>
+            <span class="section-tag">Movies</span>
+            <h2>Your chosen movies</h2>
+            <p>
+              Add or remove movies that best represent your taste. These are the strongest signals.
+            </p>
+          </div>
+          <strong class="count-pill">{{ selectedMovieIds().length }} selected</strong>
+        </div>
+
+        <label class="search-field">
+          <span>Search movies</span>
+          <input
+            type="text"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="setMovieSearch($event)"
+            placeholder="Search TMDB for more favorites..."
+          />
+        </label>
+
+        @if (isSearching()) {
+          <p class="field-help">Searching TMDB...</p>
+        }
+
+        @if (getSelectedMovieCards().length > 0) {
+          <div class="selected-movies">
+            <div class="selected-movies__header">
+              <span>Saved movies</span>
+              <strong>Click × to remove</strong>
+            </div>
+            <div class="selected-movies__list">
+              @for (movie of getSelectedMovieCards(); track movie.id) {
+                <button
+                  type="button"
+                  class="selected-movie-chip"
+                  (click)="removeMovie(movie.id)"
+                  [attr.aria-label]="'Remove ' + movie.title + ' from preferences'"
+                >
+                  <strong>{{ movie.title }}</strong>
+                  <span aria-hidden="true">×</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        @if (searchResults().length > 0) {
+          <div class="movie-result-grid">
+            @for (movie of searchResults(); track movie.id) {
+              <app-movie-seed-card
+                [movie]="movie"
+                [selected]="isMovieSelected(movie.id)"
+                [posterLoading]="isSearching()"
+                (toggled)="toggleMovie($event)"
+              />
+            }
+          </div>
+        }
+      </article>
+
+      <article class="preferences-card">
+        <div class="card-header">
+          <div>
+            <span class="section-tag">Genres</span>
+            <h2>Prioritize</h2>
+            <p>Choose genres you want CineMatch to lean toward.</p>
+          </div>
+        </div>
+
+        <div class="option-grid option-grid--pills">
+          @for (genre of genreOptions; track genre.value) {
+            <button
+              type="button"
+              class="option-pill"
+              [class.is-selected]="likedGenres().includes(genre.value)"
+              (click)="toggleLikedGenre(genre.value)"
+            >
+              {{ genre.label }}
+            </button>
+          }
+        </div>
+      </article>
+
+      <article class="preferences-card">
+        <div class="card-header">
+          <div>
+            <span class="section-tag">Avoid</span>
+            <h2>Dial down</h2>
+            <p>Mark genres you usually skip. This is a soft negative signal.</p>
+          </div>
+        </div>
+
+        <div class="option-grid option-grid--pills">
+          @for (genre of genreOptions; track genre.value) {
+            <button
+              type="button"
+              class="option-pill option-pill--negative"
+              [class.is-selected]="dislikedGenres().includes(genre.value)"
+              (click)="toggleDislikedGenre(genre.value)"
+            >
+              {{ genre.label }}
+            </button>
+          }
+        </div>
+      </article>
+
+      <article class="preferences-card preferences-card--wide">
+        <div class="card-header">
+          <div>
+            <span class="section-tag">Mood</span>
+            <h2>Movie-night feel</h2>
+            <p>Select the moods that describe what you usually want to watch.</p>
+          </div>
+        </div>
+
+        <div class="option-grid option-grid--cards">
+          @for (mood of moodOptions; track mood.value) {
+            <button
+              type="button"
+              class="choice-card"
+              [class.is-selected]="moods().includes(mood.value)"
+              (click)="toggleMood(mood.value)"
+            >
+              <strong>{{ mood.label }}</strong>
+            </button>
+          }
+        </div>
+      </article>
+
+      <article class="preferences-card preferences-card--wide">
+        <div class="card-header">
+          <div>
+            <span class="section-tag">Defaults</span>
+            <h2>Recommendation defaults</h2>
+            <p>Set soft defaults for discovery style, language, runtime, and era.</p>
+          </div>
+        </div>
+
+        <div class="defaults-grid">
+          <label class="field">
+            <span class="field-label">Discovery mode</span>
+            <select
+              class="field-input"
+              [ngModel]="discoveryMode()"
+              (ngModelChange)="discoveryMode.set($event)"
+            >
+              @for (option of discoveryOptions; track option.value) {
+                <option [ngValue]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+
+          <div class="field field--wide">
+            <span class="field-label">Languages</span>
+            <div class="option-grid option-grid--compact">
+              @for (option of languageOptions; track option.value) {
+                <button
+                  type="button"
+                  class="option-pill"
+                  [class.is-selected]="languages().includes(option.value)"
+                  (click)="toggleLanguage(option.value)"
+                >
+                  {{ option.label }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <label class="field">
+            <span class="field-label">Runtime</span>
+            <select class="field-input" [ngModel]="runtime()" (ngModelChange)="runtime.set($event)">
+              <option [ngValue]="null">No preference</option>
+              @for (option of runtimeOptions; track option.value) {
+                <option [ngValue]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+
+          <div class="field field--wide">
+            <span class="field-label">Eras</span>
+            <div class="option-grid option-grid--compact">
+              @for (option of eraOptions; track option.value) {
+                <button
+                  type="button"
+                  class="option-pill"
+                  [class.is-selected]="eras().includes(option.value)"
+                  (click)="toggleEra(option.value)"
+                >
+                  {{ option.label }}
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+  }
+</main>

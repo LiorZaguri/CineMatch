@@ -17,6 +17,7 @@ export class TopbarComponent implements OnDestroy {
     private readonly auth = inject(AuthService);
     private readonly router = inject(Router);
     private readonly movieService = inject(MovieService);
+    private readonly aiSearchPageSize = 5;
     private activeSearchSubscription: Subscription | null = null;
     private latestSearchQuery = '';
     @ViewChild('profileMenu') private readonly profileMenu?: ElementRef<HTMLDetailsElement>;
@@ -25,9 +26,12 @@ export class TopbarComponent implements OnDestroy {
     readonly isAuthenticated = this.auth.isAuthenticated;
     readonly user = this.auth.currentUser;
     readonly aiSearchQuery = signal('');
+    readonly aiSearchAllResults = signal<Movie[]>([]);
     readonly aiSearchLoading = signal(false);
     readonly aiSearchResults = signal<Movie[]>([]);
     readonly aiSearchError = signal<string | null>(null);
+    readonly aiSearchNoMoreSuggestions = signal(false);
+    readonly aiSearchResultsOffset = signal(0);
     readonly isSearchOpen = signal(false);
 
     getAvatarInitials(): string {
@@ -59,11 +63,18 @@ export class TopbarComponent implements OnDestroy {
             return;
         }
 
-        this.isSearchOpen.set(true);
+        this.cancelActiveSearch();
+        this.latestSearchQuery = '';
+        this.aiSearchAllResults.set([]);
+        this.aiSearchLoading.set(false);
+        this.aiSearchNoMoreSuggestions.set(false);
+        this.aiSearchResults.set([]);
+        this.aiSearchResultsOffset.set(0);
+        this.isSearchOpen.set(false);
     }
 
     onSearchFocus(): void {
-        if (this.aiSearchQuery().trim() && this.isAuthenticated()) {
+        if (this.aiSearchQuery().trim() && this.isAuthenticated() && !!this.latestSearchQuery) {
             this.isSearchOpen.set(true);
         }
     }
@@ -77,6 +88,43 @@ export class TopbarComponent implements OnDestroy {
         }
 
         this.runSearch(query);
+    }
+
+    showOtherSuggestions(): void {
+        const allResults = this.aiSearchAllResults();
+        const nextOffset = this.aiSearchResultsOffset() + this.aiSearchPageSize;
+        if (nextOffset >= allResults.length) {
+            this.aiSearchNoMoreSuggestions.set(true);
+            return;
+        }
+
+        this.aiSearchResultsOffset.set(nextOffset);
+        this.aiSearchResults.set(this.getResultsPage(nextOffset));
+        this.aiSearchNoMoreSuggestions.set(nextOffset + this.aiSearchPageSize >= allResults.length);
+    }
+
+    showPreviousSuggestions(): void {
+        const previousOffset = Math.max(this.aiSearchResultsOffset() - this.aiSearchPageSize, 0);
+        this.aiSearchResultsOffset.set(previousOffset);
+        this.aiSearchResults.set(this.getResultsPage(previousOffset));
+        this.aiSearchNoMoreSuggestions.set(false);
+    }
+
+    hasMoreSuggestions(): boolean {
+        return this.aiSearchResultsOffset() + this.aiSearchPageSize < this.aiSearchAllResults().length;
+    }
+
+    hasPreviousSuggestions(): boolean {
+        return this.aiSearchResultsOffset() > 0;
+    }
+
+    currentSuggestionsPage(): number {
+        return Math.floor(this.aiSearchResultsOffset() / this.aiSearchPageSize) + 1;
+    }
+
+    totalSuggestionsPages(): number {
+        const totalResults = this.aiSearchAllResults().length;
+        return totalResults ? Math.ceil(totalResults / this.aiSearchPageSize) : 1;
     }
 
     clearSearch(): void {
@@ -142,15 +190,19 @@ export class TopbarComponent implements OnDestroy {
                 }
 
                 if (response.status === 'fallback') {
+                    this.aiSearchAllResults.set([]);
+                    this.aiSearchNoMoreSuggestions.set(false);
                     this.aiSearchResults.set([]);
+                    this.aiSearchResultsOffset.set(0);
                     this.aiSearchLoading.set(false);
                     return;
                 }
 
-                const movies = response.movies
-                    .slice(0, 5)
-                    .map((movie) => this.mapSearchMovie(movie));
-                this.aiSearchResults.set(movies);
+                const movies = response.movies.map((movie) => this.mapSearchMovie(movie));
+                this.aiSearchAllResults.set(movies);
+                this.aiSearchResultsOffset.set(0);
+                this.aiSearchNoMoreSuggestions.set(false);
+                this.aiSearchResults.set(this.getResultsPage(0));
                 this.aiSearchLoading.set(false);
             },
             error: (error: unknown) => {
@@ -158,7 +210,10 @@ export class TopbarComponent implements OnDestroy {
                     return;
                 }
 
+                this.aiSearchAllResults.set([]);
+                this.aiSearchNoMoreSuggestions.set(false);
                 this.aiSearchResults.set([]);
+                this.aiSearchResultsOffset.set(0);
                 this.aiSearchLoading.set(false);
             }
         });
@@ -190,14 +245,21 @@ export class TopbarComponent implements OnDestroy {
     private resetSearchState(): void {
         this.cancelActiveSearch();
         this.latestSearchQuery = '';
+        this.aiSearchAllResults.set([]);
         this.aiSearchResults.set([]);
+        this.aiSearchResultsOffset.set(0);
         this.aiSearchError.set(null);
         this.aiSearchLoading.set(false);
+        this.aiSearchNoMoreSuggestions.set(false);
         this.isSearchOpen.set(false);
     }
 
     private cancelActiveSearch(): void {
         this.activeSearchSubscription?.unsubscribe();
         this.activeSearchSubscription = null;
+    }
+
+    private getResultsPage(offset: number): Movie[] {
+        return this.aiSearchAllResults().slice(offset, offset + this.aiSearchPageSize);
     }
 }
