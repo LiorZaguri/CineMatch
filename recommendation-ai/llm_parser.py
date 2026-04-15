@@ -286,14 +286,17 @@ async def parse_user_prompt_with_fallback(prompt: str) -> ParsedSearchResponse:
         parsed = await parse_user_prompt(prompt)
         return parsed
 
-    except (asyncio.TimeoutError, json.JSONDecodeError, ValidationError, ValueError, TypeError) as e:
-        print(f"[AI Parser] Exception details: {e}", flush=True)
+    except Exception as e:
+        # Catching all exceptions to ensure we always return a valid fallback 
+        # for the search system, regardless of whether it's a timeout, 
+        # validation error, or a connection issue with the LLM provider.
+        print(f"[AI Parser] Exception encountered: {type(e).__name__} - {e}", flush=True)
         return ParsedSearchResponse(
             mode="keyword",
             filters=SearchFilters(
                 query=prompt,
                 include_adult=False,
             ),
-            fallback_reason="invalid_llm_output",
+            fallback_reason="ai_service_error",
         )
 

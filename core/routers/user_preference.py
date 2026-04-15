@@ -187,8 +187,22 @@ async def update_user_preferences(
     user_pref.runtime = payload.runtime
 
     # 2. Synchronize nested collections using the "Replace" strategy.
-    # Because of cascade="all, delete-orphan", assigning a new list
-    # automatically handles the deletion of old records.
+    # To avoid IntegrityError (unique constraint violations) when replacing
+    # collections that have unique constraints (like user_id + name),
+    # we first clear the collections and flush the session. 
+    # This ensures that old records are marked for deletion and removed 
+    # from the database before the new ones are inserted.
+    
+    user_pref.language_preferences.clear()
+    user_pref.era_preferences.clear()
+    user_pref.chosen_movies.clear()
+    user_pref.liked_genres.clear()
+    user_pref.disliked_genres.clear()
+    user_pref.moods.clear()
+    
+    # Flush to ensure deletes are processed
+    await db.flush()
+
     user_pref.language_preferences = [
         UserLanguage(user_id=user_id, name=language)
         for language in payload.languages

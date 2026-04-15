@@ -130,7 +130,7 @@ class RabbitMQRPCClient:
                 content_type="application/json",
                 correlation_id=correlation_id,
                 reply_to=self.callback_queue.name,
-                expiration=str(timeout * 1000),  # expiration is in milliseconds (string)
+                expiration=timeout * 1000,  # expiration should be an integer (milliseconds)
             ),
             routing_key=self.target_queue,
         )
