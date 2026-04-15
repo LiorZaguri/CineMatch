@@ -1,0 +1,303 @@
+<main class="onboarding-page">
+  <section class="onboarding-shell">
+    <nav class="step-strip" aria-label="Onboarding steps">
+      @for (step of steps; track step; let index = $index) {
+        <button
+          type="button"
+          class="step-strip__item"
+          [class.is-active]="index === currentStep()"
+          [class.is-complete]="index < currentStep()"
+          (click)="goToStep(index)"
+          [attr.aria-current]="index === currentStep() ? 'step' : null"
+        >
+          <span class="step-strip__index">
+            @if (index < currentStep()) {
+              ✓
+            } @else {
+              0{{ index + 1 }}
+            }
+          </span>
+          <span class="step-strip__label">{{ step }}</span>
+        </button>
+      }
+    </nav>
+
+    <section class="stage-card">
+      @if (currentStep() === 0) {
+        <div class="stage-section stage-section--movies">
+          <div class="stage-section__header">
+            <div>
+              <p class="stage-section__eyebrow">Favorite movies</p>
+              <h2>Start with the titles you would recommend instantly.</h2>
+              <p class="stage-section__description">
+                Pick at least five movies you already like so CineMatch can learn your starting
+                taste.
+              </p>
+            </div>
+            <p class="stage-section__hint">Search TMDB or pick from the starter set below.</p>
+          </div>
+
+          <label class="search-field">
+            <span class="search-field__label">Search movies</span>
+            <input
+              type="text"
+              [ngModel]="movieSearch()"
+              (ngModelChange)="setMovieSearch($event)"
+              placeholder="Try Arrival, Parasite, Zodiac..."
+            />
+          </label>
+
+          @if (isMovieSearchLoading()) {
+            <p class="step-helper">Searching TMDB…</p>
+          }
+
+          @if (selectedMovieCards().length > 0) {
+            <section class="selected-movies" aria-label="Selected movies">
+              <div class="selected-movies__header">
+                <span>Selected movies</span>
+                <strong>{{ selectedMovieCount() }} / 5 minimum</strong>
+              </div>
+
+              <div class="selected-movies__list">
+                @for (movie of selectedMovieCards(); track movie.id) {
+                  <button
+                    type="button"
+                    class="selected-movie-chip"
+                    (click)="removeSelectedMovie(movie.id)"
+                    [attr.aria-label]="'Remove ' + movie.title + ' from selected movies'"
+                  >
+                    <strong>{{ movie.title || 'Untitled movie' }}</strong>
+                    <span class="selected-movie-chip__remove" aria-hidden="true">×</span>
+                  </button>
+                }
+              </div>
+            </section>
+          }
+
+          <div class="movie-seed-grid">
+            @for (movie of filteredMovieSeeds(); track movie.id) {
+              <app-movie-seed-card
+                [movie]="movie"
+                [selected]="isMovieSelected(movie.id)"
+                [posterLoading]="isMovieSearchLoading()"
+                (toggled)="toggleMovie($event)"
+              />
+            }
+          </div>
+
+          <p class="step-helper" [class.is-warning]="selectedMovieCount() < 5">
+            {{
+              selectedMovieCount() < 5
+                ? 'Choose at least five titles before moving on.'
+                : 'Strong start. Add more if you want a clearer first profile.'
+            }}
+          </p>
+        </div>
+      }
+
+      @if (currentStep() === 1) {
+        <div class="stage-section">
+          <div class="stage-section__header">
+            <div>
+              <p class="stage-section__eyebrow">{{ activeStepMeta().label }}</p>
+              <h2>What should CineMatch prioritize?</h2>
+              <p class="stage-section__description">
+                Choose the genres you want to see more often in your recommendations.
+              </p>
+            </div>
+          </div>
+
+          <div class="option-grid option-grid--pills">
+            @for (genre of favoriteGenres; track genre.value) {
+              <button
+                type="button"
+                class="option-pill"
+                [class.is-selected]="hasSelection('favoriteGenres', genre.value)"
+                (click)="toggleFavoriteGenre(genre.value)"
+              >
+                {{ genre.label }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @if (currentStep() === 2) {
+        <div class="stage-section">
+          <div class="stage-section__header">
+            <div>
+              <p class="stage-section__eyebrow">{{ activeStepMeta().label }}</p>
+              <h2>What usually misses for you?</h2>
+              <p class="stage-section__description">
+                Select genres you usually skip. Leave this empty if you want broad discovery.
+              </p>
+            </div>
+          </div>
+
+          <div class="option-grid option-grid--pills">
+            @for (genre of favoriteGenres; track genre.value) {
+              <button
+                type="button"
+                class="option-pill option-pill--negative"
+                [class.is-selected]="hasSelection('avoidedGenres', genre.value)"
+                (click)="toggleAvoidedGenre(genre.value)"
+              >
+                {{ genre.label }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @if (currentStep() === 3) {
+        <div class="stage-section">
+          <div class="stage-section__header">
+            <div>
+              <p class="stage-section__eyebrow">{{ activeStepMeta().label }}</p>
+              <h2>What kind of watch feels right most often?</h2>
+              <p class="stage-section__description">
+                Pick the moods that best describe what you usually want from a movie night.
+              </p>
+            </div>
+          </div>
+
+          <div class="option-grid option-grid--cards">
+            @for (mood of moodOptions; track mood.value) {
+              <button
+                type="button"
+                class="mood-card"
+                [class.is-selected]="hasSelection('moodTags', mood.value)"
+                (click)="toggleMood(mood.value)"
+              >
+                <strong>{{ mood.label }}</strong>
+                <p>{{ mood.caption }}</p>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @if (currentStep() === 4) {
+        <div class="stage-section stage-section--preferences">
+          <div class="stage-section__header">
+            <div>
+              <p class="stage-section__eyebrow">{{ activeStepMeta().label }}</p>
+              <h2>Set a few starting defaults.</h2>
+              <p class="stage-section__description">
+                These preferences guide the first pass only. You can change them later.
+              </p>
+            </div>
+          </div>
+
+          <div class="preference-stack">
+            <section class="preference-block preference-block--wide">
+              <div class="preference-block__header">
+                <span class="preference-block__label">Required</span>
+                <h3>Discovery mode</h3>
+              </div>
+              <div class="option-grid option-grid--cards option-grid--three-up">
+                @for (mode of discoveryOptions; track mode.value) {
+                  <button
+                    type="button"
+                    class="choice-card"
+                    [class.is-selected]="draft().discoveryMode === mode.value"
+                    (click)="selectDiscoveryMode(mode.value)"
+                  >
+                    <strong>{{ mode.label }}</strong>
+                    <p>{{ mode.caption }}</p>
+                  </button>
+                }
+              </div>
+            </section>
+
+            <section class="preference-block">
+              <div class="preference-block__header">
+                <span class="preference-block__label">Optional</span>
+                <h3>Languages</h3>
+              </div>
+              <div class="option-grid option-grid--pills">
+                @for (language of languageOptions; track language.value) {
+                  <button
+                    type="button"
+                    class="option-pill"
+                    [class.is-selected]="hasSelection('preferredLanguages', language.value)"
+                    (click)="toggleLanguage(language.value)"
+                  >
+                    {{ language.label }}
+                  </button>
+                }
+              </div>
+            </section>
+
+            <section class="preference-block">
+              <div class="preference-block__header">
+                <span class="preference-block__label">Optional</span>
+                <h3>Runtime</h3>
+              </div>
+              <div class="option-grid option-grid--cards">
+                @for (runtime of runtimeOptions; track runtime.value) {
+                  <button
+                    type="button"
+                    class="choice-card"
+                    [class.is-selected]="draft().runtimePreset === runtime.value"
+                    (click)="selectRuntime(runtime.value)"
+                  >
+                    <strong>{{ runtime.label }}</strong>
+                    <p>{{ runtime.caption }}</p>
+                  </button>
+                }
+              </div>
+            </section>
+
+            <section class="preference-block">
+              <div class="preference-block__header">
+                <span class="preference-block__label">Optional</span>
+                <h3>Eras</h3>
+              </div>
+              <div class="option-grid option-grid--pills">
+                @for (era of eraOptions; track era.value) {
+                  <button
+                    type="button"
+                    class="option-pill"
+                    [class.is-selected]="hasSelection('eraPreferences', era.value)"
+                    (click)="toggleEra(era.value)"
+                  >
+                    {{ era.label }}
+                  </button>
+                }
+              </div>
+            </section>
+          </div>
+        </div>
+      }
+    </section>
+
+    <footer class="onboarding-actions">
+      <button
+        type="button"
+        class="secondary-action"
+        (click)="previousStep()"
+        [disabled]="currentStep() === 0"
+      >
+        Back
+      </button>
+
+      <div class="onboarding-actions__cluster">
+        <button type="button" class="ghost-action" (click)="skipForNow()">Skip for now</button>
+
+        @if (currentStep() < steps.length - 1) {
+          <button
+            type="button"
+            class="primary-action"
+            (click)="nextStep()"
+            [disabled]="!canContinue()"
+          >
+            Continue
+          </button>
+        } @else {
+          <button type="button" class="primary-action" (click)="finishSetup()">Finish setup</button>
+        }
+      </div>
+    </footer>
+  </section>
+</main>
