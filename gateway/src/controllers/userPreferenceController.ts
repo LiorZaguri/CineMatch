@@ -7,6 +7,8 @@ const DiscoveryMode = z.enum(["mainstream confident", "hidden gems", "best mix"]
 const Language = z.enum(["English", "Korean", "Japanese", "French", "Spanish", "Open to anything"]);
 const Runtime = z.enum(["100", "100-140", "140+", "No preference"]);
 const Era = z.enum(["1970", "1980", "1990", "2000", "2010", "2020"]);
+const LanguageList = z.preprocess((value) => value == null ? [] : value, z.array(Language));
+const EraList = z.preprocess((value) => value == null ? [] : value, z.array(Era));
 const GenreName = z.enum([
   "Thriller", "Drama", "Sci-fi", "Crime", "Mystery", "Comedy",
   "Romance", "Horror", "Animation", "Fantasy", "Documentary", "Action"
@@ -30,9 +32,9 @@ const userMoodCreateSchema = z.object({
 
 const userPreferenceCreateSchema = z.object({
   discovery_mode: DiscoveryMode.default("best mix"),
-  languages: Language.nullable().optional(),
+  languages: LanguageList,
   runtime: Runtime.nullable().optional(),
-  eras: Era.nullable().optional(),
+  eras: EraList,
   chosen_movies: z.array(userMovieCreateSchema).default([]),
   liked_genres: z.array(likedGenreCreateSchema).default([]),
   disliked_genres: z.array(dislikedGenreCreateSchema).default([]),

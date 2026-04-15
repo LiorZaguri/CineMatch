@@ -272,30 +272,54 @@
       }
     </section>
 
+    @if (saveError()) {
+      <div class="onboarding-error" role="alert">
+        {{ saveError() }}
+      </div>
+    }
+
     <footer class="onboarding-actions">
       <button
         type="button"
         class="secondary-action"
         (click)="previousStep()"
-        [disabled]="currentStep() === 0"
+        [disabled]="currentStep() === 0 || isSavingPreferences()"
       >
         Back
       </button>
 
       <div class="onboarding-actions__cluster">
-        <button type="button" class="ghost-action" (click)="skipForNow()">Skip for now</button>
+        <button
+          type="button"
+          class="ghost-action"
+          (click)="skipForNow()"
+          [disabled]="isSavingPreferences()"
+        >
+          Skip for now
+        </button>
 
         @if (currentStep() < steps.length - 1) {
           <button
             type="button"
             class="primary-action"
             (click)="nextStep()"
-            [disabled]="!canContinue()"
+            [disabled]="!canContinue() || isSavingPreferences()"
           >
             Continue
           </button>
         } @else {
-          <button type="button" class="primary-action" (click)="finishSetup()">Finish setup</button>
+          <button
+            type="button"
+            class="primary-action"
+            (click)="finishSetup()"
+            [disabled]="isSavingPreferences()"
+          >
+            @if (isSavingPreferences()) {
+              Saving...
+            } @else {
+              Finish setup
+            }
+          </button>
         }
       </div>
     </footer>

@@ -120,12 +120,12 @@ class UserPreferenceBase(BaseModel):
         default=DiscoveryMode.BEST_MIX,
         description="How 'safe' or 'experimental' recommendations should be"
     )
-    # Preferred language for movies. Optional.
-    languages: Language | None = Field(None, description="Preferred language for movies")
+    # Preferred languages for movies. Empty means no language preference.
+    languages: List[Language] = Field(default_factory=list, description="Preferred languages for movies")
     # Preferred length of movies. Optional.
     runtime: Runtime | None = Field(None, description="Preferred length of movies")
-    # Preferred release era. Optional.
-    eras: Era | None = Field(None, description="Preferred release era")
+    # Preferred release eras. Empty means no era preference.
+    eras: List[Era] = Field(default_factory=list, description="Preferred release eras")
 
 
 class UserPreferenceCreate(UserPreferenceBase):
@@ -150,12 +150,12 @@ class UserPreferenceUpdate(BaseModel):
     """
     # Optional new discovery mode
     discovery_mode: DiscoveryMode | None = Field(None, description="Optional new discovery mode")
-    # Optional new preferred language
-    languages: Language | None = Field(None, description="Optional new preferred language")
+    # Optional replacement of preferred languages
+    languages: List[Language] | None = Field(None, description="Optional replacement of preferred languages")
     # Optional new preferred runtime
     runtime: Runtime | None = Field(None, description="Optional new preferred runtime")
-    # Optional new preferred era
-    eras: Era | None = Field(None, description="Optional new preferred era")
+    # Optional replacement of preferred eras
+    eras: List[Era] | None = Field(None, description="Optional replacement of preferred eras")
     
     # Optional replacement of the chosen movies list
     chosen_movies: List[UserMovieCreate] | None = Field(None, description="Optional replacement of the chosen movies list")

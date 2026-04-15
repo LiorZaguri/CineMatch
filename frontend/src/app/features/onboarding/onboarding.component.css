@@ -399,6 +399,14 @@
   color: #fff4eb;
 }
 
+.onboarding-error {
+  border-radius: 1rem;
+  border: 1px solid rgba(251, 113, 133, 0.38);
+  background: rgba(251, 113, 133, 0.12);
+  color: #fecdd3;
+  padding: 0.9rem 1rem;
+}
+
 .onboarding-actions {
   display: flex;
   align-items: center;
@@ -440,7 +448,8 @@
 }
 
 .primary-action:disabled,
-.secondary-action:disabled {
+.secondary-action:disabled,
+.ghost-action:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   transform: none;

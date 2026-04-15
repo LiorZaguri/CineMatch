@@ -90,27 +90,25 @@ class UserPreference(Base):
         nullable=False
     )
 
-    # Preferred language for movies
-    languages: Mapped[Language | None] = mapped_column(
-        Enum(Language),
-        nullable=True
-    )
-
     # Preferred length of movies
     runtime: Mapped[Runtime | None] = mapped_column(
         Enum(Runtime),
         nullable=True
     )
 
-    # Preferred release era
-    eras: Mapped[Era | None] = mapped_column(
-        Enum(Era),
-        nullable=True
-    )
-
     # Relationship to the list of movies explicitly chosen/liked by the user
     chosen_movies: Mapped[List["UserMovie"]] = relationship(
         "UserMovie", back_populates="user_preference", cascade="all, delete-orphan"
+    )
+
+    # Relationship to preferred movie languages
+    language_preferences: Mapped[List["UserLanguage"]] = relationship(
+        "UserLanguage", back_populates="user_preference", cascade="all, delete-orphan"
+    )
+
+    # Relationship to preferred release eras
+    era_preferences: Mapped[List["UserEra"]] = relationship(
+        "UserEra", back_populates="user_preference", cascade="all, delete-orphan"
     )
 
     # Relationship to genres the user explicitly likes
@@ -130,6 +128,68 @@ class UserPreference(Base):
 
     def __repr__(self) -> str:
         return f"<UserPreference(user_id={self.user_id})>"
+
+    @property
+    def languages(self) -> list[Language]:
+        """Expose language relationship as a plain API list."""
+        return [preference.name for preference in self.language_preferences]
+
+    @property
+    def eras(self) -> list[Era]:
+        """Expose era relationship as a plain API list."""
+        return [preference.name for preference in self.era_preferences]
+
+
+class UserLanguage(Base):
+    """Represents a language that a user prefers for recommendations."""
+
+    __tablename__ = "user_languages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[Language] = mapped_column(Enum(Language), index=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("user_preferences.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+
+    user_preference: Mapped["UserPreference"] = relationship(
+        "UserPreference", back_populates="language_preferences"
+    )
+
+    __table_args__ = (
+        Index("idx_user_language_unique", "user_id", "name", unique=True),
+    )
+
+    def __repr__(self) -> str:
+        return f"<UserLanguage(user_id={self.user_id}, name='{self.name.value}')>"
+
+
+class UserEra(Base):
+    """Represents a release era that a user prefers for recommendations."""
+
+    __tablename__ = "user_eras"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[Era] = mapped_column(Enum(Era), index=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("user_preferences.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+
+    user_preference: Mapped["UserPreference"] = relationship(
+        "UserPreference", back_populates="era_preferences"
+    )
+
+    __table_args__ = (
+        Index("idx_user_era_unique", "user_id", "name", unique=True),
+    )
+
+    def __repr__(self) -> str:
+        return f"<UserEra(user_id={self.user_id}, name='{self.name.value}')>"
 
 
 class UserMovie(Base):

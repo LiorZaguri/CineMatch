@@ -1,140 +1,155 @@
 <header class="topbar">
-    <div class="container topbar-content">
-        <div class="topbar-left">
-            <a routerLink="/" class="brand">
-                <span class="material-symbols-outlined brand-icon">movie_filter</span>
-                <span>CineMatch</span>
-            </a>
+  <div class="container topbar-content">
+    <div class="topbar-left">
+      <a routerLink="/" class="brand">
+        <span class="material-symbols-outlined brand-icon">movie_filter</span>
+        <span>CineMatch</span>
+      </a>
 
-            <nav class="nav-links">
-                <a
-                    routerLink="/"
-                    class="nav-link"
-                    routerLinkActive="nav-link-active"
-                    [routerLinkActiveOptions]="{ exact: true }"
-                >
-                    <span class="material-symbols-outlined nav-icon">home</span>
-                    Home
-                </a>
-                <a
-                    routerLink="/movies"
-                    class="nav-link"
-                    routerLinkActive="nav-link-active"
-                >
-                    <span class="material-symbols-outlined nav-icon">movie</span>
-                    Movies
-                </a>
-            </nav>
-        </div>
+      <nav class="nav-links">
+        <a
+          routerLink="/"
+          class="nav-link"
+          routerLinkActive="nav-link-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          <span class="material-symbols-outlined nav-icon">home</span>
+          Home
+        </a>
+        <a routerLink="/movies" class="nav-link" routerLinkActive="nav-link-active">
+          <span class="material-symbols-outlined nav-icon">movie</span>
+          Movies
+        </a>
+      </nav>
+    </div>
 
-        <div class="auth-actions">
-            <div class="ai-search" #searchPanel>
-                <form class="ai-search-form" (submit)="onSearchSubmit($event)">
-                    <span class="material-symbols-outlined ai-search-icon">auto_awesome</span>
-                    <input
-                        type="search"
-                        class="ai-search-input"
-                        [value]="aiSearchQuery()"
-                        (input)="onSearchInput($event)"
-                        (focus)="onSearchFocus()"
-                        [disabled]="!isAuthenticated()"
-                        [attr.placeholder]="isAuthenticated() ? 'Ask AI for a movie vibe...' : 'Sign in to use AI search'"
-                        aria-label="AI movie search"
-                    />
+    <div class="auth-actions">
+      <div class="ai-search" #searchPanel>
+        <form class="ai-search-form" (submit)="onSearchSubmit($event)">
+          <span class="material-symbols-outlined ai-search-icon">auto_awesome</span>
+          <input
+            type="search"
+            class="ai-search-input"
+            [value]="aiSearchQuery()"
+            (input)="onSearchInput($event)"
+            (focus)="onSearchFocus()"
+            [disabled]="!isAuthenticated()"
+            [attr.placeholder]="
+              isAuthenticated() ? 'Ask AI for a movie vibe...' : 'Sign in to use AI search'
+            "
+            aria-label="AI movie search"
+          />
 
-                    <button type="submit" class="ai-search-submit" [disabled]="!isAuthenticated() || !aiSearchQuery()" aria-label="Search with AI">
-                        <span class="material-symbols-outlined">search</span>
-                    </button>
-                </form>
+          <button
+            type="submit"
+            class="ai-search-submit"
+            [disabled]="!isAuthenticated() || !aiSearchQuery()"
+            aria-label="Search with AI"
+          >
+            <span class="material-symbols-outlined">search</span>
+          </button>
+        </form>
 
-                @if (isSearchOpen()) {
-                    <div class="ai-search-panel">
-                        <div class="ai-search-dropdown">
-                            @if (aiSearchLoading()) {
-                                <div class="ai-search-state">
-                                    <span class="ai-search-spinner" aria-hidden="true"></span>
-                                    <span>Searching for AI matches...</span>
-                                </div>
-                            } @else if (aiSearchResults().length > 0) {
-                                <div class="ai-search-dropdown-head">AI Matches</div>
-                                @for (movie of aiSearchResults(); track movie.id) {
-                                    <button type="button" class="ai-search-result" (click)="openMovie(movie.id)">
-                                        <div class="ai-search-result-poster">
-                                            @if (movie.posterUrl) {
-                                                <img [src]="movie.posterUrl" [alt]="movie.title" />
-                                            } @else {
-                                                <span class="material-symbols-outlined">movie</span>
-                                            }
-                                        </div>
-
-                                        <div class="ai-search-result-copy">
-                                            <p class="ai-search-result-title">{{ movie.title }}</p>
-                                            <p class="ai-search-result-meta">
-                                                {{ movie.releaseDate ? (movie.releaseDate | slice:0:4) : 'TBA' }}
-                                            </p>
-                                        </div>
-                                    </button>
-                                }
-                            } @else {
-                                <div class="ai-search-state">No AI matches found.</div>
-                            }
-                        </div>
-
-                        @if (!aiSearchLoading() && aiSearchResults().length > 0 && (hasPreviousSuggestions() || hasMoreSuggestions() || aiSearchNoMoreSuggestions())) {
-                            <div class="ai-search-actions">
-                                <div class="ai-search-page-indicator">
-                                    {{ currentSuggestionsPage() }} / {{ totalSuggestionsPages() }}
-                                </div>
-                                @if (hasPreviousSuggestions()) {
-                                    <button type="button" class="ai-search-more" (click)="showPreviousSuggestions()">
-                                        Back to previous
-                                    </button>
-                                }
-                                @if (hasMoreSuggestions()) {
-                                    <button type="button" class="ai-search-more" (click)="showOtherSuggestions()">
-                                        See other suggestions
-                                    </button>
-                                } @else if (aiSearchNoMoreSuggestions()) {
-                                    <div class="ai-search-note">No more available suggestions.</div>
-                                }
-                            </div>
-                        }
+        @if (isSearchOpen()) {
+          <div class="ai-search-panel">
+            <div class="ai-search-dropdown">
+              @if (aiSearchLoading()) {
+                <div class="ai-search-state">
+                  <span class="ai-search-spinner" aria-hidden="true"></span>
+                  <span>Searching for AI matches...</span>
+                </div>
+              } @else if (aiSearchResults().length > 0) {
+                <div class="ai-search-dropdown-head">AI Matches</div>
+                @for (movie of aiSearchResults(); track movie.id) {
+                  <button type="button" class="ai-search-result" (click)="openMovie(movie.id)">
+                    <div class="ai-search-result-poster">
+                      @if (movie.posterUrl) {
+                        <img [src]="movie.posterUrl" [alt]="movie.title" />
+                      } @else {
+                        <span class="material-symbols-outlined">movie</span>
+                      }
                     </div>
+
+                    <div class="ai-search-result-copy">
+                      <p class="ai-search-result-title">{{ movie.title }}</p>
+                      <p class="ai-search-result-meta">
+                        {{ movie.releaseDate ? (movie.releaseDate | slice: 0 : 4) : 'TBA' }}
+                      </p>
+                    </div>
+                  </button>
                 }
+              } @else {
+                <div class="ai-search-state">No AI matches found.</div>
+              }
             </div>
 
-            @if (isAuthenticated()) {
-                <details class="profile-menu" #profileMenu>
-                    <summary class="user-profile">
-                        <div class="profile-meta">
-                            <p class="username">{{ user()?.displayName }}</p>
-                            <p class="tier">Premium</p>
-                        </div>
-                        <div class="avatar-wrap">
-                            @if (user()?.avatarUrl) {
-                                <img [src]="user()?.avatarUrl" alt="User avatar" />
-                            } @else {
-                                <span class="avatar-fallback">{{ getAvatarInitials() }}</span>
-                            }
-                        </div>
-                        <span class="material-symbols-outlined profile-caret">expand_more</span>
-                    </summary>
-
-                    <div class="profile-dropdown">
-                        <a routerLink="/settings" class="dropdown-item" (click)="closeProfileMenu()">
-                            <span class="material-symbols-outlined">settings</span>
-                            Settings
-                        </a>
-                        <button type="button" class="dropdown-item danger" (click)="onLogout(); closeProfileMenu()">
-                            <span class="material-symbols-outlined">logout</span>
-                            Logout
-                        </button>
-                    </div>
-                </details>
-            } @else {
-                <a routerLink="/login" class="nav-link">Sign In</a>
-                <a routerLink="/register" class="btn-primary">Get Started</a>
+            @if (
+              !aiSearchLoading() &&
+              aiSearchResults().length > 0 &&
+              (hasPreviousSuggestions() || hasMoreSuggestions() || aiSearchNoMoreSuggestions())
+            ) {
+              <div class="ai-search-actions">
+                <div class="ai-search-page-indicator">
+                  {{ currentSuggestionsPage() }} / {{ totalSuggestionsPages() }}
+                </div>
+                @if (hasPreviousSuggestions()) {
+                  <button type="button" class="ai-search-more" (click)="showPreviousSuggestions()">
+                    Back to previous
+                  </button>
+                }
+                @if (hasMoreSuggestions()) {
+                  <button type="button" class="ai-search-more" (click)="showOtherSuggestions()">
+                    See other suggestions
+                  </button>
+                } @else if (aiSearchNoMoreSuggestions()) {
+                  <div class="ai-search-note">No more available suggestions.</div>
+                }
+              </div>
             }
-        </div>
+          </div>
+        }
+      </div>
+
+      @if (isAuthenticated()) {
+        <details class="profile-menu" #profileMenu>
+          <summary class="user-profile">
+            <div class="profile-meta">
+              <p class="username">{{ user()?.displayName }}</p>
+              <p class="tier">Premium</p>
+            </div>
+            <div class="avatar-wrap">
+              @if (user()?.avatarUrl) {
+                <img [src]="user()?.avatarUrl" alt="User avatar" />
+              } @else {
+                <span class="avatar-fallback">{{ getAvatarInitials() }}</span>
+              }
+            </div>
+            <span class="material-symbols-outlined profile-caret">expand_more</span>
+          </summary>
+
+          <div class="profile-dropdown">
+            <a routerLink="/settings" class="dropdown-item" (click)="closeProfileMenu()">
+              <span class="material-symbols-outlined">settings</span>
+              Settings
+            </a>
+            <a routerLink="/preferences" class="dropdown-item" (click)="closeProfileMenu()">
+              <span class="material-symbols-outlined">tune</span>
+              Taste preferences
+            </a>
+            <button
+              type="button"
+              class="dropdown-item danger"
+              (click)="onLogout(); closeProfileMenu()"
+            >
+              <span class="material-symbols-outlined">logout</span>
+              Logout
+            </button>
+          </div>
+        </details>
+      } @else {
+        <a routerLink="/login" class="nav-link">Sign In</a>
+        <a routerLink="/register" class="btn-primary">Get Started</a>
+      }
     </div>
+  </div>
 </header>

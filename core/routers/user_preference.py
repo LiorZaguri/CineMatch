@@ -13,7 +13,15 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from db.db import get_db
-from models.user_preference import DislikedGenre, LikedGenre, UserMood, UserMovie, UserPreference
+from models.user_preference import (
+    DislikedGenre,
+    LikedGenre,
+    UserEra,
+    UserLanguage,
+    UserMood,
+    UserMovie,
+    UserPreference,
+)
 from schemas.user_preference import UserMovieCreate, UserMovieRead, UserPreferenceCreate, UserPreferenceRead
 
 from .dependencies import get_user_id
@@ -53,6 +61,8 @@ async def get_my_preferences(
         .where(UserPreference.user_id == user_id)
         .options(
             selectinload(UserPreference.chosen_movies),
+            selectinload(UserPreference.language_preferences),
+            selectinload(UserPreference.era_preferences),
             selectinload(UserPreference.liked_genres),
             selectinload(UserPreference.disliked_genres),
             selectinload(UserPreference.moods),
@@ -115,6 +125,8 @@ async def register_user_preferences(
         .where(UserPreference.user_id == user_id)
         .options(
             selectinload(UserPreference.chosen_movies),
+            selectinload(UserPreference.language_preferences),
+            selectinload(UserPreference.era_preferences),
             selectinload(UserPreference.liked_genres),
             selectinload(UserPreference.disliked_genres),
             selectinload(UserPreference.moods),
@@ -154,6 +166,8 @@ async def update_user_preferences(
         .where(UserPreference.user_id == user_id)
         .options(
             selectinload(UserPreference.chosen_movies),
+            selectinload(UserPreference.language_preferences),
+            selectinload(UserPreference.era_preferences),
             selectinload(UserPreference.liked_genres),
             selectinload(UserPreference.disliked_genres),
             selectinload(UserPreference.moods),
@@ -170,13 +184,19 @@ async def update_user_preferences(
 
     # 1. Update top-level fields
     user_pref.discovery_mode = payload.discovery_mode
-    user_pref.languages = payload.languages
     user_pref.runtime = payload.runtime
-    user_pref.eras = payload.eras
 
     # 2. Synchronize nested collections using the "Replace" strategy.
     # Because of cascade="all, delete-orphan", assigning a new list
     # automatically handles the deletion of old records.
+    user_pref.language_preferences = [
+        UserLanguage(user_id=user_id, name=language)
+        for language in payload.languages
+    ]
+    user_pref.era_preferences = [
+        UserEra(user_id=user_id, name=era)
+        for era in payload.eras
+    ]
     user_pref.chosen_movies = [
         UserMovie(user_id=user_id, tmdb_id=m.tmdb_id) 
         for m in payload.chosen_movies
@@ -203,6 +223,8 @@ async def update_user_preferences(
         .where(UserPreference.user_id == user_id)
         .options(
             selectinload(UserPreference.chosen_movies),
+            selectinload(UserPreference.language_preferences),
+            selectinload(UserPreference.era_preferences),
             selectinload(UserPreference.liked_genres),
             selectinload(UserPreference.disliked_genres),
             selectinload(UserPreference.moods),
