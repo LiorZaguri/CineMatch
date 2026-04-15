@@ -39,6 +39,7 @@ SYSTEM_PROMPT = """
     certification
     language
     original_language
+    reference_title
     with_genres
     without_genres
     with_cast
@@ -87,6 +88,15 @@ SYSTEM_PROMPT = """
     - Use "keyword" for vague but movie-related requests.
     - Apply spelling correction and normalization to every string value you emit in "filters".
     - If you emit "query", it must be a corrected English search phrase that preserves the user's intended meaning, not the raw typo-filled text.
+    - Treat requests such as "like", "similar to", "same vibe as", "in the style of", or comparable phrasing as similarity requests, not direct title lookup requests.
+    - For similarity requests like "movies like Harry Potter", prefer "mode": "discover" and set "reference_title" to the corrected movie or franchise name.
+    - For similarity requests, do not put only the reference title into "query". "query" is for direct title search, not for "movies like X" intent.
+    - The backend will use "reference_title" to look up the reference movie, read its genres and a subset of its keywords, and then search for related movies.
+    - If the user is searching by movie title or clearly naming a specific movie, put that title request in "query" because title matching should use TMDB search, not discover-only filters.
+    - Prefer "query" for requests like "find Titanic", "movie Inception", or misspelled title searches such as "interstelar".
+    - Disambiguation rule:
+      - "find Titanic" -> use "query"
+      - "movies like Titanic" -> set "reference_title" to "Titanic" and use "discover"
     - If unsure but movie-related, return:
     {
         "mode": "keyword",
@@ -104,14 +114,19 @@ SYSTEM_PROMPT = """
     - Normalize text before mapping it into numeric, boolean, date, or enum-like outputs.
     - Keep numeric, boolean, and date outputs structurally correct. Do not turn numbers, booleans, or dates into strings just because the user misspelled surrounding words.
     - If the intended correction is not reasonably clear, do not invent a specific person, title, keyword, genre, or other entity. In that case preserve the broad meaning as best as possible in a corrected "query".
+    - When the user asks for movies similar to a known movie or franchise, set "reference_title" to the corrected canonical title or franchise name and let the backend derive genres and some keywords from it.
+    - For similarity requests, you may still add extra discover filters when the user adds extra intent beyond the reference movie, such as tone, runtime, date range, quality, language, cast, or crew preferences.
+    - If the reference movie or franchise is not recognized confidently, do not invent a "reference_title". Fall back to a corrected "query" that preserves the user's intent.
     - with_genres and without_genres must be JSON arrays of integers, even for one value.
     - with_cast and with_crew may be JSON arrays of TMDB person IDs or cast/crew names.
     - with_keywords may be a JSON array of TMDB keyword IDs or clean keyword/topic names.
-    - certification, language, original_language, sort_by, and query are string fields and must contain normalized, corrected values when used.
+    - certification, language, original_language, sort_by, query, and reference_title are string fields and must contain normalized, corrected values when used.
     - Example: "with_genres": [28], not "with_genres": 28
     - Example: "with_cast": ["Gal Gadot"] or "with_cast": [31]
     - Example: "with_keywords": ["school"] or "with_keywords": [1234]
-    - Example: "query": "movies like Harry Potter but darker"
+    - Example: "reference_title": "Harry Potter"
+    - Example: "query": "Titanic"
+    - Example: "query": "Interstellar"
     - If the user asks for movies in a specific spoken language, set "original_language" to that language's ISO 639-1 code.
       For example, "movies in Spanish" becomes "original_language": "es".
       Apply the same rule even if the language name is misspelled, such as "spanich".
@@ -165,7 +180,35 @@ SYSTEM_PROMPT = """
     {
     "mode": "keyword",
     "filters": {
-        "query": "movies like Harry Potter but darker"
+        "query": "Interstellar"
+    },
+    "fallback_reason": null
+    }
+
+    Example:
+    {
+    "mode": "discover",
+    "filters": {
+        "reference_title": "Harry Potter"
+    },
+    "fallback_reason": null
+    }
+
+    Example:
+    {
+    "mode": "discover",
+    "filters": {
+        "reference_title": "Interstellar"
+    },
+    "fallback_reason": null
+    }
+
+    Example:
+    {
+    "mode": "discover",
+    "filters": {
+        "reference_title": "Titanic",
+        "with_keywords": ["darker"]
     },
     "fallback_reason": null
     }

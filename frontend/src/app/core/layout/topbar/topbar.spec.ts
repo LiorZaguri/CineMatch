@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
 import { provideRouter } from '@angular/router';
+import { By } from '@angular/platform-browser';
 import { TopbarComponent } from './topbar';
 import { AuthService } from '../../services/auth.service';
 import { MovieService } from '../../services/movie.service';
@@ -52,5 +53,36 @@ describe('TopbarComponent', () => {
 
         expect(input.disabled).toBeTrue();
         expect(input.placeholder).toContain('Sign in');
+    });
+
+    it('should not open the AI dropdown while the user is only typing', () => {
+        authServiceStub.isAuthenticated.set(true);
+        fixture.detectChanges();
+
+        const input = fixture.debugElement.query(By.css('.ai-search-input')).nativeElement as HTMLInputElement;
+        input.value = 'interstellar';
+        input.dispatchEvent(new Event('input'));
+        fixture.detectChanges();
+
+        expect(component.aiSearchQuery()).toBe('interstellar');
+        expect(component.isSearchOpen()).toBeFalse();
+        expect(fixture.debugElement.query(By.css('.ai-search-dropdown'))).toBeNull();
+    });
+
+    it('should open the AI dropdown after the user submits a search', () => {
+        authServiceStub.isAuthenticated.set(true);
+        movieServiceStub.aiSearch.and.returnValue(of({ status: 'success', fallback_used: false, movies: [] }));
+        fixture.detectChanges();
+
+        const form = fixture.debugElement.query(By.css('.ai-search-form')).nativeElement as HTMLFormElement;
+        const input = fixture.debugElement.query(By.css('.ai-search-input')).nativeElement as HTMLInputElement;
+        input.value = 'interstellar';
+        input.dispatchEvent(new Event('input'));
+        form.dispatchEvent(new Event('submit'));
+        fixture.detectChanges();
+
+        expect(movieServiceStub.aiSearch).toHaveBeenCalledWith({ prompt: 'interstellar' });
+        expect(component.isSearchOpen()).toBeTrue();
+        expect(fixture.debugElement.query(By.css('.ai-search-dropdown'))).not.toBeNull();
     });
 });

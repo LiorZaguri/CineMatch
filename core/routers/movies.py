@@ -32,6 +32,7 @@ from schemas.tmdbmovie import MovieDashboard, MovieDetailWithReviews, TmdbMovie,
 from services.rabbitmq.rpc import recommendation_rpc, summary_rpc
 from services.tmdb.tmdbservice import (
     discover_movies,
+    discover_movies_like_reference,
     get_movie_credits,
     get_movie_details,
     get_now_playing_movies,
@@ -53,6 +54,58 @@ SUMMARY_REVIEW_LOOKBACK = 10
 SUMMARY_MAX_REVIEWS = 5
 SUMMARY_MAX_WORDS = 120
 SUMMARY_MAX_OUTPUT_TOKENS = 300
+AI_SEARCH_MAX_RESULTS = 25
+TMDB_RESULTS_PER_PAGE = 20
+AI_SEARCH_SOURCE_PAGES = (AI_SEARCH_MAX_RESULTS + TMDB_RESULTS_PER_PAGE - 1) // TMDB_RESULTS_PER_PAGE
+
+
+async def _collect_ai_movie_results(ai_filters: AISearchResponse) -> dict | None:
+    reference_title = (ai_filters.filters.reference_title or "").strip()
+    query = (ai_filters.filters.query or "").strip()
+
+    async def fetch_page(page: int) -> dict | None:
+        if reference_title:
+            return await discover_movies_like_reference(ai_filters, page=page)
+        if query:
+            return await search_movies(query=query, page=page)
+        return await discover_movies(ai_filters, page=page)
+
+    aggregated_response: dict | None = None
+    aggregated_results: list[dict] = []
+    seen_movie_ids: set[int] = set()
+
+    for page in range(1, AI_SEARCH_SOURCE_PAGES + 1):
+        page_response = await fetch_page(page)
+        if page_response is None:
+            return aggregated_response
+
+        if aggregated_response is None:
+            aggregated_response = {**page_response, "results": []}
+
+        page_results = page_response.get("results") or []
+        if not page_results:
+            break
+
+        for movie in page_results:
+            movie_id = movie.get("id")
+            if not isinstance(movie_id, int) or movie_id in seen_movie_ids:
+                continue
+
+            aggregated_results.append(movie)
+            seen_movie_ids.add(movie_id)
+
+            if len(aggregated_results) >= AI_SEARCH_MAX_RESULTS:
+                break
+
+        aggregated_response["results"] = aggregated_results
+        if len(aggregated_results) >= AI_SEARCH_MAX_RESULTS:
+            break
+
+        total_pages = page_response.get("total_pages")
+        if isinstance(total_pages, int) and page >= total_pages:
+            break
+
+    return aggregated_response
 
 
 @router.post("/review/",response_model=ReviewRead ,status_code=status.HTTP_201_CREATED)
@@ -338,12 +391,15 @@ async def ai_search_movie(request: AISearchRequest):
         if not filters_check:
             raise Exception("AI returned empty structured filters")
 
-        ai_recommended_movies = await discover_movies(ai_filters)
+        ai_recommended_movies = await _collect_ai_movie_results(ai_filters)
+
+        if ai_recommended_movies is None:
+            raise Exception("TMDB AI search failed")
         
         # Map raw JSON results to TmdbMovie objects for validation
         validated_movies = []
         if ai_recommended_movies and "results" in ai_recommended_movies:
-            validated_movies = [TmdbMovie(**m) for m in ai_recommended_movies["results"][:7]]
+            validated_movies = [TmdbMovie(**m) for m in ai_recommended_movies["results"][:AI_SEARCH_MAX_RESULTS]]
 
         return AISearchSuccess(status="success", fallback_used=False, movies=validated_movies)
 
