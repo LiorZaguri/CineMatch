@@ -1,0 +1,45 @@
+<button type="button" class="movie-card" [class.is-selected]="selected()" (click)="onSelect()">
+  <span class="movie-card__badge">
+    {{ selected() ? 'Selected' : 'Pick' }}
+  </span>
+
+  <div class="movie-card__poster-shell">
+    @if (showPosterSkeleton()) {
+      <div class="movie-card__poster-skeleton" aria-hidden="true">
+        <span></span>
+      </div>
+    }
+
+    @if (hasPoster()) {
+      <img
+        #posterImage
+        class="movie-card__poster"
+        [class.is-ready]="imageReady() || posterImage.complete"
+        [src]="movie().posterUrl || ''"
+        [alt]="title() + ' poster'"
+        loading="lazy"
+        (load)="onImageLoad()"
+        (error)="onImageError()"
+      />
+    } @else {
+      <div class="movie-card__poster-fallback" aria-label="Poster unavailable">
+        <div class="movie-card__poster-fallback-inner">
+          <span class="movie-card__poster-fallback-kicker">CineMatch</span>
+          <strong>{{ title() }}</strong>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="movie-card__content">
+    <strong class="movie-card__title">{{ title() }}</strong>
+
+    <div class="movie-card__meta" aria-label="Movie metadata">
+      <span>{{ yearLabel() }}</span>
+      <span>{{ ratingLabel() }}</span>
+      <span>{{ genreLabel() }}</span>
+    </div>
+
+    <p class="movie-card__summary">{{ summary() }}</p>
+  </div>
+</button>

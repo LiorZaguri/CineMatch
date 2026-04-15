@@ -123,6 +123,31 @@ async def get_top_rated_movies(page: int = 1) -> Optional[Dict[str, Any]]:
     return await _fetch_movie_list("top_rated", page)
 
 
+async def search_movies(query: str, page: int = 1) -> Optional[Dict[str, Any]]:
+    """Fetches a paginated list of movies from TMDB's keyword search endpoint."""
+    setting = get_tmdb_settings()
+    client = get_tmdb_client()
+
+    try:
+        response = await client.get(
+            "search/movie",
+            params={
+                "language": setting.TMDB_LANGUAGE,
+                "query": query,
+                "page": page,
+                "include_adult": False,
+            },
+        )
+        response.raise_for_status()
+        return response.json()
+    except httpx.HTTPStatusError as e:
+        print(f"[TMDB] HTTP error while searching movies for '{query}': {e}", flush=True)
+        return None
+    except httpx.RequestError as e:
+        print(f"[TMDB] Network error while searching movies for '{query}': {e}", flush=True)
+        return None
+
+
 async def get_movie_details(tmdb_id: int) -> Optional[Dict[str, Any]]:
     """
     Retrieves detailed metadata for a specific movie by its TMDB ID, including the trailer.

@@ -36,6 +36,7 @@ from services.tmdb.tmdbservice import (
     get_movie_details,
     get_now_playing_movies,
     get_popular_movies,
+    search_movies,
     get_top_rated_movies,
     get_upcoming_movies,
 )
@@ -272,6 +273,33 @@ async def top_rated(page: int = Query(1, ge=1)):
     data = await get_top_rated_movies(page=page)
     if not data:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="TMDB unreachable")
+    return data
+
+
+@router.get("/search/", response_model=TmdbMovieList)
+async def movie_search(query: str = Query(..., min_length=1), page: int = Query(1, ge=1)):
+    """
+    Fetches a paginated list of movies from TMDB using a plain text query.
+
+    Args:
+        query (str): The movie title or keyword query.
+        page (int): The page number of results to retrieve.
+
+    Returns:
+        TmdbMovieList: A paginated list of matching movies.
+
+    Raises:
+        HTTPException: 502 Bad Gateway if TMDB API is unreachable.
+    """
+    data = await search_movies(query=query, page=page)
+    if not data:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="TMDB unreachable")
+
+    if "results" in data:
+        data["results"] = data["results"][:5]
+        data["total_results"] = min(data.get("total_results", len(data["results"])), 5)
+        data["total_pages"] = min(data.get("total_pages", 1), 1)
+
     return data
 
 @router.post("/ai/search/", response_model=AISearchSuccess | AISearchFallback)

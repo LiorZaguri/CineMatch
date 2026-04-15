@@ -18,6 +18,11 @@ import { getUsersByIds } from "../services/authService";
   const pageQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
   });
+
+  const movieSearchQuerySchema = z.object({
+    query: z.string().trim().min(1),
+    page: z.coerce.number().int().min(1).default(1),
+  });
   
   const tmdbIdParamsSchema = z.object({
     tmdb_id: z.coerce.number().int().min(1),
@@ -300,7 +305,21 @@ import { getUsersByIds } from "../services/authService";
       next(error);
     }
   }
-  
+
+  export async function searchMovies(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { query, page } = movieSearchQuerySchema.parse(req.query);
+      const encodedQuery = encodeURIComponent(query);
+      const { status, payload } = await forwardToCore(`/api/movies/search/?query=${encodedQuery}&page=${page}`);
+      return handleCoreResponse(res, status, payload);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return sendValidationError(res, error);
+      }
+      next(error);
+    }
+  }
+
   export async function getMovieDetails(req: Request,res: Response,next: NextFunction) {
     try {
       const { tmdb_id } = tmdbIdParamsSchema.parse(req.params);
