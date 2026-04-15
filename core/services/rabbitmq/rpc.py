@@ -92,18 +92,20 @@ class RabbitMQRPCClient:
                 except Exception as e:
                     future.set_exception(e)
 
-    async def call(self, payload: dict | str) -> dict:
+    async def call(self, payload: dict | str, timeout: int = 120) -> dict:
         """
         Sends an RPC request to the target queue and awaits the response.
         
         Args:
             payload (dict | str): The data to send. If a dict, it will be JSON encoded.
+            timeout (int): Maximum time in seconds to wait for a response. Defaults to 120.
             
         Returns:
             dict: The JSON-decoded response from the target service.
             
         Raises:
             RuntimeError: If the RPC client has not been connected.
+            asyncio.TimeoutError: If the response is not received within the timeout.
         """
         if not self.channel or not self.callback_queue:
             raise RuntimeError(f"RPC Client for {self.target_queue} is not connected.")
@@ -120,19 +122,26 @@ class RabbitMQRPCClient:
         # Ensure payload is a JSON-encoded bytes object
         body = payload.encode() if isinstance(payload, str) else json.dumps(payload).encode()
 
-        # Publish the request to the default exchange, routing it to the target service's queue
+        # Publish the request to the default exchange, routing it to the target service's queue.
+        # expiration: tells RabbitMQ to discard the message if it stays in the queue longer than the timeout.
         await self.channel.default_exchange.publish(
             aio_pika.Message(
                 body=body,
                 content_type="application/json",
                 correlation_id=correlation_id,
                 reply_to=self.callback_queue.name,
+                expiration=str(timeout * 1000),  # expiration is in milliseconds (string)
             ),
             routing_key=self.target_queue,
         )
 
-        # Suspend execution until the on_response callback sets the result on this Future
-        return await future
+        try:
+            # Suspend execution until the on_response callback sets the result or timeout occurs
+            return await asyncio.wait_for(future, timeout=timeout)
+        except asyncio.TimeoutError:
+            # Clean up the orphan future to prevent memory leaks and late-response conflicts
+            self.futures.pop(correlation_id, None)
+            raise
 
 
 # ==========================================

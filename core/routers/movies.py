@@ -321,10 +321,11 @@ async def ai_search_movie(request: AISearchRequest):
         AISearchSuccess | AISearchFallback: The discovered movies or a fallback signal.
     """
     try:
-        # Call the recommendation service via RPC with a 60-second timeout
-        response = await asyncio.wait_for(
-            recommendation_rpc.call({"prompt": request.prompt}),
-            timeout=60
+        # Call the recommendation service via RPC with a 120-second timeout
+        # The RPC client now handles internal cleanup and message expiration.
+        response = await recommendation_rpc.call(
+            {"prompt": request.prompt}, 
+            timeout=120
         )
 
         # Validate the response against the expected schema
