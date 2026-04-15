@@ -40,6 +40,9 @@ services:
     build: ./core
     container_name: cinematch-core
     working_dir: /app
+    volumes:
+      - ./core:/app
+      - /app/.venv
     env_file:
       - ./core/.env
     command: sh -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000 --forwarded-allow-ips='*'"

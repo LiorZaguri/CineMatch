@@ -11,7 +11,15 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from alembic import context
 from db.config import get_settings
 from models.base import Base
+from models.movie import Movie  # noqa: F401
 from models.review import Review, ReviewSummary  # noqa: F401
+from models.user_preference import (  # noqa: F401
+    DislikedGenre,
+    LikedGenre,
+    UserMood,
+    UserMovie,
+    UserPreference,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

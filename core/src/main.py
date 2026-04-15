@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from db.db import close_db, init_db
 from routers.movies import router as movies_router
+from routers.user_preference import router as user_preference_router
 from services.rabbitmq.rabbitmq import close_rabbitmq, init_rabbitmq
 from services.s3.s3_service import close_s3, init_s3_bucket
 from services.tmdb.tmdbservice import close_tmdb, init_tmdb
@@ -83,6 +84,7 @@ app.add_middleware(
 
 # Include routers to register API endpoints
 app.include_router(movies_router)
+app.include_router(user_preference_router)
 
 
 @app.get("/api/health/", tags=["Health"])

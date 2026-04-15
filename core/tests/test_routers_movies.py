@@ -7,7 +7,6 @@ Tests cover:
 - TMDB movie list wrappers (popular, now-playing, etc.).
 - Movie detail page with reviews.
 """
-import asyncio
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
