@@ -17,7 +17,8 @@ REVIEW_BAD_WORDS_PATTERN = re.compile(
     re.IGNORECASE,
 )
 REVIEW_SPAM_PATTERN = re.compile(
-    r"\b(?:buy now|cheap|click here|discount|dm me|follow me|free\s+gift|giveaway|join my|promo(?:\s+code)?|subscribe|telegram|visit my|whatsapp)\b",
+    r"\b(?:buy now|cheap|click here|discount|dm me|follow me|free\s+gift|"
+    r"giveaway|join my|promo(?:\s+code)?|subscribe|telegram|visit my|whatsapp)\b",
     re.IGNORECASE,
 )
 REVIEW_WORD_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9'’-]*")

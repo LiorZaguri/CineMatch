@@ -24,3 +24,6 @@ class Movie(Base):
     poster_url: Mapped[str] = mapped_column(String(255), nullable=True)
     # ID of the user who created this movie entry
     created_by_user_id: Mapped[int] = mapped_column(index=True, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<Movie(id={self.id}, title='{self.title}')>"

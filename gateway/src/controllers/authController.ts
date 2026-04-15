@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction} from "express";
 import { AuthenticatedRequest } from "../types/authRequest";
 import {AuthError,changeUserPassword,deleteUserAccount,loginUser,registerUser,updateUserProfile,updateUserAvatar,} from "../services/authService";
+import { initializeCorePreferences } from "./userPreferenceController";
 import {buildPublicFileUrl,createAvatarUploadUrl,validateAvatarContentType,} from "../services/S3Service";
 
 
@@ -37,6 +38,19 @@ export async function register(req: Request, res: Response) {
 
   try {
     const result = await registerUser(email, password, displayName.trim());
+
+    // Initialize default preferences in Core service
+    try {
+      await initializeCorePreferences(result.user.id);
+    } catch (prefErr: any) {
+      console.error("Failed to initialize core preferences for new user:", prefErr);
+      return res.status(500).json({
+        error: "CORE_INITIALIZATION_FAILED",
+        message: "User created, but failed to initialize preferences in core service.",
+        details: prefErr.message
+      });
+    }
+
     return res.status(201).json(result);
   } catch (err: any) {
     if (err instanceof AuthError && err.code === "EMAIL_ALREADY_EXISTS") {

@@ -44,6 +44,10 @@ class Review(Base):
         Index("idx_user_movie_review", "user_id", "tmdb_id", unique=True),
     )
 
+    def __repr__(self) -> str:
+        return f"<Review(id={self.id}, user_id={self.user_id}, tmdb_id={self.tmdb_id}, rating={self.rating})>"
+
+
 class ReviewSummary(Base):
     """
     Represents an AI-generated summary of multiple user reviews for a specific movie.
@@ -68,3 +72,6 @@ class ReviewSummary(Base):
         server_onupdate=func.now(),
         nullable=False,
     )
+
+    def __repr__(self) -> str:
+        return f"<ReviewSummary(id={self.id}, tmdb_id={self.tmdb_id})>"

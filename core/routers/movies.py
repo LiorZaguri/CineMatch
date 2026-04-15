@@ -37,9 +37,9 @@ from services.tmdb.tmdbservice import (
     get_movie_details,
     get_now_playing_movies,
     get_popular_movies,
-    search_movies,
     get_top_rated_movies,
     get_upcoming_movies,
+    search_movies,
 )
 
 from .dependencies import _get_all_reviews, _get_streaming_service, get_user_country_code, get_user_id
