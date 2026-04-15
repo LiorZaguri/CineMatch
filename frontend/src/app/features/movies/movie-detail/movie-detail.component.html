@@ -78,7 +78,13 @@
                     </article>
 
                     <article class="detail-block" id="where-to-watch">
-                        <h2 class="detail-heading">Where to Watch</h2>
+                        <div class="detail-heading-row">
+                            <h2 class="detail-heading">Where to Watch</h2>
+                            <div class="justwatch-attribution">
+                                <span>by</span>
+                                <span class="justwatch-label">JustWatch</span>
+                            </div>
+                        </div>
                         @if (streamingServices().length > 0) {
                         <p class="provider-note">
                             Streaming availability for {{ getCountryLabel(movieData.country_code) }}.

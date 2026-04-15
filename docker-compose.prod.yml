@@ -45,13 +45,13 @@ services:
   # AI recommendation service 
   ai-recommender:
     build:
-      context: ./AI recommendation
+      context: ./recommendation-ai
       dockerfile: Dockerfile
     container_name: cinematch-ai-recommender
     restart: unless-stopped
     working_dir: /app
     env_file:
-      - ./AI recommendation/.env
+      - ./recommendation-ai/.env
     networks:
       - cinematch-net
       

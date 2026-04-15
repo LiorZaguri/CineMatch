@@ -285,6 +285,20 @@
     flex: 0 0 auto;
 }
 
+.justwatch-attribution {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--detail-muted);
+    font-weight: 600;
+}
+
+.justwatch-label {
+    color: #fbc02d; /* JustWatch yellow-ish brand color */
+    font-weight: 700;
+}
+
 .trailers-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
