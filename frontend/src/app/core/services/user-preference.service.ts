@@ -26,7 +26,7 @@ export class UserPreferenceService {
   }
 
   removeChosenMovie(tmdbId: number) {
-    return this.http.delete<UserPreferenceProfile>(`${this.preferenceUrl}/movie/${tmdbId}/`);
+    return this.http.delete<void>(`${this.preferenceUrl}/movie/${tmdbId}/`);
   }
 
   checkMoviePreference(tmdbId: number) {

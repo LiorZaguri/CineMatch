@@ -1,0 +1,53 @@
+<div class="my-list-page">
+  <section class="my-list-hero" appScrollReveal [revealDelay]="60">
+    <div class="my-list-hero__copy">
+      <span class="my-list-kicker">My List</span>
+      <h1>Your saved movies, ready when you are.</h1>
+      <p>
+        Keep track of the titles you want to come back to. This list is separate from your taste
+        profile likes.
+      </p>
+    </div>
+  </section>
+
+  @if (loading()) {
+    <div class="my-list-state">
+      <div class="loader"></div>
+      <p>Loading your list...</p>
+    </div>
+  } @else if (error(); as errorMessage) {
+    <div class="my-list-state my-list-state--error">
+      <h2>Couldn’t load your list</h2>
+      <p>{{ errorMessage }}</p>
+      <button type="button" class="retry-btn" (click)="retry()">Try again</button>
+    </div>
+  } @else if (!hasMovies()) {
+    <div class="my-list-state my-list-state--empty" appScrollReveal [revealDelay]="90">
+      <span class="material-symbols-outlined">bookmark</span>
+      <h2>Your list is empty</h2>
+      <p>Add movies from the detail page and they’ll show up here.</p>
+      <a routerLink="/movies" class="browse-btn">Browse Movies</a>
+    </div>
+  } @else {
+    <section class="my-list-grid" appScrollReveal [revealDelay]="100">
+      @for (movie of movies(); track movie.id) {
+        <a [routerLink]="['/movies', movie.id]" class="list-card">
+          <div class="list-card__poster">
+            <img [src]="movie.posterUrl" [alt]="movie.title" />
+            <button
+              type="button"
+              class="list-card__remove"
+              aria-label="Remove from My List"
+              (click)="removeFromList(movie, $event)">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div class="list-card__body">
+            <h3>{{ movie.title }}</h3>
+            <p>{{ getYear(movie) }}</p>
+          </div>
+        </a>
+      }
+    </section>
+  }
+</div>

@@ -43,6 +43,12 @@ export const routes: Routes = [
     canActivate: [authGuard, onboardingCompleteGuard],
   },
   {
+    path: 'my-list',
+    loadComponent: () =>
+      import('./features/my-list/my-list.component').then((m) => m.MyListComponent),
+    canActivate: [authGuard, onboardingCompleteGuard],
+  },
+  {
     path: 'settings',
     loadComponent: () =>
       import('./features/settings/settings.component').then((m) => m.SettingsComponent),

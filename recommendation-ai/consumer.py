@@ -3,7 +3,8 @@ from uuid import uuid4
 import aio_pika
 from aio_pika.abc import AbstractIncomingMessage
 from llm_parser import parse_user_prompt_with_fallback
-from schemas import SearchRequest
+from reranker import rerank_recommendations_with_fallback
+from schemas import RerankRequest, SearchRequest
 from services.rabbitmq.config import get_rabbitmq_settings
 
 class SearchConsumer:
@@ -50,18 +51,22 @@ class SearchConsumer:
     async def handle_message(self, message: AbstractIncomingMessage) -> None:
         async with message.process():
             payload = json.loads(message.body.decode("utf-8"))
-            request = SearchRequest.model_validate(payload)
 
-            parsed_response = await parse_user_prompt_with_fallback(
-                request.prompt,
-            )
+            if payload.get("type") == "rerank_recommendations":
+                request = RerankRequest.model_validate(payload)
+                response_payload = await rerank_recommendations_with_fallback(request)
+            else:
+                request = SearchRequest.model_validate(payload)
+                response_payload = await parse_user_prompt_with_fallback(
+                    request.prompt,
+                )
 
             if not message.reply_to or not self.channel:
                 return
 
             await self.channel.default_exchange.publish(
                 aio_pika.Message(
-                    body=parsed_response.model_dump_json().encode("utf-8"),
+                    body=response_payload.model_dump_json().encode("utf-8"),
                     content_type="application/json",
                     correlation_id=message.correlation_id or str(uuid4()),
                     delivery_mode=aio_pika.DeliveryMode.PERSISTENT,

@@ -8,12 +8,25 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
+  id           String           @id @default(uuid())
+  email        String           @unique
   displayName  String
   passwordHash String
   avatarUrl    String?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime         @default(now())
+  watchlist    WatchlistMovie[]
 
   @@map("users")
+}
+
+model WatchlistMovie {
+  id        String   @id @default(uuid())
+  userId    String
+  tmdbId    Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tmdbId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("watchlist_movies")
 }

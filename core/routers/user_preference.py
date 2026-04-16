@@ -23,6 +23,7 @@ from models.user_preference import (
     UserPreference,
 )
 from schemas.user_preference import UserMovieCreate, UserMovieRead, UserPreferenceCreate, UserPreferenceRead
+from services.recommendations.profile_recommendations import schedule_profile_recommendation_refresh
 
 from .dependencies import get_user_id
 
@@ -230,6 +231,7 @@ async def update_user_preferences(
 
     # 3. Commit changes and return the refreshed profile
     await db.commit()
+    schedule_profile_recommendation_refresh(user_id)
     
     # Re-fetch with preloading to avoid lazy-loading issues during serialization
     query = (
@@ -299,6 +301,7 @@ async def add_chosen_movie(
     
     await db.commit()
     await db.refresh(new_movie)
+    schedule_profile_recommendation_refresh(user_id)
     
     return new_movie
 
@@ -337,6 +340,7 @@ async def remove_chosen_movie(
     # Delete the record
     await db.delete(user_movie)
     await db.commit()
+    schedule_profile_recommendation_refresh(user_id)
     
     return None
 

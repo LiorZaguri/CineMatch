@@ -16,6 +16,7 @@ from models.review import Review, ReviewSummary  # noqa: F401
 from models.user_preference import (  # noqa: F401
     DislikedGenre,
     LikedGenre,
+    RecommendationCache,
     UserMood,
     UserMovie,
     UserPreference,

@@ -1,6 +1,6 @@
 """ defines the message contract """
 
-from typing import Literal
+from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -40,4 +40,38 @@ class SearchFilters(BaseModel):
 class ParsedSearchResponse(BaseModel):
     mode: Literal["discover", "keyword"]
     filters: SearchFilters
+    fallback_reason: str | None = None
+
+
+class RerankUserProfile(BaseModel):
+    liked_genres: list[str] = Field(default_factory=list)
+    disliked_genres: list[str] = Field(default_factory=list)
+    moods: list[str] = Field(default_factory=list)
+    languages: list[str] = Field(default_factory=list)
+    eras: list[str] = Field(default_factory=list)
+    runtime: str | None = None
+    discovery_mode: str | None = None
+    selected_titles: list[str] = Field(default_factory=list)
+
+
+class RerankCandidate(BaseModel):
+    id: int
+    title: str = Field(min_length=1)
+    overview: str = ""
+    release_date: str | None = None
+    vote_average: float | None = None
+    original_language: str | None = None
+
+
+class RerankRequest(BaseModel):
+    type: Literal["rerank_recommendations"] = "rerank_recommendations"
+    user_profile: RerankUserProfile
+    reduced_filters: dict[str, Any] = Field(default_factory=dict)
+    candidates: list[RerankCandidate] = Field(min_length=1, max_length=40)
+    max_results: int = Field(default=20, ge=1, le=40)
+
+
+class RerankResponse(BaseModel):
+    ranked_ids: list[int] = Field(default_factory=list)
+    match_scores: dict[str, int] = Field(default_factory=dict)
     fallback_reason: str | None = None

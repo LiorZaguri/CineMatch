@@ -14,6 +14,19 @@ model User {
   passwordHash String
   avatarUrl    String?
   createdAt    DateTime @default(now())
+  watchlist    WatchlistMovie[]
 
   @@map("users")
+}
+
+model WatchlistMovie {
+  id        String   @id @default(uuid())
+  userId    String
+  tmdbId    Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tmdbId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("watchlist_movies")
 }

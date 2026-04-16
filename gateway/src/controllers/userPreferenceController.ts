@@ -107,6 +107,13 @@ async function forwardToCore(path: string, req?: Request, init?: RequestInit) {
       headers,
     });
 
+    if (response.status === 204) {
+      return {
+        status: response.status,
+        payload: null,
+      };
+    }
+
     const contentType = response.headers.get("content-type") ?? "";
     const isJson = contentType.includes("application/json");
 
@@ -124,6 +131,9 @@ async function forwardToCore(path: string, req?: Request, init?: RequestInit) {
 
 function handleCoreResponse(res: Response, status: number, payload: unknown) {
   if (status >= 200 && status < 300) {
+    if (status === 204) {
+      return res.status(204).send();
+    }
     return res.status(status).json(payload);
   }
 

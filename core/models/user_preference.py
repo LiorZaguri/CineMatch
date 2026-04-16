@@ -8,9 +8,10 @@ AI recommendation engine to personalize results.
 """
 
 import enum
-from typing import List
+from datetime import datetime
+from typing import Any, List
 
-from sqlalchemy import Enum, ForeignKey, Index, Integer, String
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -124,6 +125,13 @@ class UserPreference(Base):
     # Relationship to specific moods/vibes the user is interested in
     moods: Mapped[List["UserMood"]] = relationship(
         "UserMood", back_populates="user_preference", cascade="all, delete-orphan"
+    )
+
+    recommendation_cache: Mapped["RecommendationCache | None"] = relationship(
+        "RecommendationCache",
+        back_populates="user_preference",
+        cascade="all, delete-orphan",
+        uselist=False,
     )
 
     def __repr__(self) -> str:
@@ -316,3 +324,35 @@ class UserMood(Base):
 
     def __repr__(self) -> str:
         return f"<UserMood(user_id={self.user_id}, name='{self.name}')>"
+
+
+class RecommendationCache(Base):
+    """Stores the latest deterministic and AI-ranked recommendations for a user."""
+
+    __tablename__ = "recommendation_caches"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("user_preferences.user_id", ondelete="CASCADE"),
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+    profile_signature: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+    candidate_results: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    ai_results: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
+    candidate_generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ai_generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_ai_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    refresh_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    refresh_status: Mapped[str] = mapped_column(String(32), default="idle", nullable=False)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    user_preference: Mapped["UserPreference"] = relationship(
+        "UserPreference",
+        back_populates="recommendation_cache",
+    )
+
+    def __repr__(self) -> str:
+        return f"<RecommendationCache(user_id={self.user_id}, status={self.refresh_status})>"

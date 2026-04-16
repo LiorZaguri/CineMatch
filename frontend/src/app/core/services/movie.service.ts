@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, forkJoin, throwError } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { catchError, finalize, map, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   AIMovieSearchRequest,
@@ -22,17 +22,44 @@ import {
   providedIn: 'root',
 })
 export class MovieService {
+  private readonly genreMap = new Map<number, string>([
+    [28, 'Action'],
+    [12, 'Adventure'],
+    [16, 'Animation'],
+    [35, 'Comedy'],
+    [80, 'Crime'],
+    [99, 'Documentary'],
+    [18, 'Drama'],
+    [10751, 'Family'],
+    [14, 'Fantasy'],
+    [36, 'History'],
+    [27, 'Horror'],
+    [10402, 'Music'],
+    [9648, 'Mystery'],
+    [10749, 'Romance'],
+    [878, 'Sci-fi'],
+    [10770, 'TV Movie'],
+    [53, 'Thriller'],
+    [10752, 'War'],
+    [37, 'Western'],
+  ]);
   private readonly http = inject(HttpClient);
   private readonly gatewayMovieUrl = `${environment.apiUrl}/movies`;
   private readonly imageBaseUrl = 'https://image.tmdb.org/t/p';
 
   private readonly _movies = signal<Movie[]>([]);
   private readonly _dashboard = signal<MovieDashboardResponse | null>(null);
+  private readonly _recommendations = signal<Movie[]>([]);
+  private readonly _recommendationsLoading = signal<boolean>(false);
+  private readonly _recommendationsError = signal<string | null>(null);
   private readonly _loading = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
 
   readonly movies = computed(() => this._movies());
   readonly dashboard = computed(() => this._dashboard());
+  readonly recommendations = computed(() => this._recommendations());
+  readonly recommendationsLoading = computed(() => this._recommendationsLoading());
+  readonly recommendationsError = computed(() => this._recommendationsError());
   readonly loading = computed(() => this._loading());
   readonly error = computed(() => this._error());
   readonly nowPlaying = computed(() => this._dashboard()?.now_playing ?? []);
@@ -122,6 +149,29 @@ export class MovieService {
       .pipe(map((movie) => this.mapMovie(movie)));
   }
 
+  getPersonalizedRecommendations(forceRefresh = false): Observable<Movie[]> {
+    if (!forceRefresh && this._recommendations().length > 0) {
+      return new Observable<Movie[]>((subscriber) => {
+        subscriber.next(this._recommendations());
+        subscriber.complete();
+      });
+    }
+
+    this._recommendationsLoading.set(true);
+    this._recommendationsError.set(null);
+
+    return this.http.get<TmdbMovieListResponse>(`${this.gatewayMovieUrl}/recommendations/me/`).pipe(
+      map((response) => this.mapMovies(response.results)),
+      tap((movies) => this._recommendations.set(movies)),
+      catchError((err) => {
+        this._recommendations.set([]);
+        this._recommendationsError.set('Recommendations are unavailable right now.');
+        return throwError(() => err);
+      }),
+      finalize(() => this._recommendationsLoading.set(false)),
+    );
+  }
+
   getMovieByUUID(uuid: string, forceRefresh = false): Observable<Movie> {
     return this.getMovieByTmdbId(uuid, forceRefresh);
   }
@@ -188,7 +238,8 @@ export class MovieService {
       backdropUrl: this.buildImageUrl(movie.backdrop_path ?? movie.poster_path, 'w1280'),
       releaseDate: movie.release_date || '',
       rating: movie.vote_average ?? 0,
-      genre: [],
+      aiMatchScore: typeof movie.ai_match_score === 'number' ? movie.ai_match_score : null,
+      genre: this.mapGenres(movie),
       director: '',
       cast: Array.isArray(movie.cast) ? [...movie.cast].sort((a, b) => a.order - b.order) : [],
 
@@ -197,10 +248,39 @@ export class MovieService {
       trailer: typeof movie.trailer === 'string' ? movie.trailer : undefined,
       streaming_services: Array.isArray(movie.streaming_services) ? movie.streaming_services : [],
       country_code: typeof movie.country_code === 'string' ? movie.country_code : undefined,
+      production_companies: Array.isArray(movie.production_companies)
+        ? movie.production_companies
+        : [],
+      production_countries: Array.isArray(movie.production_countries)
+        ? movie.production_countries
+        : [],
+      spoken_languages: Array.isArray(movie.spoken_languages) ? movie.spoken_languages : [],
       reviews: 'reviews' in movie && Array.isArray(movie.reviews) ? movie.reviews : undefined,
       review_summary:
         movie.review_summary ?? (movie.summary ? { summary_text: movie.summary } : null),
     };
+  }
+
+  private mapGenres(movie: TmdbMovie): string[] {
+    if (Array.isArray(movie.genre) && movie.genre.length > 0) {
+      return movie.genre
+        .map((genre) => genre?.trim())
+        .filter((genreName): genreName is string => !!genreName);
+    }
+
+    if (Array.isArray(movie.genres) && movie.genres.length > 0) {
+      return movie.genres
+        .map((genre) => genre?.name?.trim())
+        .filter((genreName): genreName is string => !!genreName);
+    }
+
+    if (Array.isArray(movie.genre_ids) && movie.genre_ids.length > 0) {
+      return movie.genre_ids
+        .map((genreId) => this.genreMap.get(genreId))
+        .filter((genreName): genreName is string => !!genreName);
+    }
+
+    return [];
   }
 
   private buildImageUrl(path: string | null | undefined, size: string): string {

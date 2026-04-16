@@ -33,7 +33,7 @@ interface StepMeta {
 
 const MOVIE_SEEDS: OnboardingMovieCard[] = [
   {
-    id: 1,
+    id: 146233,
     title: 'Prisoners',
     year: 2013,
     metadata: 'Dark thriller',
@@ -41,7 +41,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/uhviyknTT5cEQXbn6vWIqfM4vGm.jpg',
   },
   {
-    id: 2,
+    id: 335984,
     title: 'Blade Runner 2049',
     year: 2017,
     metadata: 'Visual sci-fi',
@@ -49,7 +49,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg',
   },
   {
-    id: 3,
+    id: 496243,
     title: 'Parasite',
     year: 2019,
     metadata: 'Dark satire',
@@ -57,7 +57,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg',
   },
   {
-    id: 4,
+    id: 244786,
     title: 'Whiplash',
     year: 2014,
     metadata: 'Obsession drama',
@@ -65,7 +65,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/7fn624j5lj3xTme2SgiLCeuedmO.jpg',
   },
   {
-    id: 5,
+    id: 329865,
     title: 'Arrival',
     year: 2016,
     metadata: 'Thoughtful sci-fi',
@@ -73,7 +73,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/x2FJsf1ElAgr63Y3PNPtJrcmpoe.jpg',
   },
   {
-    id: 6,
+    id: 1949,
     title: 'Zodiac',
     year: 2007,
     metadata: 'Procedural thriller',
@@ -81,7 +81,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/6YmeO4pB7XTh8P8F960O1uA14JO.jpg',
   },
   {
-    id: 7,
+    id: 44214,
     title: 'Black Swan',
     year: 2010,
     metadata: 'Psychological',
@@ -89,7 +89,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/8iIabM9w35hIpDH4NB2woftQNa2.jpg',
   },
   {
-    id: 8,
+    id: 120467,
     title: 'The Grand Budapest Hotel',
     year: 2014,
     metadata: 'Stylized comedy',
@@ -97,7 +97,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/eWdyYQreja6JGCzqHWXpWHDrrPo.jpg',
   },
   {
-    id: 9,
+    id: 376867,
     title: 'Moonlight',
     year: 2016,
     metadata: 'Intimate drama',
@@ -105,7 +105,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/rcICfiL9fvwRjoWHxW8cjbVhKCG.jpg',
   },
   {
-    id: 10,
+    id: 76341,
     title: 'Mad Max: Fury Road',
     year: 2015,
     metadata: 'Adrenaline action',
@@ -113,7 +113,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/hA2ple9q4qnwxp3hKVNhroipsir.jpg',
   },
   {
-    id: 11,
+    id: 11423,
     title: 'Memories of Murder',
     year: 2003,
     metadata: 'Crime mystery',
@@ -121,7 +121,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/edZ25O6tY6ZktUjKHuN9fGgM4sE.jpg',
   },
   {
-    id: 12,
+    id: 152601,
     title: 'Her',
     year: 2013,
     metadata: 'Romantic sci-fi',
@@ -129,7 +129,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/eCOtqtfvn7mxGl6nfmq4b1exJRc.jpg',
   },
   {
-    id: 13,
+    id: 843,
     title: 'In the Mood for Love',
     year: 2000,
     metadata: 'Romantic longing',
@@ -137,7 +137,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/iYypPT4bhqXfq1b6EnmxvRt6b2Y.jpg',
   },
   {
-    id: 14,
+    id: 155,
     title: 'The Dark Knight',
     year: 2008,
     metadata: 'Epic crime',
@@ -145,7 +145,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
   },
   {
-    id: 15,
+    id: 129,
     title: 'Spirited Away',
     year: 2001,
     metadata: 'Fantastical animation',
@@ -153,7 +153,7 @@ const MOVIE_SEEDS: OnboardingMovieCard[] = [
     posterUrl: 'https://image.tmdb.org/t/p/w500/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg',
   },
   {
-    id: 16,
+    id: 264660,
     title: 'Ex Machina',
     year: 2014,
     metadata: 'Minimalist sci-fi',

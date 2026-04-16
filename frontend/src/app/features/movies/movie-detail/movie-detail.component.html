@@ -37,7 +37,7 @@
 
                 <div class="detail-hero__badge">
                     <span class="material-symbols-outlined">bolt</span>
-                    {{ (movieData.rating * 10) | number:'1.0-0' }}% AI Match
+                    {{ heroAiMatchScore() }}% AI Match
                 </div>
 
                 <h1 class="detail-hero__title">{{ movieData.title }}</h1>
@@ -58,14 +58,36 @@
                 </div>
 
                 <div class="detail-hero__actions">
-                    <button class="action-btn action-btn--secondary" type="button">
+                    <button
+                        class="action-btn action-btn--secondary"
+                        [class.action-btn--active]="isInMyList()"
+                        type="button"
+                        [disabled]="listLoading()"
+                        (click)="toggleMyList()">
                         <span class="material-symbols-outlined">add</span>
-                        Add to List
+                        {{ listLoading() ? 'Saving...' : (isInMyList() ? 'In My List' : 'Add to List') }}
                     </button>
-                    <button class="action-btn action-btn--icon" type="button" aria-label="Share">
+                    <button
+                        class="action-btn action-btn--icon"
+                        [class.action-btn--active]="isLiked()"
+                        type="button"
+                        [disabled]="likeLoading()"
+                        [attr.aria-pressed]="isLiked()"
+                        [attr.aria-label]="likeLoading() ? 'Updating taste profile' : (isLiked() ? 'Remove from taste profile' : 'Add to taste profile')"
+                        (click)="toggleLikedMovie()">
+                        <span class="material-symbols-outlined">{{ isLiked() ? 'favorite' : 'favorite_border' }}</span>
+                    </button>
+                    <button class="action-btn action-btn--icon" type="button" aria-label="Share" (click)="shareMovie()">
                         <span class="material-symbols-outlined">share</span>
                     </button>
                 </div>
+
+                @if (likeError(); as likeErrorMessage) {
+                <p class="detail-hero__feedback detail-hero__feedback--error">{{ likeErrorMessage }}</p>
+                }
+                @if (listError(); as listErrorMessage) {
+                <p class="detail-hero__feedback detail-hero__feedback--error">{{ listErrorMessage }}</p>
+                }
             </div>
         </section>
 
@@ -359,15 +381,15 @@
                         <div class="production-list">
                             <div class="production-row">
                                 <span class="production-label">Studio</span>
-                                <span class="production-value">Syncopy Films</span>
+                                <span class="production-value">{{ getProductionStudios(movieData) }}</span>
                             </div>
                             <div class="production-row">
                                 <span class="production-label">Country</span>
-                                <span class="production-value">USA / UK</span>
+                                <span class="production-value">{{ getProductionCountries(movieData) }}</span>
                             </div>
                             <div class="production-row">
                                 <span class="production-label">Language</span>
-                                <span class="production-value">English</span>
+                                <span class="production-value">{{ getSpokenLanguages(movieData) }}</span>
                             </div>
                         </div>
                     </div>

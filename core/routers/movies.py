@@ -15,9 +15,11 @@ from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
 from db.db import get_db
 from models.review import Review, ReviewSummary
+from models.user_preference import UserPreference
 from schemas.Ai import AISearchFallback, AISearchRequest, AISearchResponse, AISearchSuccess
 from schemas.review import (
     ReviewCreate,
@@ -30,6 +32,7 @@ from schemas.review import (
 from schemas.summary import ReviewSummaryResponse
 from schemas.tmdbmovie import MovieDashboard, MovieDetailWithReviews, TmdbMovie, TmdbMovieList
 from services.rabbitmq.rpc import recommendation_rpc, summary_rpc
+from services.recommendations.profile_recommendations import get_profile_recommendations
 from services.tmdb.tmdbservice import (
     discover_movies,
     discover_movies_like_reference,
@@ -354,6 +357,46 @@ async def movie_search(query: str = Query(..., min_length=1), page: int = Query(
         data["total_pages"] = min(data.get("total_pages", 1), 1)
 
     return data
+
+
+@router.get("/recommendations/me/", response_model=TmdbMovieList)
+async def get_my_recommendations(
+    user_id: Annotated[str, Depends(get_user_id)],
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns lightweight profile-based recommendations for the authenticated user.
+
+    The endpoint serves cached AI-ranked results when they are fresh. Otherwise it
+    returns deterministic TMDB-filtered candidates immediately and refreshes the
+    AI rerank in the background.
+    """
+    query = (
+        select(UserPreference)
+        .where(UserPreference.user_id == user_id)
+        .options(
+            selectinload(UserPreference.chosen_movies),
+            selectinload(UserPreference.language_preferences),
+            selectinload(UserPreference.era_preferences),
+            selectinload(UserPreference.liked_genres),
+            selectinload(UserPreference.disliked_genres),
+            selectinload(UserPreference.moods),
+            selectinload(UserPreference.recommendation_cache),
+        )
+    )
+    result = await db.execute(query)
+    user_pref = result.scalars().first()
+
+    if user_pref is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User preferences not found. Please complete onboarding.",
+        )
+
+    recommendations = await get_profile_recommendations(user_pref)
+    await db.commit()
+    return TmdbMovieList(**recommendations)
+
 
 @router.post("/ai/search/", response_model=AISearchSuccess | AISearchFallback)
 async def ai_search_movie(request: AISearchRequest):

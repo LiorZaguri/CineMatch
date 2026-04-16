@@ -1,151 +1,158 @@
 <div class="movies-page">
-    @if (loading()) {
-        <div class="loading-overlay">
-            <div class="loader"></div>
-            <p>Curating your experience...</p>
+  @if (loading()) {
+    <div class="loading-overlay">
+      <div class="loader"></div>
+      <p>Curating your experience...</p>
+    </div>
+  }
+
+  @if (!loading() && error()) {
+    <div class="error-container" appScrollReveal>
+      <h3>Something went wrong</h3>
+      <p>{{ error() }}</p>
+      <button class="btn-retry" (click)="retry()">Try Again</button>
+    </div>
+  }
+
+  @if (!loading() && !error() && movies().length > 0) {
+    <section class="hero-section" appScrollReveal [revealDelay]="60">
+      <img
+        class="hero-image"
+        [class.is-fading]="isHeroFading()"
+        [src]="heroMovie()?.backdropUrl || heroMovie()?.posterUrl"
+        [alt]="heroMovie()?.title || 'Featured movie'"
+      />
+      <div class="hero-gradient"></div>
+
+      <div class="hero-content" [class.is-fading]="isHeroFading()">
+        <div class="hero-meta-row">
+          <span class="badge">Trending</span>
         </div>
-    }
 
-    @if (!loading() && error()) {
-        <div class="error-container" appScrollReveal>
-            <h3>Something went wrong</h3>
-            <p>{{ error() }}</p>
-            <button class="btn-retry" (click)="retry()">Try Again</button>
+        <h1>{{ heroMovie()?.title }}</h1>
+        <p>{{ heroMovie()?.description }}</p>
+
+        <div
+          class="hero-actions"
+          (mouseenter)="pauseHeroCarousel()"
+          (mouseleave)="resumeHeroCarousel()"
+          (focusin)="pauseHeroCarousel()"
+          (focusout)="resumeHeroCarousel()"
+        >
+          <a [routerLink]="['/movies', heroMovie()?.id]" class="btn-primary">
+            <span class="material-symbols-outlined">info</span>
+            View Details
+          </a>
         </div>
-    }
+      </div>
+    </section>
 
-    @if (!loading() && !error() && movies().length > 0) {
-        <section class="hero-section" appScrollReveal [revealDelay]="60">
-            <img
-                class="hero-image"
-                [class.is-fading]="isHeroFading()"
-                [src]="heroMovie()?.backdropUrl || heroMovie()?.posterUrl"
-                [alt]="heroMovie()?.title || 'Featured movie'"
-            />
-            <div class="hero-gradient"></div>
+    <div class="content-stack">
+      <section appScrollReveal [revealDelay]="80">
+        <div class="section-head">
+          <div class="section-title-wrap">
+            <h3>AI Recommendations for You</h3>
+            <span class="material-symbols-outlined">auto_awesome</span>
+          </div>
+        </div>
 
-            <div class="hero-content" [class.is-fading]="isHeroFading()">
-                <div class="hero-meta-row">
-                    <span class="badge">Trending</span>
-                    <div class="ai-match">
-                        <span class="material-symbols-outlined">auto_awesome</span>
-                        <span>98% AI Match</span>
-                    </div>
-                </div>
+        @if (recommendationsLoading()) {
+          <div class="section-empty">Finding matches from your taste profile...</div>
+        } @else if (recommendedMovies().length > 0) {
+          <div class="carousel-shell">
+            <button
+              type="button"
+              class="carousel-nav carousel-nav-left"
+              (click)="scrollRecommendations('left')"
+              aria-label="Scroll recommendations left"
+            >
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
 
-                <h1>{{ heroMovie()?.title }}</h1>
-                <p>{{ heroMovie()?.description }}</p>
-
-                <div class="hero-actions" (mouseenter)="pauseHeroCarousel()" (mouseleave)="resumeHeroCarousel()"
-                    (focusin)="pauseHeroCarousel()" (focusout)="resumeHeroCarousel()">
-                    <a [routerLink]="['/movies', heroMovie()?.id]" class="btn-primary">
-                        <span class="material-symbols-outlined">info</span>
-                        View Details
-                    </a>
-                </div>
+            <div #recommendationsRow class="scroll-row no-scrollbar recommendations-row">
+              @for (movie of recommendedMovies(); track movie.id) {
+                <a [routerLink]="['/movies', movie.id]" class="poster-card">
+                  <div class="poster-wrap">
+                    <img [src]="movie.posterUrl" [alt]="movie.title" />
+                    <div class="match-pill">{{ getMatchScore(movie, $index) }}%</div>
+                  </div>
+                  <h4>{{ movie.title }}</h4>
+                  <p>{{ getGenres(movie) }} • {{ getYear(movie) }}</p>
+                </a>
+              }
             </div>
+
+            <button
+              type="button"
+              class="carousel-nav carousel-nav-right"
+              (click)="scrollRecommendations('right')"
+              aria-label="Scroll recommendations right"
+            >
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
+        } @else {
+          <div class="section-empty">
+            {{
+              recommendationsError() || 'No personalized recommendations are available right now.'
+            }}
+          </div>
+        }
+      </section>
+
+      @for (section of dashboardSections(); track section.key) {
+        <section class="catalog-section" appScrollReveal [revealDelay]="100">
+          <div class="section-head">
+            <div class="section-title-wrap">
+              <h3>{{ section.title }}</h3>
+            </div>
+            <p class="section-copy">{{ section.description }}</p>
+          </div>
+
+          <div class="carousel-shell">
+            <button
+              type="button"
+              class="carousel-nav carousel-nav-left"
+              (click)="scrollRow(catalogRow, 'left')"
+              [attr.aria-label]="'Scroll ' + section.title + ' left'"
+            >
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+
+            <div #catalogRow class="scroll-row no-scrollbar catalog-row">
+              @for (movie of section.movies; track movie.id) {
+                <a [routerLink]="['/movies', movie.id]" class="poster-card catalog-card">
+                  <div class="poster-wrap">
+                    <img [src]="movie.posterUrl" [alt]="movie.title" />
+                    <div class="rating-pill">
+                      <span class="material-symbols-outlined">star</span>
+                      <span>{{ getScore(movie) }}</span>
+                    </div>
+                  </div>
+                  <h4>{{ movie.title }}</h4>
+                  <p>{{ getGenres(movie) }} • {{ getYear(movie) }}</p>
+                </a>
+              }
+            </div>
+
+            <button
+              type="button"
+              class="carousel-nav carousel-nav-right"
+              (click)="scrollRow(catalogRow, 'right')"
+              [attr.aria-label]="'Scroll ' + section.title + ' right'"
+            >
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
         </section>
+      }
+    </div>
+  }
 
-        <div class="content-stack">
-            <section appScrollReveal [revealDelay]="80">
-                <div class="section-head">
-                    <div class="section-title-wrap">
-                        <h3>AI Recommendations for You</h3>
-                        <span class="material-symbols-outlined">auto_awesome</span>
-                    </div>
-                </div>
-
-                @if (recommendedMovies().length > 0) {
-                <div class="carousel-shell">
-                    <button
-                        type="button"
-                        class="carousel-nav carousel-nav-left"
-                        (click)="scrollRecommendations('left')"
-                        aria-label="Scroll recommendations left"
-                    >
-                        <span class="material-symbols-outlined">chevron_left</span>
-                    </button>
-
-                    <div #recommendationsRow class="scroll-row no-scrollbar recommendations-row">
-                    @for (movie of recommendedMovies(); track movie.id) {
-                        <a [routerLink]="['/movies', movie.id]" class="poster-card">
-                            <div class="poster-wrap">
-                                <img [src]="movie.posterUrl" [alt]="movie.title" />
-                                <div class="match-pill">{{ 80 + ($index % 20) }}%</div>
-                            </div>
-                            <h4>{{ movie.title }}</h4>
-                            <p>{{ getGenres(movie) }} • {{ getYear(movie) }}</p>
-                        </a>
-                    }
-                    </div>
-
-                    <button
-                        type="button"
-                        class="carousel-nav carousel-nav-right"
-                        (click)="scrollRecommendations('right')"
-                        aria-label="Scroll recommendations right"
-                    >
-                        <span class="material-symbols-outlined">chevron_right</span>
-                    </button>
-                </div>
-                } @else {
-                <div class="section-empty">No popular movies are available right now.</div>
-                }
-            </section>
-
-            @for (section of dashboardSections(); track section.key) {
-            <section class="catalog-section" appScrollReveal [revealDelay]="100">
-                <div class="section-head">
-                    <div class="section-title-wrap">
-                        <h3>{{ section.title }}</h3>
-                    </div>
-                    <p class="section-copy">{{ section.description }}</p>
-                </div>
-
-                <div class="carousel-shell">
-                    <button
-                        type="button"
-                        class="carousel-nav carousel-nav-left"
-                        (click)="scrollRow(catalogRow, 'left')"
-                        [attr.aria-label]="'Scroll ' + section.title + ' left'"
-                    >
-                        <span class="material-symbols-outlined">chevron_left</span>
-                    </button>
-
-                    <div #catalogRow class="scroll-row no-scrollbar catalog-row">
-                        @for (movie of section.movies; track movie.id) {
-                        <a [routerLink]="['/movies', movie.id]" class="poster-card catalog-card">
-                            <div class="poster-wrap">
-                                <img [src]="movie.posterUrl" [alt]="movie.title" />
-                                <div class="rating-pill">
-                                    <span class="material-symbols-outlined">star</span>
-                                    <span>{{ getScore(movie) }}</span>
-                                </div>
-                            </div>
-                            <h4>{{ movie.title }}</h4>
-                            <p>{{ getGenres(movie) }} • {{ getYear(movie) }}</p>
-                        </a>
-                        }
-                    </div>
-
-                    <button
-                        type="button"
-                        class="carousel-nav carousel-nav-right"
-                        (click)="scrollRow(catalogRow, 'right')"
-                        [attr.aria-label]="'Scroll ' + section.title + ' right'"
-                    >
-                        <span class="material-symbols-outlined">chevron_right</span>
-                    </button>
-                </div>
-            </section>
-            }
-        </div>
-    }
-
-    @if (!loading() && !error() && movies().length === 0) {
-        <div class="empty-state" appScrollReveal>
-            <h2>No movies found</h2>
-            <p>Our collection is currently undergoing maintenance. Check back soon!</p>
-        </div>
-    }
+  @if (!loading() && !error() && movies().length === 0) {
+    <div class="empty-state" appScrollReveal>
+      <h2>No movies found</h2>
+      <p>Our collection is currently undergoing maintenance. Check back soon!</p>
+    </div>
+  }
 </div>

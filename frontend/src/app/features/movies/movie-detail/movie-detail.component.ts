@@ -8,7 +8,17 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { MovieService } from '../../../core/services/movie.service';
-import { CreateReviewRequest, Movie, MovieReview, StreamingService } from '../../../core/models/movie.models';
+import { UserPreferenceService } from '../../../core/services/user-preference.service';
+import { WatchlistService } from '../../../core/services/watchlist.service';
+import {
+    CreateReviewRequest,
+    Movie,
+    MovieReview,
+    ProductionCompany,
+    ProductionCountry,
+    SpokenLanguage,
+    StreamingService,
+} from '../../../core/models/movie.models';
 import { ScrollRevealDirective } from '../../../core/directives/scroll-reveal.directive';
 
 interface MovieSummaryPayload {
@@ -43,6 +53,8 @@ export class MovieDetailComponent implements OnDestroy {
     private readonly route = inject(ActivatedRoute);
     private readonly movieService = inject(MovieService);
     private readonly authService = inject(AuthService);
+    private readonly userPreferenceService = inject(UserPreferenceService);
+    private readonly watchlistService = inject(WatchlistService);
     private readonly sanitizer = inject(DomSanitizer);
     private readonly document = inject(DOCUMENT);
     private previousBodyOverflow = '';
@@ -71,6 +83,12 @@ export class MovieDetailComponent implements OnDestroy {
     readonly mediaModalKind = signal<'trailer' | 'image'>('trailer');
     readonly mediaModalUrl = signal<SafeResourceUrl | string | null>(null);
     readonly mediaModalTitle = signal<string>('Trailer');
+    readonly likeLoading = signal<boolean>(false);
+    readonly likeError = signal<string | null>(null);
+    readonly isLiked = signal<boolean>(false);
+    readonly listLoading = signal<boolean>(false);
+    readonly listError = signal<string | null>(null);
+    readonly isInMyList = signal<boolean>(false);
     private readonly regionNames =
         typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function'
             ? new Intl.DisplayNames(['en'], { type: 'region' })
@@ -144,6 +162,39 @@ export class MovieDetailComponent implements OnDestroy {
             .slice(0, 10);
     });
 
+    readonly canLikeMovie = computed(() => this.authService.isAuthenticated() && !!this.movie());
+    readonly heroAiMatchScore = computed(() => {
+        const currentMovie = this.movie();
+        if (!currentMovie) {
+            return 0;
+        }
+
+        if (
+            typeof currentMovie.aiMatchScore === 'number'
+            && Number.isFinite(currentMovie.aiMatchScore)
+        ) {
+            return Math.round(Math.max(0, Math.min(currentMovie.aiMatchScore, 100)));
+        }
+
+        const tmdbId = this.resolveTmdbId(currentMovie);
+        const recommendationMatch = this.movieService
+            .recommendations()
+            .find((entry) => {
+                const recommendationTmdbId = this.resolveTmdbId(entry);
+                return recommendationTmdbId !== null && recommendationTmdbId === tmdbId;
+            });
+
+        if (
+            recommendationMatch
+            && typeof recommendationMatch.aiMatchScore === 'number'
+            && Number.isFinite(recommendationMatch.aiMatchScore)
+        ) {
+            return Math.round(Math.max(0, Math.min(recommendationMatch.aiMatchScore, 100)));
+        }
+
+        return Math.round(Math.max(0, Math.min(currentMovie.rating * 10, 100)));
+    });
+
     constructor() {
         // React to route param changes
         this.route.paramMap.subscribe(params => {
@@ -172,6 +223,33 @@ export class MovieDetailComponent implements OnDestroy {
 
     trackStreamingService(_index: number, service: StreamingService): string {
         return service.name;
+    }
+
+    getProductionStudios(movie: Movie | null): string {
+        const companies = movie?.production_companies ?? [];
+        const names = companies
+            .map((company: ProductionCompany) => company.name?.trim())
+            .filter((name): name is string => !!name);
+
+        return names.length > 0 ? names.slice(0, 2).join(' / ') : 'Not available';
+    }
+
+    getProductionCountries(movie: Movie | null): string {
+        const countries = movie?.production_countries ?? [];
+        const names = countries
+            .map((country: ProductionCountry) => country.name?.trim())
+            .filter((name): name is string => !!name);
+
+        return names.length > 0 ? names.slice(0, 3).join(' / ') : 'Not available';
+    }
+
+    getSpokenLanguages(movie: Movie | null): string {
+        const languages = movie?.spoken_languages ?? [];
+        const names = languages
+            .map((language: SpokenLanguage) => language.english_name?.trim() || language.name?.trim())
+            .filter((name): name is string => !!name);
+
+        return names.length > 0 ? names.slice(0, 3).join(' / ') : 'Not available';
     }
 
     isTrailerCard(card: MediaCard): boolean {
@@ -413,12 +491,21 @@ export class MovieDetailComponent implements OnDestroy {
         this.reviewEditError.set(null);
         this.reviewEditSubmitting.set(false);
         this.closeMediaModal();
+        this.likeLoading.set(false);
+        this.likeError.set(null);
+        this.isLiked.set(false);
+        this.listLoading.set(false);
+        this.listError.set(null);
+        this.isInMyList.set(false);
 
         this.movieService.getMovieByTmdbId(tmdbId, true).subscribe({
             next: (movie: Movie) => {
                 this.movie.set(movie);
                 this.setInitialSummary(movie);
                 this.loading.set(false);
+                this.loadMoviePreferenceStatus(movie);
+                this.loadWatchlistStatus(movie);
+                this.loadRecommendationScoreContext();
             },
             error: (err: any) => {
                 if (err instanceof HttpErrorResponse && err.status === 404) {
@@ -430,6 +517,146 @@ export class MovieDetailComponent implements OnDestroy {
                 console.error('MovieDetailComponent error:', err);
             }
         });
+    }
+
+    private loadRecommendationScoreContext(): void {
+        if (!this.authService.isAuthenticated()) {
+            return;
+        }
+
+        this.movieService.getPersonalizedRecommendations(false).subscribe({
+            error: () => {
+                // The hero badge already has a deterministic fallback.
+            }
+        });
+    }
+
+    toggleLikedMovie(): void {
+        const currentMovie = this.movie();
+        if (!currentMovie || this.likeLoading()) {
+            return;
+        }
+
+        if (!this.authService.isAuthenticated()) {
+            this.likeError.set('Please sign in to save movies to your taste profile.');
+            return;
+        }
+
+        const tmdbId = this.resolveTmdbId(currentMovie);
+        if (!tmdbId) {
+            this.likeError.set('This movie cannot be added to your profile right now.');
+            return;
+        }
+
+        this.likeLoading.set(true);
+        this.likeError.set(null);
+
+        if (this.isLiked()) {
+            this.userPreferenceService.removeChosenMovie(tmdbId).pipe(
+                finalize(() => this.likeLoading.set(false)),
+            ).subscribe({
+                next: () => {
+                    this.isLiked.set(false);
+                },
+                error: (err: HttpErrorResponse) => {
+                    const detailMessage = typeof err.error?.detail === 'string' ? err.error.detail : null;
+                    this.likeError.set(detailMessage || 'Failed to update your profile. Please try again.');
+                },
+            });
+            return;
+        }
+
+        this.userPreferenceService.addChosenMovie(tmdbId).pipe(
+            finalize(() => this.likeLoading.set(false)),
+        ).subscribe({
+            next: () => {
+                this.isLiked.set(true);
+            },
+            error: (err: HttpErrorResponse) => {
+                const detailMessage = typeof err.error?.detail === 'string' ? err.error.detail : null;
+                this.likeError.set(detailMessage || 'Failed to update your profile. Please try again.');
+            },
+        });
+    }
+
+    toggleMyList(): void {
+        const currentMovie = this.movie();
+        if (!currentMovie || this.listLoading()) {
+            return;
+        }
+
+        if (!this.authService.isAuthenticated()) {
+            this.listError.set('Please sign in to manage your list.');
+            return;
+        }
+
+        const tmdbId = this.resolveTmdbId(currentMovie);
+        if (!tmdbId) {
+            this.listError.set('This movie cannot be added to your list right now.');
+            return;
+        }
+
+        this.listLoading.set(true);
+        this.listError.set(null);
+
+        if (this.isInMyList()) {
+            this.watchlistService.removeMovie(tmdbId).pipe(
+                finalize(() => this.listLoading.set(false)),
+            ).subscribe({
+                next: () => {
+                    this.isInMyList.set(false);
+                },
+                error: (err: HttpErrorResponse) => {
+                    const detailMessage = typeof err.error?.message === 'string'
+                        ? err.error.message
+                        : typeof err.error?.detail === 'string'
+                            ? err.error.detail
+                            : null;
+                    this.listError.set(detailMessage || 'Failed to update your list. Please try again.');
+                },
+            });
+            return;
+        }
+
+        this.watchlistService.addMovie(tmdbId).pipe(
+            finalize(() => this.listLoading.set(false)),
+        ).subscribe({
+            next: () => {
+                this.isInMyList.set(true);
+            },
+            error: (err: HttpErrorResponse) => {
+                const detailMessage = typeof err.error?.message === 'string'
+                    ? err.error.message
+                    : typeof err.error?.detail === 'string'
+                        ? err.error.detail
+                        : null;
+                this.listError.set(detailMessage || 'Failed to update your list. Please try again.');
+            },
+        });
+    }
+
+    shareMovie(): void {
+        const currentMovie = this.movie();
+        if (!currentMovie) {
+            return;
+        }
+
+        const shareUrl = this.document.defaultView?.location.href ?? '';
+        const shareData = {
+            title: currentMovie.title,
+            text: `Check out ${currentMovie.title} on CineMatch`,
+            url: shareUrl,
+        };
+
+        const navigatorRef = this.document.defaultView?.navigator;
+        if (navigatorRef && 'share' in navigatorRef && typeof navigatorRef.share === 'function') {
+            navigatorRef.share(shareData).catch(() => undefined);
+            return;
+        }
+
+        if (navigatorRef?.clipboard?.writeText) {
+            navigatorRef.clipboard.writeText(shareUrl).catch(() => undefined);
+        }
     }
 
     generateAiSummary(): void {
@@ -626,6 +853,50 @@ export class MovieDetailComponent implements OnDestroy {
         const detail = movie as MovieDetailData & { summary?: string | null };
         const summary = detail.review_summary?.summary_text?.trim() ?? detail.summary?.trim();
         this.aiSummary.set(summary || null);
+    }
+
+    private loadMoviePreferenceStatus(movie: Movie): void {
+        if (!this.authService.isAuthenticated()) {
+            this.isLiked.set(false);
+            return;
+        }
+
+        const tmdbId = this.resolveTmdbId(movie);
+        if (!tmdbId) {
+            this.isLiked.set(false);
+            return;
+        }
+
+        this.userPreferenceService.checkMoviePreference(tmdbId).subscribe({
+            next: (status) => {
+                this.isLiked.set(!!status.is_liked);
+            },
+            error: () => {
+                this.isLiked.set(false);
+            },
+        });
+    }
+
+    private loadWatchlistStatus(movie: Movie): void {
+        if (!this.authService.isAuthenticated()) {
+            this.isInMyList.set(false);
+            return;
+        }
+
+        const tmdbId = this.resolveTmdbId(movie);
+        if (!tmdbId) {
+            this.isInMyList.set(false);
+            return;
+        }
+
+        this.watchlistService.checkMovie(tmdbId).subscribe({
+            next: (status) => {
+                this.isInMyList.set(!!status.is_in_list);
+            },
+            error: () => {
+                this.isInMyList.set(false);
+            },
+        });
     }
 
     private resolveTmdbId(movie: Movie): number | null {

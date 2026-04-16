@@ -22,6 +22,11 @@ class TmdbMovie(BaseModel):
     original_title: str = Field(..., description="Original title in the source language")
     
     overview: str = Field(..., description="Short plot summary")
+
+    genre_ids: List[int] = Field(
+        default_factory=list,
+        description="TMDB genre identifiers used for lightweight list responses",
+    )
     
     poster_path: Optional[str] = Field(None, description="The path to the poster image on TMDB's servers")
 
@@ -34,6 +39,13 @@ class TmdbMovie(BaseModel):
     title: str = Field(..., description="English (or requested language) title")
     
     vote_average: float = Field(..., description="Average user rating (0-10)")
+
+    ai_match_score: Optional[int] = Field(
+        None,
+        ge=0,
+        le=100,
+        description="AI confidence score for how well this movie matches the user's profile",
+    )
 
     trailer: Optional[str] = Field(None, description="The URL to the movie's trailer")
 
@@ -75,6 +87,22 @@ class StreamingService(BaseModel):
     logo_path: Optional[str] = Field(None, description="The path to the provider's logo")
 
 
+class ProductionCompany(BaseModel):
+    id: int = Field(..., description="Unique identifier for the production company")
+    name: str = Field(..., description="The production company name")
+
+
+class ProductionCountry(BaseModel):
+    iso_3166_1: str = Field(..., description="ISO 3166-1 country code")
+    name: str = Field(..., description="The production country name")
+
+
+class SpokenLanguage(BaseModel):
+    english_name: str = Field(..., description="Language name in English")
+    iso_639_1: Optional[str] = Field(None, description="ISO 639-1 language code")
+    name: str = Field(..., description="Localized language name")
+
+
 class CastMember(BaseModel):
     """
     Represents a cast member of a movie.
@@ -99,5 +127,11 @@ class MovieDetailWithReviews(TmdbMovie):
     streaming_services: List[StreamingService] = Field(default_factory=list, description="List of streaming services available for the movie")
     
     cast: List[CastMember] = Field(default_factory=list, description="List of top billed cast members for the movie")
+
+    production_companies: List[ProductionCompany] = Field(default_factory=list, description="Production companies attached to the movie")
+
+    production_countries: List[ProductionCountry] = Field(default_factory=list, description="Production countries attached to the movie")
+
+    spoken_languages: List[SpokenLanguage] = Field(default_factory=list, description="Spoken languages used in the movie")
 
     country_code: str = Field("US", description="The country code used for localized content")

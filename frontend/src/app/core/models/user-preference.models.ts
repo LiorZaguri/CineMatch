@@ -57,5 +57,5 @@ export interface UpdateUserPreferenceRequest {
 }
 
 export interface MoviePreferenceStatus {
-  exists: boolean;
+  is_liked: boolean;
 }
