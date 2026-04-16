@@ -31,7 +31,13 @@ function loadPrismaClient() {
 
 const { PrismaClient } = loadPrismaClient();
 
-const connectionString = `postgresql://${env("POSTGRES_USER")}:${env("POSTGRES_PASSWORD")}@${env("POSTGRES_HOST")}:${env("POSTGRES_PORT")}/${env("POSTGRES_DB")}?sslmode=require&channel_binding=require`;
+const sslMode = process.env.POSTGRES_SSLMODE ?? "require";
+const channelBinding = process.env.POSTGRES_CHANNEL_BINDING ?? "require";
+const query = new URLSearchParams({
+  sslmode: sslMode,
+  channel_binding: channelBinding,
+});
+const connectionString = `postgresql://${env("POSTGRES_USER")}:${env("POSTGRES_PASSWORD")}@${env("POSTGRES_HOST")}:${env("POSTGRES_PORT")}/${env("POSTGRES_DB")}?${query.toString()}`;
 if (!connectionString) {
   throw new Error("Missing DATABASE_URL");
 }

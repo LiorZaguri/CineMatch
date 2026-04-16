@@ -19,10 +19,7 @@ const {
   skip,
   Decimal,
   Debug,
-  DbNull,
-  JsonNull,
-  AnyNull,
-  NullTypes,
+  objectEnumValues,
   makeStrictEnum,
   Extensions,
   warnOnce,
@@ -30,7 +27,7 @@ const {
   Public,
   getRuntime,
   createParam,
-} = require('./runtime/client.js')
+} = require('./runtime/library.js')
 
 
 const Prisma = {}
@@ -39,12 +36,12 @@ exports.Prisma = Prisma
 exports.$Enums = {}
 
 /**
- * Prisma Client JS version: 7.4.2
- * Query Engine version: 94a226be1cf2967af2541cca5529f0f7ba866919
+ * Prisma Client JS version: 6.19.3
+ * Query Engine version: c2990dca591cba766e3b7ef5d9e8a84796e47ab7
  */
 Prisma.prismaVersion = {
-  client: "7.4.2",
-  engine: "94a226be1cf2967af2541cca5529f0f7ba866919"
+  client: "6.19.3",
+  engine: "c2990dca591cba766e3b7ef5d9e8a84796e47ab7"
 }
 
 Prisma.PrismaClientKnownRequestError = PrismaClientKnownRequestError;
@@ -72,11 +69,15 @@ Prisma.defineExtension = Extensions.defineExtension
 /**
  * Shorthand utilities for JSON filtering
  */
-Prisma.DbNull = DbNull
-Prisma.JsonNull = JsonNull
-Prisma.AnyNull = AnyNull
+Prisma.DbNull = objectEnumValues.instances.DbNull
+Prisma.JsonNull = objectEnumValues.instances.JsonNull
+Prisma.AnyNull = objectEnumValues.instances.AnyNull
 
-Prisma.NullTypes = NullTypes
+Prisma.NullTypes = {
+  DbNull: objectEnumValues.classes.DbNull,
+  JsonNull: objectEnumValues.classes.JsonNull,
+  AnyNull: objectEnumValues.classes.AnyNull
+}
 
 
 
@@ -133,31 +134,92 @@ exports.Prisma.ModelName = {
  * Create the Client
  */
 const config = {
-  "previewFeatures": [],
-  "clientVersion": "7.4.2",
-  "engineVersion": "94a226be1cf2967af2541cca5529f0f7ba866919",
+  "generator": {
+    "name": "client",
+    "provider": {
+      "fromEnvVar": null,
+      "value": "prisma-client-js"
+    },
+    "output": {
+      "value": "/Users/liorzaguri/Projects/CineMatch/gateway/src/generated/prisma",
+      "fromEnvVar": null
+    },
+    "config": {
+      "engineType": "library"
+    },
+    "binaryTargets": [
+      {
+        "fromEnvVar": null,
+        "value": "darwin-arm64",
+        "native": true
+      }
+    ],
+    "previewFeatures": [],
+    "sourceFilePath": "/Users/liorzaguri/Projects/CineMatch/gateway/prisma/schema.prisma",
+    "isCustomOutput": true
+  },
+  "relativeEnvPaths": {
+    "rootEnvPath": null,
+    "schemaEnvPath": "../../../.env"
+  },
+  "relativePath": "../../../prisma",
+  "clientVersion": "6.19.3",
+  "engineVersion": "c2990dca591cba766e3b7ef5d9e8a84796e47ab7",
+  "datasourceNames": [
+    "db"
+  ],
   "activeProvider": "postgresql",
-  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nmodel User {\n  id           String           @id @default(uuid())\n  email        String           @unique\n  displayName  String\n  passwordHash String\n  avatarUrl    String?\n  createdAt    DateTime         @default(now())\n  watchlist    WatchlistMovie[]\n\n  @@map(\"users\")\n}\n\nmodel WatchlistMovie {\n  id        String   @id @default(uuid())\n  userId    String\n  tmdbId    Int\n  createdAt DateTime @default(now())\n  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@unique([userId, tmdbId])\n  @@index([userId, createdAt(sort: Desc)])\n  @@map(\"watchlist_movies\")\n}\n"
-}
-
-config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"displayName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"passwordHash\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"avatarUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"watchlist\",\"kind\":\"object\",\"type\":\"WatchlistMovie\",\"relationName\":\"UserToWatchlistMovie\"}],\"dbName\":\"users\"},\"WatchlistMovie\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tmdbId\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"UserToWatchlistMovie\"}],\"dbName\":\"watchlist_movies\"}},\"enums\":{},\"types\":{}}")
-defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
-config.parameterizationSchema = {
-  strings: JSON.parse("[\"where\",\"orderBy\",\"cursor\",\"user\",\"watchlist\",\"_count\",\"User.findUnique\",\"User.findUniqueOrThrow\",\"User.findFirst\",\"User.findFirstOrThrow\",\"User.findMany\",\"data\",\"User.createOne\",\"User.createMany\",\"User.createManyAndReturn\",\"User.updateOne\",\"User.updateMany\",\"User.updateManyAndReturn\",\"create\",\"update\",\"User.upsertOne\",\"User.deleteOne\",\"User.deleteMany\",\"having\",\"_min\",\"_max\",\"User.groupBy\",\"User.aggregate\",\"WatchlistMovie.findUnique\",\"WatchlistMovie.findUniqueOrThrow\",\"WatchlistMovie.findFirst\",\"WatchlistMovie.findFirstOrThrow\",\"WatchlistMovie.findMany\",\"WatchlistMovie.createOne\",\"WatchlistMovie.createMany\",\"WatchlistMovie.createManyAndReturn\",\"WatchlistMovie.updateOne\",\"WatchlistMovie.updateMany\",\"WatchlistMovie.updateManyAndReturn\",\"WatchlistMovie.upsertOne\",\"WatchlistMovie.deleteOne\",\"WatchlistMovie.deleteMany\",\"_avg\",\"_sum\",\"WatchlistMovie.groupBy\",\"WatchlistMovie.aggregate\",\"AND\",\"OR\",\"NOT\",\"id\",\"userId\",\"tmdbId\",\"createdAt\",\"equals\",\"in\",\"notIn\",\"lt\",\"lte\",\"gt\",\"gte\",\"not\",\"contains\",\"startsWith\",\"endsWith\",\"email\",\"displayName\",\"passwordHash\",\"avatarUrl\",\"every\",\"some\",\"none\",\"userId_tmdbId\",\"is\",\"isNot\",\"connectOrCreate\",\"upsert\",\"createMany\",\"set\",\"disconnect\",\"delete\",\"connect\",\"updateMany\",\"deleteMany\",\"increment\",\"decrement\",\"multiply\",\"divide\"]"),
-  graph: "chQgCgQAAEkAIC4AAEUAMC8AAAkAEDAAAEUAMDEBAAAAATRAAEgAIUABAAAAAUEBAEYAIUIBAEYAIUMBAEcAIQEAAAABACAIAwAATQAgLgAASwAwLwAAAwAQMAAASwAwMQEARgAhMgEARgAhMwIATAAhNEAASAAhAQMAAGwAIAkDAABNACAuAABLADAvAAADABAwAABLADAxAQAAAAEyAQBGACEzAgBMACE0QABIACFHAABKACADAAAAAwAgAQAABAAwAgAABQAgAQAAAAMAIAEAAAABACAKBAAASQAgLgAARQAwLwAACQAQMAAARQAwMQEARgAhNEAASAAhQAEARgAhQQEARgAhQgEARgAhQwEARwAhAgQAAGsAIEMAAFgAIAMAAAAJACABAAAKADACAAABACADAAAACQAgAQAACgAwAgAAAQAgAwAAAAkAIAEAAAoAMAIAAAEAIAcEAABqACAxAQAAAAE0QAAAAAFAAQAAAAFBAQAAAAFCAQAAAAFDAQAAAAEBCwAADgAgBjEBAAAAATRAAAAAAUABAAAAAUEBAAAAAUIBAAAAAUMBAAAAAQELAAAQADABCwAAEAAwBwQAAF0AIDEBAFMAITRAAFUAIUABAFMAIUEBAFMAIUIBAFMAIUMBAFwAIQIAAAABACALAAATACAGMQEAUwAhNEAAVQAhQAEAUwAhQQEAUwAhQgEAUwAhQwEAXAAhAgAAAAkAIAsAABUAIAIAAAAJACALAAAVACADAAAAAQAgEgAADgAgEwAAEwAgAQAAAAEAIAEAAAAJACAEBQAAWQAgGAAAWwAgGQAAWgAgQwAAWAAgCS4AAEAAMC8AABwAEDAAAEAAMDEBADYAITRAADgAIUABADYAIUEBADYAIUIBADYAIUMBAEEAIQMAAAAJACABAAAbADAXAAAcACADAAAACQAgAQAACgAwAgAAAQAgAQAAAAUAIAEAAAAFACADAAAAAwAgAQAABAAwAgAABQAgAwAAAAMAIAEAAAQAMAIAAAUAIAMAAAADACABAAAEADACAAAFACAFAwAAVwAgMQEAAAABMgEAAAABMwIAAAABNEAAAAABAQsAACQAIAQxAQAAAAEyAQAAAAEzAgAAAAE0QAAAAAEBCwAAJgAwAQsAACYAMAUDAABWACAxAQBTACEyAQBTACEzAgBUACE0QABVACECAAAABQAgCwAAKQAgBDEBAFMAITIBAFMAITMCAFQAITRAAFUAIQIAAAADACALAAArACACAAAAAwAgCwAAKwAgAwAAAAUAIBIAACQAIBMAACkAIAEAAAAFACABAAAAAwAgBQUAAE4AIBgAAFEAIBkAAFAAICoAAE8AICsAAFIAIAcuAAA1ADAvAAAyABAwAAA1ADAxAQA2ACEyAQA2ACEzAgA3ACE0QAA4ACEDAAAAAwAgAQAAMQAwFwAAMgAgAwAAAAMAIAEAAAQAMAIAAAUAIAcuAAA1ADAvAAAyABAwAAA1ADAxAQA2ACEyAQA2ACEzAgA3ACE0QAA4ACEOBQAAOgAgGAAAPwAgGQAAPwAgNQEAAAABNgEAAAAENwEAAAAEOAEAAAABOQEAAAABOgEAAAABOwEAAAABPAEAPgAhPQEAAAABPgEAAAABPwEAAAABDQUAADoAIBgAADoAIBkAADoAICoAAD0AICsAADoAIDUCAAAAATYCAAAABDcCAAAABDgCAAAAATkCAAAAAToCAAAAATsCAAAAATwCADwAIQsFAAA6ACAYAAA7ACAZAAA7ACA1QAAAAAE2QAAAAAQ3QAAAAAQ4QAAAAAE5QAAAAAE6QAAAAAE7QAAAAAE8QAA5ACELBQAAOgAgGAAAOwAgGQAAOwAgNUAAAAABNkAAAAAEN0AAAAAEOEAAAAABOUAAAAABOkAAAAABO0AAAAABPEAAOQAhCDUCAAAAATYCAAAABDcCAAAABDgCAAAAATkCAAAAAToCAAAAATsCAAAAATwCADoAIQg1QAAAAAE2QAAAAAQ3QAAAAAQ4QAAAAAE5QAAAAAE6QAAAAAE7QAAAAAE8QAA7ACENBQAAOgAgGAAAOgAgGQAAOgAgKgAAPQAgKwAAOgAgNQIAAAABNgIAAAAENwIAAAAEOAIAAAABOQIAAAABOgIAAAABOwIAAAABPAIAPAAhCDUIAAAAATYIAAAABDcIAAAABDgIAAAAATkIAAAAAToIAAAAATsIAAAAATwIAD0AIQ4FAAA6ACAYAAA_ACAZAAA_ACA1AQAAAAE2AQAAAAQ3AQAAAAQ4AQAAAAE5AQAAAAE6AQAAAAE7AQAAAAE8AQA-ACE9AQAAAAE-AQAAAAE_AQAAAAELNQEAAAABNgEAAAAENwEAAAAEOAEAAAABOQEAAAABOgEAAAABOwEAAAABPAEAPwAhPQEAAAABPgEAAAABPwEAAAABCS4AAEAAMC8AABwAEDAAAEAAMDEBADYAITRAADgAIUABADYAIUEBADYAIUIBADYAIUMBAEEAIQ4FAABDACAYAABEACAZAABEACA1AQAAAAE2AQAAAAU3AQAAAAU4AQAAAAE5AQAAAAE6AQAAAAE7AQAAAAE8AQBCACE9AQAAAAE-AQAAAAE_AQAAAAEOBQAAQwAgGAAARAAgGQAARAAgNQEAAAABNgEAAAAFNwEAAAAFOAEAAAABOQEAAAABOgEAAAABOwEAAAABPAEAQgAhPQEAAAABPgEAAAABPwEAAAABCDUCAAAAATYCAAAABTcCAAAABTgCAAAAATkCAAAAAToCAAAAATsCAAAAATwCAEMAIQs1AQAAAAE2AQAAAAU3AQAAAAU4AQAAAAE5AQAAAAE6AQAAAAE7AQAAAAE8AQBEACE9AQAAAAE-AQAAAAE_AQAAAAEKBAAASQAgLgAARQAwLwAACQAQMAAARQAwMQEARgAhNEAASAAhQAEARgAhQQEARgAhQgEARgAhQwEARwAhCzUBAAAAATYBAAAABDcBAAAABDgBAAAAATkBAAAAAToBAAAAATsBAAAAATwBAD8AIT0BAAAAAT4BAAAAAT8BAAAAAQs1AQAAAAE2AQAAAAU3AQAAAAU4AQAAAAE5AQAAAAE6AQAAAAE7AQAAAAE8AQBEACE9AQAAAAE-AQAAAAE_AQAAAAEINUAAAAABNkAAAAAEN0AAAAAEOEAAAAABOUAAAAABOkAAAAABO0AAAAABPEAAOwAhA0QAAAMAIEUAAAMAIEYAAAMAIAIyAQAAAAEzAgAAAAEIAwAATQAgLgAASwAwLwAAAwAQMAAASwAwMQEARgAhMgEARgAhMwIATAAhNEAASAAhCDUCAAAAATYCAAAABDcCAAAABDgCAAAAATkCAAAAAToCAAAAATsCAAAAATwCADoAIQwEAABJACAuAABFADAvAAAJABAwAABFADAxAQBGACE0QABIACFAAQBGACFBAQBGACFCAQBGACFDAQBHACFIAAAJACBJAAAJACAAAAAAAAFNAQAAAAEFTQIAAAABUwIAAAABVAIAAAABVQIAAAABVgIAAAABAU1AAAAAAQUSAABuACATAABxACBKAABvACBLAABwACBQAAABACADEgAAbgAgSgAAbwAgUAAAAQAgAAAAAAFNAQAAAAELEgAAXgAwEwAAYwAwSgAAXwAwSwAAYAAwTAAAYQAgTQAAYgAwTgAAYgAwTwAAYgAwUAAAYgAwUQAAZAAwUgAAZQAwAzEBAAAAATMCAAAAATRAAAAAAQIAAAAFACASAABpACADAAAABQAgEgAAaQAgEwAAaAAgAQsAAG0AMAkDAABNACAuAABLADAvAAADABAwAABLADAxAQAAAAEyAQBGACEzAgBMACE0QABIACFHAABKACACAAAABQAgCwAAaAAgAgAAAGYAIAsAAGcAIAcuAABlADAvAABmABAwAABlADAxAQBGACEyAQBGACEzAgBMACE0QABIACEHLgAAZQAwLwAAZgAQMAAAZQAwMQEARgAhMgEARgAhMwIATAAhNEAASAAhAzEBAFMAITMCAFQAITRAAFUAIQMxAQBTACEzAgBUACE0QABVACEDMQEAAAABMwIAAAABNEAAAAABBBIAAF4AMEoAAF8AMEwAAGEAIFAAAGIAMAACBAAAawAgQwAAWAAgAzEBAAAAATMCAAAAATRAAAAAAQYxAQAAAAE0QAAAAAFAAQAAAAFBAQAAAAFCAQAAAAFDAQAAAAECAAAAAQAgEgAAbgAgAwAAAAkAIBIAAG4AIBMAAHIAIAgAAAAJACALAAByACAxAQBTACE0QABVACFAAQBTACFBAQBTACFCAQBTACFDAQBcACEGMQEAUwAhNEAAVQAhQAEAUwAhQQEAUwAhQgEAUwAhQwEAXAAhAgQGAgUAAwEDAAEBBAcAAAAAAwUACBgACRkACgAAAAMFAAgYAAkZAAoBAwABAQMAAQUFAA8YABIZABMqABArABEAAAAAAAUFAA8YABIZABMqABArABEGAgEHCAEICwEJDAEKDQEMDwENEQQOEgUPFAEQFgQRFwYUGAEVGQEWGgQaHQcbHgscHwIdIAIeIQIfIgIgIwIhJQIiJwQjKAwkKgIlLAQmLQ0nLgIoLwIpMAQsMw4tNBQ"
-}
-config.compilerWasm = {
-      getRuntime: async () => require('./query_compiler_fast_bg.js'),
-      getQueryCompilerWasmModule: async () => {
-        const { Buffer } = require('node:buffer')
-        const { wasm } = require('./query_compiler_fast_bg.wasm-base64.js')
-        const queryCompilerWasmFileBytes = Buffer.from(wasm, 'base64')
-
-        return new WebAssembly.Module(queryCompilerWasmFileBytes)
-      },
-      importName: './query_compiler_fast_bg.js',
+  "postinstall": false,
+  "inlineDatasources": {
+    "db": {
+      "url": {
+        "fromEnvVar": "DATABASE_URL",
+        "value": null
+      }
     }
+  },
+  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id           String           @id @default(uuid())\n  email        String           @unique\n  displayName  String\n  passwordHash String\n  avatarUrl    String?\n  createdAt    DateTime         @default(now())\n  watchlist    WatchlistMovie[]\n\n  @@map(\"users\")\n}\n\nmodel WatchlistMovie {\n  id        String   @id @default(uuid())\n  userId    String\n  tmdbId    Int\n  createdAt DateTime @default(now())\n  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@unique([userId, tmdbId])\n  @@index([userId, createdAt(sort: Desc)])\n  @@map(\"watchlist_movies\")\n}\n",
+  "inlineSchemaHash": "6701d2735ef66af8531d5ceb18716e793ff1c323e44aff5df8b8e9430d1a3fb8",
+  "copyEngine": true
+}
+
+const fs = require('fs')
+
+config.dirname = __dirname
+if (!fs.existsSync(path.join(__dirname, 'schema.prisma'))) {
+  const alternativePaths = [
+    "src/generated/prisma",
+    "generated/prisma",
+  ]
+  
+  const alternativePath = alternativePaths.find((altPath) => {
+    return fs.existsSync(path.join(process.cwd(), altPath, 'schema.prisma'))
+  }) ?? alternativePaths[0]
+
+  config.dirname = path.join(process.cwd(), alternativePath)
+  config.isBundled = true
+}
+
+config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"dbName\":\"users\",\"schema\":null,\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":true,\"isReadOnly\":false,\"hasDefaultValue\":true,\"type\":\"String\",\"nativeType\":null,\"default\":{\"name\":\"uuid\",\"args\":[4]},\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"email\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":true,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"String\",\"nativeType\":null,\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"displayName\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"String\",\"nativeType\":null,\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"passwordHash\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"String\",\"nativeType\":null,\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"avatarUrl\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":false,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"String\",\"nativeType\":null,\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":true,\"type\":\"DateTime\",\"nativeType\":null,\"default\":{\"name\":\"now\",\"args\":[]},\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"watchlist\",\"kind\":\"object\",\"isList\":true,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"WatchlistMovie\",\"nativeType\":null,\"relationName\":\"UserToWatchlistMovie\",\"relationFromFields\":[],\"relationToFields\":[],\"isGenerated\":false,\"isUpdatedAt\":false}],\"primaryKey\":null,\"uniqueFields\":[],\"uniqueIndexes\":[],\"isGenerated\":false},\"WatchlistMovie\":{\"dbName\":\"watchlist_movies\",\"schema\":null,\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":true,\"isReadOnly\":false,\"hasDefaultValue\":true,\"type\":\"String\",\"nativeType\":null,\"default\":{\"name\":\"uuid\",\"args\":[4]},\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"userId\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":true,\"hasDefaultValue\":false,\"type\":\"String\",\"nativeType\":null,\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"tmdbId\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"Int\",\"nativeType\":null,\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":true,\"type\":\"DateTime\",\"nativeType\":null,\"default\":{\"name\":\"now\",\"args\":[]},\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"user\",\"kind\":\"object\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"User\",\"nativeType\":null,\"relationName\":\"UserToWatchlistMovie\",\"relationFromFields\":[\"userId\"],\"relationToFields\":[\"id\"],\"relationOnDelete\":\"Cascade\",\"isGenerated\":false,\"isUpdatedAt\":false}],\"primaryKey\":null,\"uniqueFields\":[[\"userId\",\"tmdbId\"]],\"uniqueIndexes\":[{\"name\":null,\"fields\":[\"userId\",\"tmdbId\"]}],\"isGenerated\":false}},\"enums\":{},\"types\":{}}")
+defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
+config.engineWasm = undefined
+config.compilerWasm = undefined
+
+
+const { warnEnvConflicts } = require('./runtime/library.js')
+
+warnEnvConflicts({
+    rootEnvPath: config.relativeEnvPaths.rootEnvPath && path.resolve(config.dirname, config.relativeEnvPaths.rootEnvPath),
+    schemaEnvPath: config.relativeEnvPaths.schemaEnvPath && path.resolve(config.dirname, config.relativeEnvPaths.schemaEnvPath)
+})
 
 const PrismaClient = getPrismaClient(config)
 exports.PrismaClient = PrismaClient
 Object.assign(exports, Prisma)
+
+// file annotations for bundling tools to include these files
+path.join(__dirname, "libquery_engine-darwin-arm64.dylib.node");
+path.join(process.cwd(), "src/generated/prisma/libquery_engine-darwin-arm64.dylib.node")
+// file annotations for bundling tools to include these files
+path.join(__dirname, "schema.prisma");
+path.join(process.cwd(), "src/generated/prisma/schema.prisma")

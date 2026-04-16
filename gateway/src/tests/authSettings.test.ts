@@ -1,3 +1,15 @@
+jest.mock("../controllers/userPreferenceController", () => {
+  const actual = jest.requireActual("../controllers/userPreferenceController");
+
+  return {
+    ...actual,
+    initializeCorePreferences: jest.fn().mockResolvedValue({
+      status: 201,
+      payload: null,
+    }),
+  };
+});
+
 import request from "supertest";
 import { app } from "../app";
 
