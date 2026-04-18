@@ -287,7 +287,11 @@ async def top_rated(page: int = Query(1, ge=1)):
 
 
 @router.get("/search/", response_model=TmdbMovieList)
-async def movie_search(query: str = Query(..., min_length=1), page: int = Query(1, ge=1)):
+async def movie_search(
+    query: str = Query(..., min_length=1),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=50),
+):
     """
     Fetches a paginated list of movies from TMDB using a plain text query.
 
@@ -305,10 +309,10 @@ async def movie_search(query: str = Query(..., min_length=1), page: int = Query(
     if not data:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="TMDB unreachable")
 
-    # Truncate to the top 5 results for the quick-search preview in the UI
+    # Keep quick-search compact by default, while allowing full onboarding grids.
     if "results" in data:
-        data["results"] = data["results"][:5]
-        data["total_results"] = min(data.get("total_results", len(data["results"])), 5)
+        data["results"] = data["results"][:limit]
+        data["total_results"] = min(data.get("total_results", len(data["results"])), limit)
         data["total_pages"] = min(data.get("total_pages", 1), 1)
 
     return data

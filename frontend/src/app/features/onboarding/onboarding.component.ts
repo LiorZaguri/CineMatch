@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -16,7 +16,6 @@ import {
 import { MovieService } from '../../core/services/movie.service';
 import { OnboardingService } from '../../core/services/onboarding.service';
 import { UserPreferenceService } from '../../core/services/user-preference.service';
-import { MovieSeedCardComponent } from './components/movie-seed-card/movie-seed-card.component';
 import { OnboardingMovieCard } from './movie-card.models';
 
 interface OptionPill {
@@ -31,135 +30,12 @@ interface StepMeta {
   description: string;
 }
 
-const MOVIE_SEEDS: OnboardingMovieCard[] = [
-  {
-    id: 146233,
-    title: 'Prisoners',
-    year: 2013,
-    metadata: 'Dark thriller',
-    summary: 'Slow-burn tension and moral dread.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/uhviyknTT5cEQXbn6vWIqfM4vGm.jpg',
-  },
-  {
-    id: 335984,
-    title: 'Blade Runner 2049',
-    year: 2017,
-    metadata: 'Visual sci-fi',
-    summary: 'Atmospheric scale and meditative sci-fi.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg',
-  },
-  {
-    id: 496243,
-    title: 'Parasite',
-    year: 2019,
-    metadata: 'Dark satire',
-    summary: 'Class tension with sharp tonal shifts.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg',
-  },
-  {
-    id: 244786,
-    title: 'Whiplash',
-    year: 2014,
-    metadata: 'Obsession drama',
-    summary: 'Intensity, craft, and emotional impact.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/7fn624j5lj3xTme2SgiLCeuedmO.jpg',
-  },
-  {
-    id: 329865,
-    title: 'Arrival',
-    year: 2016,
-    metadata: 'Thoughtful sci-fi',
-    summary: 'Emotion-led science fiction with restraint.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/x2FJsf1ElAgr63Y3PNPtJrcmpoe.jpg',
-  },
-  {
-    id: 1949,
-    title: 'Zodiac',
-    year: 2007,
-    metadata: 'Procedural thriller',
-    summary: 'Methodical investigation and dread.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/6YmeO4pB7XTh8P8F960O1uA14JO.jpg',
-  },
-  {
-    id: 44214,
-    title: 'Black Swan',
-    year: 2010,
-    metadata: 'Psychological',
-    summary: 'Identity fracture and artistic obsession.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/8iIabM9w35hIpDH4NB2woftQNa2.jpg',
-  },
-  {
-    id: 120467,
-    title: 'The Grand Budapest Hotel',
-    year: 2014,
-    metadata: 'Stylized comedy',
-    summary: 'Precise visual worldbuilding and wit.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/eWdyYQreja6JGCzqHWXpWHDrrPo.jpg',
-  },
-  {
-    id: 376867,
-    title: 'Moonlight',
-    year: 2016,
-    metadata: 'Intimate drama',
-    summary: 'Tender, character-led storytelling.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/rcICfiL9fvwRjoWHxW8cjbVhKCG.jpg',
-  },
-  {
-    id: 76341,
-    title: 'Mad Max: Fury Road',
-    year: 2015,
-    metadata: 'Adrenaline action',
-    summary: 'Pure momentum and tactile action design.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/hA2ple9q4qnwxp3hKVNhroipsir.jpg',
-  },
-  {
-    id: 11423,
-    title: 'Memories of Murder',
-    year: 2003,
-    metadata: 'Crime mystery',
-    summary: 'Uneasy crime storytelling with humanity.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/edZ25O6tY6ZktUjKHuN9fGgM4sE.jpg',
-  },
-  {
-    id: 152601,
-    title: 'Her',
-    year: 2013,
-    metadata: 'Romantic sci-fi',
-    summary: 'Melancholic futurism and emotional texture.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/eCOtqtfvn7mxGl6nfmq4b1exJRc.jpg',
-  },
-  {
-    id: 843,
-    title: 'In the Mood for Love',
-    year: 2000,
-    metadata: 'Romantic longing',
-    summary: 'Elegant restraint and visual sensuality.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/iYypPT4bhqXfq1b6EnmxvRt6b2Y.jpg',
-  },
-  {
-    id: 155,
-    title: 'The Dark Knight',
-    year: 2008,
-    metadata: 'Epic crime',
-    summary: 'High-stakes spectacle with psychological weight.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
-  },
-  {
-    id: 129,
-    title: 'Spirited Away',
-    year: 2001,
-    metadata: 'Fantastical animation',
-    summary: 'Wonder, mystery, and emotional warmth.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg',
-  },
-  {
-    id: 264660,
-    title: 'Ex Machina',
-    year: 2014,
-    metadata: 'Minimalist sci-fi',
-    summary: 'Controlled suspense and clean design.',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/dmJW8IAKHKxFNiUnoDR7JfsK7Rp.jpg',
-  },
+type MovieSort = 'popular' | 'recent' | 'az';
+
+const SORT_OPTIONS: { label: string; value: MovieSort }[] = [
+  { label: 'Popular', value: 'popular' },
+  { label: 'Recent', value: 'recent' },
+  { label: 'A–Z', value: 'az' },
 ];
 
 const FAVORITE_GENRES: OptionPill[] = [
@@ -241,13 +117,8 @@ const STEP_META: StepMeta[] = [
   },
   {
     label: 'Signal shaping',
-    title: 'What genres do you want more of?',
-    description: 'Choose the genres that should pull recommendations toward your taste.',
-  },
-  {
-    label: 'Negative signal',
-    title: 'What should we dial down?',
-    description: 'Leave it empty if you want the first version to stay broad.',
+    title: 'What should CineMatch lean into or avoid?',
+    description: 'Pick the genres you want more of and anything you usually skip.',
   },
   {
     label: 'Session mood',
@@ -260,11 +131,6 @@ const STEP_META: StepMeta[] = [
     description: 'These are soft preferences for the first recommendation pass.',
   },
 ];
-
-const MOVIE_SEED_LOOKUP = MOVIE_SEEDS.reduce<Record<number, OnboardingMovieCard>>(
-  (lookup, movie) => ({ ...lookup, [movie.id]: movie }),
-  {},
-);
 
 const GENRE_TO_API: Record<string, UserPreferenceGenre> = {
   thriller: 'Thriller',
@@ -320,15 +186,16 @@ const ERA_TO_API: Record<string, UserPreferenceEra> = {
 @Component({
   selector: 'app-onboarding',
   standalone: true,
-  imports: [CommonModule, FormsModule, MovieSeedCardComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './onboarding.component.html',
   styleUrl: './onboarding.component.css',
 })
-export class OnboardingComponent implements OnDestroy {
+export class OnboardingComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly movieService = inject(MovieService);
   protected readonly onboarding = inject(OnboardingService);
   private readonly userPreferences = inject(UserPreferenceService);
+  private catalogSubscription: Subscription | null = null;
   private searchSubscription: Subscription | null = null;
 
   protected readonly currentStep = signal(0);
@@ -336,14 +203,15 @@ export class OnboardingComponent implements OnDestroy {
   protected readonly saveError = signal<string | null>(null);
   protected readonly movieSearch = signal('');
   protected readonly isMovieSearchLoading = signal(false);
-  protected readonly movieSearchResults = signal<OnboardingMovieCard[]>([]);
-  protected readonly selectedMovieCache = signal<Record<number, OnboardingMovieCard>>({
-    ...MOVIE_SEED_LOOKUP,
-  });
+  protected readonly activeSort = signal<MovieSort>('popular');
+  protected readonly cursorX = signal(0);
+  protected readonly cursorY = signal(0);
+  protected readonly catalogMovieSeeds = signal<OnboardingMovieCard[]>([]);
+  protected readonly apiMovieSeeds = signal<OnboardingMovieCard[]>([]);
+  protected readonly selectedMovieCache = signal<Record<number, OnboardingMovieCard>>({});
   protected readonly steps = [
     'Choose favorites',
     'Shape your taste',
-    'Tell us what to avoid',
     'Define your mood',
     'Set your defaults',
   ] as const;
@@ -356,8 +224,22 @@ export class OnboardingComponent implements OnDestroy {
   protected readonly eraOptions = ERA_OPTIONS;
   protected readonly runtimeOptions = RUNTIME_OPTIONS;
   protected readonly discoveryOptions = DISCOVERY_OPTIONS;
+  protected readonly sortOptions = SORT_OPTIONS;
 
   protected readonly selectedMovieCount = computed(() => this.draft().selectedMovieIds.length);
+  protected readonly selectionProgress = computed(() =>
+    Math.min(100, (this.selectedMovieCount() / 5) * 100),
+  );
+  protected readonly selectionHint = computed(() => {
+    const count = this.selectedMovieCount();
+    if (count === 0) {
+      return 'Pick at least 5 to continue';
+    }
+    if (count < 5) {
+      return `${5 - count} more to go`;
+    }
+    return 'Great taste! You can pick more.';
+  });
   protected readonly selectedMovieCards = computed(() => {
     const cache = this.selectedMovieCache();
     return this.draft().selectedMovieIds.map(
@@ -372,20 +254,19 @@ export class OnboardingComponent implements OnDestroy {
   });
   protected readonly filteredMovieSeeds = computed(() => {
     const query = this.movieSearch().trim().toLowerCase();
-    const remoteResults = this.movieSearchResults();
-    if (query && remoteResults.length > 0) {
-      return remoteResults.slice(0, 5);
-    }
+    const filteredMovies = this.apiMovieSeeds().filter(
+      (movie) => !query || `${movie.title} ${movie.year ?? ''}`.toLowerCase().includes(query),
+    );
 
-    if (!query) {
-      return MOVIE_SEEDS.slice(0, 5);
-    }
-
-    return MOVIE_SEEDS.filter((movie) =>
-      `${movie.title} ${movie.year ?? ''} ${movie.metadata ?? ''} ${movie.summary ?? ''}`
-        .toLowerCase()
-        .includes(query),
-    ).slice(0, 5);
+    return [...filteredMovies].sort((a, b) => {
+      if (this.activeSort() === 'recent') {
+        return (b.year ?? 0) - (a.year ?? 0);
+      }
+      if (this.activeSort() === 'az') {
+        return a.title.localeCompare(b.title);
+      }
+      return (a.rank ?? 999) - (b.rank ?? 999);
+    });
   });
 
   protected readonly canContinue = computed(() => {
@@ -398,13 +279,39 @@ export class OnboardingComponent implements OnDestroy {
     if (step === 1) {
       return draft.favoriteGenres.length > 0;
     }
-    if (step === 3) {
+    if (step === 2) {
       return draft.moodTags.length > 0;
     }
     return true;
   });
 
   protected readonly activeStepMeta = computed(() => this.stepMeta[this.currentStep()]);
+
+  ngOnInit(): void {
+    this.catalogSubscription = this.movieService.getMovies().subscribe({
+      next: (catalog) => {
+        const movies = [
+          ...catalog.dashboard.popular,
+          ...catalog.dashboard.now_playing,
+          ...catalog.dashboard.top_rated,
+          ...catalog.dashboard.upcoming,
+        ];
+        const movieCards = this.toMovieCards(movies);
+        this.catalogMovieSeeds.set(movieCards);
+        this.apiMovieSeeds.set(movieCards);
+        this.cacheMovies(movieCards);
+      },
+      error: () => {
+        this.catalogMovieSeeds.set([]);
+        this.apiMovieSeeds.set([]);
+      },
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.catalogSubscription?.unsubscribe();
+    this.searchSubscription?.unsubscribe();
+  }
 
   protected isMovieSelected(movieId: number): boolean {
     return this.draft().selectedMovieIds.includes(movieId);
@@ -431,29 +338,37 @@ export class OnboardingComponent implements OnDestroy {
 
     if (trimmedValue.length < 2) {
       this.isMovieSearchLoading.set(false);
-      this.movieSearchResults.set([]);
+      this.apiMovieSeeds.set(this.catalogMovieSeeds());
       return;
     }
 
     this.isMovieSearchLoading.set(true);
-    this.searchSubscription = this.movieService.searchMovies(trimmedValue).subscribe({
+    this.searchSubscription = this.movieService.searchMovies(trimmedValue, 1, 48).subscribe({
       next: (movies) => {
         if (this.movieSearch().trim() !== trimmedValue) {
           return;
         }
-        const movieCards = movies.slice(0, 5).map((movie) => this.toMovieSeed(movie));
+        const movieCards = this.toMovieCards(movies, 48);
+        this.apiMovieSeeds.set(movieCards);
         this.cacheMovies(movieCards);
-        this.movieSearchResults.set(movieCards);
         this.isMovieSearchLoading.set(false);
       },
       error: () => {
         if (this.movieSearch().trim() !== trimmedValue) {
           return;
         }
-        this.movieSearchResults.set([]);
         this.isMovieSearchLoading.set(false);
       },
     });
+  }
+
+  protected setSort(value: MovieSort): void {
+    this.activeSort.set(value);
+  }
+
+  protected moveCursor(event: MouseEvent): void {
+    this.cursorX.set(event.clientX);
+    this.cursorY.set(event.clientY);
   }
 
   protected toggleMovie(movieId: number): void {
@@ -512,6 +427,7 @@ export class OnboardingComponent implements OnDestroy {
     }
 
     this.currentStep.set(stepIndex);
+    this.scrollToStepTop();
   }
 
   protected nextStep(): void {
@@ -521,12 +437,14 @@ export class OnboardingComponent implements OnDestroy {
 
     if (this.currentStep() < this.steps.length - 1) {
       this.currentStep.update((step) => step + 1);
+      this.scrollToStepTop();
     }
   }
 
   protected previousStep(): void {
     if (this.currentStep() > 0) {
       this.currentStep.update((step) => step - 1);
+      this.scrollToStepTop();
     }
   }
 
@@ -538,22 +456,60 @@ export class OnboardingComponent implements OnDestroy {
     this.persistPreferences('completed');
   }
 
-  ngOnDestroy(): void {
-    this.searchSubscription?.unsubscribe();
+  private toMovieCards(movies: Movie[], maxResults = 24): OnboardingMovieCard[] {
+    const seen = new Set<number>();
+    return movies
+      .filter((movie) => {
+        if (seen.has(movie.id)) {
+          return false;
+        }
+        seen.add(movie.id);
+        return true;
+      })
+      .slice(0, maxResults)
+      .map((movie, index) => this.toMovieCard(movie, index));
   }
 
-  private toMovieSeed(movie: Movie): OnboardingMovieCard {
-    const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
+  private toMovieCard(movie: Movie, index: number): OnboardingMovieCard {
+    const genreTags = movie.genre.flatMap((genre) => this.toFilterGenres(genre));
     return {
       id: movie.id,
       title: movie.title,
-      year: year && Number.isFinite(year) ? year : null,
-      rating: movie.rating ?? null,
+      year: this.getReleaseYear(movie.releaseDate),
+      rating: movie.rating,
       genre: movie.genre[0] ?? null,
       metadata: movie.genre[0] ?? null,
-      summary: movie.description || 'No synopsis available yet.',
+      summary: movie.description,
       posterUrl: movie.posterUrl || null,
+      genres: [...new Set(genreTags)],
+      bg: `bg-${String.fromCharCode(97 + (index % 9))}`,
+      rank: index + 1,
     };
+  }
+
+  private getReleaseYear(releaseDate: string): number | null {
+    const year = releaseDate ? new Date(releaseDate).getFullYear() : null;
+    return year && Number.isFinite(year) ? year : null;
+  }
+
+  private toFilterGenres(genre: string): string[] {
+    const normalizedGenre = genre.toLowerCase();
+    const tags = [normalizedGenre];
+
+    if (['thriller', 'horror', 'crime', 'mystery'].includes(normalizedGenre)) {
+      tags.push('dark');
+    }
+    if (['sci-fi', 'mystery'].includes(normalizedGenre)) {
+      tags.push('mind-bending');
+    }
+    if (['drama', 'romance'].includes(normalizedGenre)) {
+      tags.push('emotional');
+    }
+    if (normalizedGenre === 'comedy') {
+      tags.push('funny');
+    }
+
+    return tags;
   }
 
   private cacheMovies(movies: OnboardingMovieCard[]): void {
@@ -563,6 +519,14 @@ export class OnboardingComponent implements OnDestroy {
         nextCache[movie.id] = movie;
       }
       return nextCache;
+    });
+  }
+
+  private scrollToStepTop(): void {
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
     });
   }
 

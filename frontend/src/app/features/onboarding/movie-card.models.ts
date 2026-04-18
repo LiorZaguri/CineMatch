@@ -7,4 +7,7 @@ export interface OnboardingMovieCard {
   metadata?: string | null;
   summary?: string | null;
   posterUrl?: string | null;
+  genres?: string[];
+  bg?: string;
+  rank?: number;
 }

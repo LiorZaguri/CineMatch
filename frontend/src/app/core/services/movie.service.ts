@@ -192,12 +192,13 @@ export class MovieService {
     return this.http.post<AIMovieSearchResponse>(`${this.gatewayMovieUrl}/ai/search`, payload);
   }
 
-  searchMovies(query: string, page = 1): Observable<Movie[]> {
+  searchMovies(query: string, page = 1, limit = 20): Observable<Movie[]> {
     return this.http
       .get<TmdbMovieListResponse>(`${this.gatewayMovieUrl}/search/`, {
         params: {
           query,
           page,
+          limit,
         },
       })
       .pipe(map((response) => this.mapMovies(response.results)));
