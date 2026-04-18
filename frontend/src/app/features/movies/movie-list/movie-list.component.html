@@ -56,8 +56,14 @@
           </div>
         </div>
 
-        @if (recommendationsLoading()) {
-          <div class="section-empty">Finding matches from your taste profile...</div>
+        @if (recommendationsLoading() || tasteProfileLoading()) {
+          <div class="recommendations-loading" role="status" aria-live="polite">
+            <div class="mini-loader" aria-hidden="true"></div>
+            <div>
+              <h4>Finding matches from your taste profile...</h4>
+              <p>We are reading your saved movies, genres, and moods to rank better picks for you.</p>
+            </div>
+          </div>
         } @else if (recommendedMovies().length > 0) {
           <div class="carousel-shell">
             <button
@@ -91,11 +97,38 @@
               <span class="material-symbols-outlined">chevron_right</span>
             </button>
           </div>
+        } @else if (shouldPromptForTasteSetup()) {
+          <div class="recommendation-setup-card">
+            <div class="setup-icon" aria-hidden="true">
+              <span class="material-symbols-outlined">auto_awesome</span>
+            </div>
+            <div class="setup-copy">
+              <h4>Your recommendations need a taste profile first.</h4>
+              <p>
+                You skipped setup, so CineMatch does not have enough signal to recommend movies yet.
+                Complete your taste profile, or start liking movies from detail pages to teach the
+                app what fits you.
+              </p>
+            </div>
+            <button type="button" class="setup-action" (click)="startTasteSetup()">
+              Set up taste profile
+            </button>
+          </div>
         } @else {
-          <div class="section-empty">
-            {{
-              recommendationsError() || 'No personalized recommendations are available right now.'
-            }}
+          <div class="recommendation-setup-card recommendation-setup-card--soft">
+            <div class="setup-icon" aria-hidden="true">
+              <span class="material-symbols-outlined">sync_problem</span>
+            </div>
+            <div class="setup-copy">
+              <h4>Recommendations are taking longer than expected.</h4>
+              <p>
+                {{
+                  recommendationsError() ||
+                    'No personalized recommendations are available right now.'
+                }}
+              </p>
+            </div>
+            <button type="button" class="setup-action" (click)="retry()">Try again</button>
           </div>
         }
       </section>

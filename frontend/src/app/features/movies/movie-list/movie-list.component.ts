@@ -9,10 +9,13 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MovieService } from '../../../core/services/movie.service';
 import { Movie } from '../../../core/models/movie.models';
 import { ScrollRevealDirective } from '../../../core/directives/scroll-reveal.directive';
+import { OnboardingService } from '../../../core/services/onboarding.service';
+import { UserPreferenceService } from '../../../core/services/user-preference.service';
+import { UserPreferenceProfile } from '../../../core/models/user-preference.models';
 
 interface MovieSection {
   key: string;
@@ -30,6 +33,9 @@ interface MovieSection {
 })
 export class MovieListComponent implements OnInit, OnDestroy {
   private readonly movieService = inject(MovieService);
+  private readonly onboarding = inject(OnboardingService);
+  private readonly router = inject(Router);
+  private readonly userPreferenceService = inject(UserPreferenceService);
   private carouselTimer: ReturnType<typeof setInterval> | null = null;
   private fadeTimer: ReturnType<typeof setTimeout> | null = null;
   private heroPaused = false;
@@ -44,6 +50,9 @@ export class MovieListComponent implements OnInit, OnDestroy {
   readonly recommendationsError = this.movieService.recommendationsError;
   readonly heroIndex = signal(0);
   readonly isHeroFading = signal(false);
+  readonly tasteProfile = signal<UserPreferenceProfile | null>(null);
+  readonly tasteProfileLoading = signal(false);
+  readonly tasteProfileMissing = signal(false);
   @ViewChild('recommendationsRow') private recommendationsRow?: ElementRef<HTMLDivElement>;
 
   readonly heroMovies = this.movieService.nowPlaying;
@@ -56,6 +65,24 @@ export class MovieListComponent implements OnInit, OnDestroy {
     return heroes[this.heroIndex() % heroes.length];
   });
   readonly recommendedMovies = computed(() => this.movieService.recommendations().slice(0, 20));
+  readonly hasTasteSignals = computed(() => {
+    const profile = this.tasteProfile();
+
+    return Boolean(
+      profile &&
+        (profile.chosen_movies.length > 0 ||
+          profile.liked_genres.length > 0 ||
+          profile.moods.length > 0 ||
+          profile.eras.length > 0 ||
+          profile.languages.length > 0 ||
+          profile.runtime),
+    );
+  });
+  readonly shouldPromptForTasteSetup = computed(
+    () =>
+      !this.tasteProfileLoading() &&
+      (this.tasteProfileMissing() || (this.onboarding.isSkipped() && !this.hasTasteSignals())),
+  );
   readonly topMatches = computed(() => this.movieService.topRated().slice(0, 6));
   readonly upcomingMovies = computed(() => this.movieService.upcoming().slice(0, 8));
   readonly dashboardSections = computed<MovieSection[]>(() =>
@@ -89,6 +116,7 @@ export class MovieListComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadMovies();
+    this.loadTasteProfile();
     this.startHeroCarousel();
   }
 
@@ -144,6 +172,11 @@ export class MovieListComponent implements OnInit, OnDestroy {
     });
   }
 
+  startTasteSetup(): void {
+    this.onboarding.reset();
+    this.router.navigate(['/onboarding']);
+  }
+
   private loadMovies(): void {
     this.movieService.getMovies(true).subscribe({
       error: (err) => {
@@ -153,6 +186,23 @@ export class MovieListComponent implements OnInit, OnDestroy {
     this.movieService.getPersonalizedRecommendations(true).subscribe({
       error: (err) => {
         console.error('Failed to load recommendations:', err);
+      },
+    });
+  }
+
+  private loadTasteProfile(): void {
+    this.tasteProfileLoading.set(true);
+    this.tasteProfileMissing.set(false);
+
+    this.userPreferenceService.getMyPreferences().subscribe({
+      next: (profile) => {
+        this.tasteProfile.set(profile);
+        this.tasteProfileLoading.set(false);
+      },
+      error: () => {
+        this.tasteProfile.set(null);
+        this.tasteProfileMissing.set(true);
+        this.tasteProfileLoading.set(false);
       },
     });
   }

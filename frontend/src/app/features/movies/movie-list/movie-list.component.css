@@ -47,7 +47,7 @@
 .hero-content {
     position: relative;
     z-index: 2;
-    height: auto;
+    min-height: clamp(18.5rem, 31vh, 23.5rem);
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -94,13 +94,14 @@
 .hero-content h1 {
     margin: 0;
     font-size: clamp(2.8rem, 6vw, 5.2rem);
-    line-height: 1.05;
+    line-height: 1.02;
     font-weight: 900;
     text-transform: uppercase;
-    white-space: nowrap;
     max-width: 100%;
     overflow: hidden;
-    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 .hero-content p {
@@ -120,6 +121,7 @@
     display: flex;
     gap: 0.8rem;
     flex-wrap: wrap;
+    margin-top: auto;
 }
 
 .btn-primary,
@@ -201,6 +203,7 @@
     gap: clamp(0.7rem, 1.5vw, 1rem);
     overflow-x: auto;
     padding-bottom: 0.35rem;
+    min-height: clamp(23rem, 28vw, 31rem);
 }
 
 .carousel-shell {
@@ -281,6 +284,14 @@
     width: clamp(12rem, 15.5vw, 16.5rem);
     flex: 0 0 clamp(12rem, 15.5vw, 16.5rem);
     scroll-snap-align: start;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+.movies-page .poster-card::after {
+    content: none !important;
 }
 
 .poster-wrap {
@@ -340,12 +351,106 @@
 .poster-card h4 {
     margin: 0;
     font-size: clamp(1rem, 1vw, 1.18rem);
+    line-height: 1.2;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 .poster-card p {
     margin: 0.2rem 0 0;
     color: #94a3b8;
     font-size: clamp(0.88rem, 0.8vw, 0.98rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.recommendations-loading,
+.recommendation-setup-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-height: 7.5rem;
+    border: 1px solid rgba(234, 42, 51, 0.22);
+    border-radius: 1.1rem;
+    background:
+        radial-gradient(circle at top left, rgba(234, 42, 51, 0.18), transparent 34%),
+        rgba(255, 255, 255, 0.045);
+    padding: clamp(1rem, 2vw, 1.35rem);
+    color: #f8fafc;
+}
+
+.recommendations-loading h4,
+.recommendation-setup-card h4 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1rem, 1.1vw, 1.2rem);
+}
+
+.recommendations-loading p,
+.recommendation-setup-card p {
+    margin: 0.28rem 0 0;
+    max-width: 62ch;
+    color: #cbd5e1;
+    font-size: clamp(0.9rem, 0.9vw, 1rem);
+    line-height: 1.55;
+}
+
+.mini-loader,
+.setup-icon {
+    width: 2.9rem;
+    height: 2.9rem;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mini-loader {
+    border: 3px solid rgba(255, 255, 255, 0.18);
+    border-top-color: #ea2a33;
+    animation: spin 1s linear infinite;
+}
+
+.setup-icon {
+    background: rgba(234, 42, 51, 0.16);
+    color: #ff5b68;
+}
+
+.setup-icon .material-symbols-outlined {
+    font-size: 1.55rem;
+}
+
+.setup-copy {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.setup-action {
+    border: 0;
+    border-radius: 999px;
+    background: #ea2a33;
+    color: #fff;
+    padding: 0.78rem 1.15rem;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        background 180ms ease,
+        transform 180ms ease;
+}
+
+.setup-action:hover {
+    background: #ff3f48;
+    transform: translateY(-1px);
+}
+
+.recommendation-setup-card--soft {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.045);
 }
 
 .loading-overlay {
@@ -420,6 +525,7 @@
 
     .hero-content {
         padding-bottom: 1.5rem;
+        min-height: 19.5rem;
     }
 
     .hero-content h1 {
@@ -438,7 +544,15 @@
     }
 
     .poster-card p {
-        display: none;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        white-space: normal;
+    }
+
+    .scroll-row,
+    .recommendations-row {
+        min-height: 24rem;
     }
 
     .carousel-shell {
@@ -451,6 +565,16 @@
 
     .recommendations-row {
         padding-inline: 0;
+    }
+
+    .recommendations-loading,
+    .recommendation-setup-card {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .setup-action {
+        width: 100%;
     }
 }
 
