@@ -161,8 +161,6 @@ async def _get_all_reviews(tmdb_id: int, db: AsyncSession) -> list[TmdbReview]:
         ))
         
     all_reviews.sort(key=_review_sort_key, reverse=True)
-    print("---------------------------------------------------------------------", flush=True)
-    print(all_reviews, flush=True)
     return all_reviews
 
 
