@@ -1,148 +1,426 @@
 <section class="home-page">
-    <section class="hero-section" id="discover">
-        <div class="hero-bg">
-            <div class="hero-overlay"></div>
-            <img alt="Cinematic theater background"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMBtSFNcT1E3h28ntxJYzrdQ8jbA-Bz0Yjknpey9kdD_ktfN6vYxZyfxx5-yHI2XlF250FPAMOfvcV4uHjBaA3pF554nszj19JgRBQ5DqdZhGwF63pjx4nWXC7Oki6Uoo693UHXaon5qtX4CyG4wxe30jLRCxkA7G5UHAPd3mt23_sTvE6httDtx867F1DnHW4VZLikFEllMXIMTdEszzoFEvVsJvBYZ_3K213sEC9LhZjswMsHvbI0sDyDOMkpcQ0vXDCF0nwYcM" />
-        </div>
+  <div class="cursor" id="cursor"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
 
-        <div class="hero-content container-wide" appScrollReveal [revealDelay]="80">
-            <h1 class="hero-title">
-                Find Your Next
-                <span class="accent-text">Favorite Film</span>
-                with AI.
-            </h1>
-            <p class="hero-subtitle">
-                Experience cinema tailored to your soul. Our neural engine matches your unique taste across 100 years
-                of film history.
+  <section class="hero">
+    <div class="hero-left">
+      <div class="hero-tag">AI-Powered Recommendation Engine</div>
+      <h1 class="hero-headline">
+        Find your<br />
+        <em>next</em><br />
+        <strong>favorite film.</strong>
+      </h1>
+      <p class="hero-sub">
+        CineMatch turns your taste, moods, and favorites into recommendations that actually feel
+        personal — not algorithmic.
+      </p>
+      <div class="hero-actions">
+        <a routerLink="/register" class="btn-primary" style="color: var(--cream)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5" />
+            <path d="M6.5 5.5l4 2.5-4 2.5V5.5z" fill="currentColor" />
+          </svg>
+          Create Account
+        </a>
+        <a routerLink="/login" class="btn-ghost">Sign in</a>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <div class="poster-grid">
+        @for (poster of heroPosters(); track poster.src) {
+          <div class="poster-card">
+            <img [src]="poster.src" [alt]="poster.alt" loading="eager" />
+          </div>
+        }
+      </div>
+
+      <div class="stat-badge b1">
+        <div class="stat-label">Avg. match score</div>
+        <div class="stat-value">94%</div>
+      </div>
+
+      <div class="stat-badge b2">
+        <div class="stat-label">Films indexed</div>
+        <div class="stat-value">850k+</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="marquee-wrap">
+    <div class="marquee-track">
+      <div class="marquee-item">Mood-based search <span class="sep"></span></div>
+      <div class="marquee-item">AI recommendations <span class="sep"></span></div>
+      <div class="marquee-item">Streaming availability <span class="sep"></span></div>
+      <div class="marquee-item">Personalized watchlist <span class="sep"></span></div>
+      <div class="marquee-item">Rich movie pages <span class="sep"></span></div>
+      <div class="marquee-item">Taste profiling <span class="sep"></span></div>
+      <div class="marquee-item">AI search by vibe <span class="sep"></span></div>
+      <div class="marquee-item">User + critic reviews <span class="sep"></span></div>
+      <div class="marquee-item">Mood-based search <span class="sep"></span></div>
+      <div class="marquee-item">AI recommendations <span class="sep"></span></div>
+      <div class="marquee-item">Streaming availability <span class="sep"></span></div>
+      <div class="marquee-item">Personalized watchlist <span class="sep"></span></div>
+      <div class="marquee-item">Rich movie pages <span class="sep"></span></div>
+      <div class="marquee-item">Taste profiling <span class="sep"></span></div>
+      <div class="marquee-item">AI search by vibe <span class="sep"></span></div>
+      <div class="marquee-item">User + critic reviews <span class="sep"></span></div>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="taste-section">
+      <div class="reveal">
+        <div class="section-label">Built Around Taste</div>
+        <h2 class="taste-headline">
+          Better picks start<br />with a clearer<br />sense of <em>your</em><br />taste.
+        </h2>
+        <p class="taste-body">
+          CineMatch learns from the movies you love and turns that into recommendations that feel
+          genuinely personal — from the first pick.
+        </p>
+      </div>
+
+      <div class="taste-points">
+        <div class="taste-point reveal reveal-delay-1">
+          <div class="tp-num">01</div>
+          <div class="tp-content">
+            <h4>Shaped by your favorites</h4>
+            <p>
+              Start with movies you already love and let CineMatch build a clear picture of your
+              taste from day one.
             </p>
-            <div class="cta-row">
-                <a routerLink="/register" class="cta cta-primary">Start Free Trial</a>
-                <a routerLink="/movies" class="cta cta-glass">View Demo</a>
-            </div>
+          </div>
+          <div class="tp-icon" aria-hidden="true">
+            <svg class="landing-icon" viewBox="0 0 24 24">
+              <path d="m16 6 4 14" />
+              <path d="M12 6v14" />
+              <path d="M8 8v12" />
+              <path d="M4 4v16" />
+              <path d="M4 4h14a2 2 0 0 1 2 2v14" />
+              <path d="M4 8h16" />
+            </svg>
+          </div>
         </div>
-    </section>
 
-    <!-- <section class="section trending" id="collections">
-        <div class="section-head container-wide">
-            <h2>Trending Now</h2>
-            <a routerLink="/movies">View All</a>
+        <div class="taste-point reveal reveal-delay-2">
+          <div class="tp-num">02</div>
+          <div class="tp-content">
+            <h4>Sharpens over time</h4>
+            <p>
+              Save titles you love, skip ones you don't — the feed keeps getting more accurate with
+              every interaction.
+            </p>
+          </div>
+          <div class="tp-icon" aria-hidden="true">
+            <svg class="landing-icon" viewBox="0 0 24 24">
+              <path d="M12 3v18" />
+              <path d="M3 12h18" />
+              <path d="m5 5 14 14" />
+              <path d="m19 5-14 14" />
+            </svg>
+          </div>
         </div>
-        <div class="poster-row">
-            @for (movie of trendingMovies(); track movie.id) {
-            <a [routerLink]="['/movies', movie.id]" class="poster">
-                <img [src]="movie.posterUrl" [alt]="movie.title" />
-            </a>
-            }
-        </div>
-    </section>-->
 
-    <section class="section container-wide">
-        <div class="section-intro" appScrollReveal>
-            <div>
-                <p class="eyebrow">The Experience</p>
-                <h3>Personalized<br />Recommendations</h3>
-            </div>
-            <p class="muted">Our AI understands your mood, preferred pacing, and favorite directors to suggest
-                what you
-                will love next.</p>
+        <div class="taste-point reveal reveal-delay-3">
+          <div class="tp-num">03</div>
+          <div class="tp-content">
+            <h4>Richer movie pages</h4>
+            <p>
+              When something looks promising, get trailers, streaming info, AI summaries, and
+              reviews before you commit.
+            </p>
+          </div>
+          <div class="tp-icon" aria-hidden="true">
+            <svg class="landing-icon" viewBox="0 0 24 24">
+              <path d="M7 7h10" />
+              <path d="M7 12h10" />
+              <path d="M7 17h6" />
+              <rect width="16" height="20" x="4" y="2" rx="2" />
+            </svg>
+          </div>
         </div>
-        <div class="feature-grid">
-            <article class="glass-card feature-card" appScrollReveal [revealDelay]="80">
-                <span class="material-symbols-outlined">psychology</span>
-                <h4>Mood Analysis</h4>
-                <p>Our engine scans your watch history to detect emotional resonance patterns and match films to your
-                    current state.</p>
-                <div class="feature-media">
-                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrJ2D-RHN_ak6bIQYbsJjStMf99kKgdD1GEvZK-xrdJuvOibL35Qc41kXuNnKE-6ogfDShav2mpH_zgowe82eyIUBKQqk4tkWdayy4clUYkcTH8jUWQnW4M203h5e-sDCajaTWspod_oDo8MscyvUITKBoT0_x-f8VjC5JftdAPZ-57zMtY89gOlf7P4Pn8HpXSw9X0MVAReD5TqZRXgjvx20ETE1F9brPI57RyHWKcpRLc8DazD2LIT9VjR9BfHnV1DF6rcFHf6E"
-                        alt="Abstract mood artwork" />
-                </div>
-            </article>
-            <article class="glass-card feature-card" appScrollReveal [revealDelay]="160">
-                <span class="material-symbols-outlined">movie_edit</span>
-                <h4>Director DNA</h4>
-                <p>We analyze visual styles, pacing, and framing techniques you gravitate toward across decades of
-                    cinema.</p>
-                <div class="feature-media">
-                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5-JgjKenQbD8pX6i7gRv2fOR9kL5sp5Ghqgyov4jr33kmuYOc6tlMU7MoN_7beGvFQ4Y2F2XtkGXiOq2t9BqMhwk8jslOmGf09kQQSDyocslw2jwA9P8RUlxti8CAXQqjJMYPYBQ3I1Hu1WofaqtU1xWCs-heft8cgWmT8uUcIpdnqO28f6Ye-e17PAY0gfyVkwf-fGXcERKS8Sn1AwU-qrtFu7jj9XNANZcwABpLCq5OdFk81knpzUinl2ZU7jGGMCLpmowGOYg"
-                        alt="Cinema camera setup" />
-                </div>
-            </article>
-            <article class="glass-card feature-card" appScrollReveal [revealDelay]="240">
-                <span class="material-symbols-outlined">auto_awesome</span>
-                <h4>Genre Blending</h4>
-                <p>Discover hidden gems across genres that should not work on paper, but feel exactly right for you.</p>
-                <div class="feature-media">
-                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZKxeSIYteojsKWQSM8mVgU3FcXMm8w8iAmaKowtzD_6jkYtvacy3e6XknBucfV6NGohZWAzmI-a0SzbH1lO5WExRGVfM-zv-fL3hfUmE9wpHAUtTN5B3dquB-cIq7yoYFs-X7QhUH9X02DNjVYIGIm90zamk6oqSRUf-sB09YnH3-ARfA6qATY5i-rYC-MfHQan9WW1GJvyUSZUk11G-VQzR22o1c1uXBjg2-EkwAySGwXeAMMWhvRNQfnB7eipnn9RLY3vQtOvI"
-                        alt="Sci-fi silhouette scene" />
-                </div>
-            </article>
-        </div>
-    </section>
 
-    <section class="section process" id="ai-lab">
-        <div class="container-wide">
-            <div class="center-head" appScrollReveal>
-                <p class="eyebrow">The Process</p>
-                <h3>How CineMatch Works</h3>
-            </div>
-            <div class="process-grid">
-                <article appScrollReveal [revealDelay]="80">
-                    <div class="process-icon">
-                        <span class="material-symbols-outlined">scan</span>
-                    </div>
-                    <h4>1. Scan</h4>
-                    <p>Analyze your viewing habits, favorite directors, and visual preferences.</p>
-                </article>
-                <article appScrollReveal [revealDelay]="160">
-                    <div class="process-icon">
-                        <span class="material-symbols-outlined">analytics</span>
-                    </div>
-                    <h4>2. Analyze</h4>
-                    <p>Neural models map the emotional and visual DNA of over 500k films.</p>
-                </article>
-                <article appScrollReveal [revealDelay]="240">
-                    <div class="process-icon">
-                        <span class="material-symbols-outlined">match_word</span>
-                    </div>
-                    <h4>3. Match</h4>
-                    <p>Receive a feed of titles tuned to your cinematic taste and current mood.</p>
-                </article>
-            </div>
+        <div class="taste-point reveal reveal-delay-4">
+          <div class="tp-num">04</div>
+          <div class="tp-content">
+            <h4>Mood & genre control</h4>
+            <p>
+              Set your vibe for the night and let the AI narrow toward what feels right — not just
+              what's popular.
+            </p>
+          </div>
+          <div class="tp-icon" aria-hidden="true">
+            <svg class="landing-icon" viewBox="0 0 24 24">
+              <path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7Z" />
+              <circle cx="12" cy="9" r="2" />
+            </svg>
+          </div>
         </div>
-    </section>
+      </div>
+    </div>
+  </section>
 
-    <section class="section support-section">
-        <div class="container-wide support-wrap">
-            <div class="center-head" appScrollReveal>
-                <p class="eyebrow">Support</p>
-                <h3>Got Questions?</h3>
-            </div>
-            <div class="support-list">
-                <article class="support-item" appScrollReveal [revealDelay]="80">
-                    <h5>How accurate are the AI matches?</h5>
-                    <span class="material-symbols-outlined">add</span>
-                </article>
-                <article class="support-item" appScrollReveal [revealDelay]="140">
-                    <h5>Can I import my Watchlist from Letterboxd?</h5>
-                    <span class="material-symbols-outlined">add</span>
-                </article>
-                <article class="support-item" appScrollReveal [revealDelay]="200">
-                    <h5>Does it work with international cinema?</h5>
-                    <span class="material-symbols-outlined">add</span>
-                </article>
-            </div>
+  <section class="section section-dark">
+    <div class="section-label reveal">Why CineMatch Feels Different</div>
+    <div class="features-grid">
+      <div class="feat-card reveal reveal-delay-1">
+        <div class="feat-num">01</div>
+        <div class="feat-icon-wrap" aria-hidden="true">
+          <svg class="landing-icon" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" />
+            <circle cx="12" cy="12" r="6" />
+            <circle cx="12" cy="12" r="2" />
+          </svg>
         </div>
-    </section>
+        <h3>Tell us what you already love</h3>
+        <p>
+          Pick favorite movies, choose moods and genres you want more of — giving the AI a much
+          better starting point than a blank slate.
+        </p>
+      </div>
 
-    <section class="section container-wide">
-        <div class="cta-panel" appScrollReveal>
-            <h3>Ready to find your <span>perfect match?</span></h3>
-            <p>Join 50k+ cinephiles today and transform the way you experience movies. Start your 7-day free trial.</p>
-            <div class="cta-row">
-                <a routerLink="/register" class="cta cta-primary">Join Now</a>
-                <a routerLink="/movies" class="cta cta-glass">Learn More</a>
-            </div>
+      <div class="feat-card reveal reveal-delay-2">
+        <div class="feat-num">02</div>
+        <div class="feat-icon-wrap" aria-hidden="true">
+          <svg class="landing-icon" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
         </div>
-    </section>
+        <h3>Search by title or by vibe</h3>
+        <p>
+          Look up a specific movie fast, or describe the kind of night you want and let AI point
+          you toward a better match.
+        </p>
+      </div>
+
+      <div class="feat-card reveal reveal-delay-3">
+        <div class="feat-num">03</div>
+        <div class="feat-icon-wrap" aria-hidden="true">
+          <svg class="landing-icon" viewBox="0 0 24 24">
+            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z" />
+          </svg>
+        </div>
+        <h3>Keep your watchlist clean</h3>
+        <p>
+          Save titles to My List — the ones that fit your taste and keep your next movie night easy
+          to pick from.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="how-section">
+      <div class="how-left reveal">
+        <div class="section-label">How It Works</div>
+        <h2 class="how-headline">
+          A quick setup that makes it smarter
+          <em style="font-style: italic; color: var(--gold)">right away.</em>
+        </h2>
+      </div>
+
+      <div class="steps">
+        <div class="step reveal reveal-delay-1">
+          <div class="step-num">01</div>
+          <div class="step-content">
+            <h3>Start with movies you already know you love</h3>
+            <p>
+              Pick a few favorites and give CineMatch a clear read on your taste from the very
+              beginning.
+            </p>
+          </div>
+        </div>
+
+        <div class="step reveal reveal-delay-2">
+          <div class="step-num">02</div>
+          <div class="step-content">
+            <h3>Shape the kind of recommendations you want</h3>
+            <p>
+              Set genres, moods, languages, runtime, and eras so the app leans toward what feels
+              right for you.
+            </p>
+          </div>
+        </div>
+
+        <div class="step reveal reveal-delay-3">
+          <div class="step-num">03</div>
+          <div class="step-content">
+            <h3>Open any movie and decide with more confidence</h3>
+            <p>
+              Check trailers, streaming availability, AI review summaries, and user reviews before
+              you commit.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="search-section">
+    <div class="search-inner">
+      <div class="search-left reveal">
+        <div class="section-label search-label">Search Modes</div>
+        <h2>Three ways to<br />find <em>exactly</em><br />what you want.</h2>
+        <p>
+          Whether you know the title or just a feeling, CineMatch has a mode built for it.
+        </p>
+      </div>
+
+      <div class="search-modes">
+        <div class="mode-card reveal reveal-delay-1">
+          <div class="mode-icon" aria-hidden="true">
+            <svg class="landing-icon" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+          </div>
+          <div>
+            <h4>Normal Search</h4>
+            <p>Search directly when you know the title — fast, precise, indexed across 850k+ films.</p>
+          </div>
+        </div>
+
+        <div class="mode-card reveal reveal-delay-2">
+          <div class="mode-icon" aria-hidden="true">
+            <svg class="landing-icon" viewBox="0 0 24 24">
+              <path d="M12 5a3 3 0 0 0-5.3-2 3 3 0 0 0-3.4 4.6A3 3 0 0 0 4 13a3 3 0 0 0 3 5h1" />
+              <path d="M12 5a3 3 0 0 1 5.3-2 3 3 0 0 1 3.4 4.6A3 3 0 0 1 20 13a3 3 0 0 1-3 5h-1" />
+              <path d="M12 5v14" />
+              <path d="M8 15h8" />
+            </svg>
+          </div>
+          <div>
+            <h4>AI Search for Intent</h4>
+            <p>Describe a feeling, tone, or type of night and let AI narrow the list intelligently.</p>
+          </div>
+        </div>
+
+        <div class="mode-card reveal reveal-delay-3">
+          <div class="mode-icon" aria-hidden="true">
+            <svg class="landing-icon" viewBox="0 0 24 24">
+              <path d="M12 3C7 3 3 6.7 3 11.3c0 3.6 2.7 6.7 6.3 6.7h1.4c.8 0 1.3.8 1 1.5-.4.9.3 1.8 1.3 1.5 4.6-.9 8-4.5 8-9.7C21 6.7 17 3 12 3Z" />
+              <circle cx="7.5" cy="10.5" r=".5" />
+              <circle cx="10" cy="7.5" r=".5" />
+              <circle cx="14" cy="7.5" r=".5" />
+              <circle cx="16.5" cy="10.5" r=".5" />
+            </svg>
+          </div>
+          <div>
+            <h4>Vibe Search</h4>
+            <p>Pick a mood, a decade, a feeling — and get personalized results that actually match the moment.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="movie-preview-section">
+    <div class="preview-header reveal">
+      <div class="section-label preview-label">Inside the App</div>
+      <h2 style="color: var(--text)">
+        Every movie page gives you<br />more than <em>the basics.</em>
+      </h2>
+      <p>
+        Trailers, streaming info by region, AI-written summaries, and user reviews — all in one
+        place.
+      </p>
+    </div>
+
+    <div class="movie-card-preview reveal">
+      <div
+        class="movie-card-header"
+        style="background-image: url('https://image.tmdb.org/t/p/w1280/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg')"
+      >
+        <div class="movie-card-title-block">
+          <div class="movie-title-preview">Interstellar</div>
+          <div class="movie-meta">
+            <span class="movie-tag">2014</span>
+            <span class="movie-tag">Sci-Fi Drama</span>
+            <span class="movie-tag">169 min</span>
+            <span class="movie-tag movie-tag--icon">
+              <svg class="tag-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M8.5 14.5A4 4 0 0 0 12 21a6 6 0 0 0 6-6c0-4-4-7-4-12-2.5 1.5-4 4-4 7 0 1.5.5 2.5.5 2.5S9 12 8.5 9.5C6.5 11 6 12.8 6 15" />
+              </svg>
+              Intense
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="movie-card-body">
+        <div>
+          <div class="movie-info-row">
+            <span class="mir-label">Director</span>
+            <span class="mir-value">Christopher Nolan</span>
+          </div>
+          <div class="movie-info-row">
+            <span class="mir-label">Streaming</span>
+            <span class="mir-value streaming-highlight">Available to rent or buy</span>
+          </div>
+          <div class="movie-info-row">
+            <span class="mir-label">TMDB Score</span>
+            <span class="mir-value">8.4 / 10</span>
+          </div>
+          <div class="movie-info-row">
+            <span class="mir-label">Taste Match</span>
+            <span class="mir-value taste-highlight">96% for you</span>
+          </div>
+          <div class="movie-info-row movie-info-row--last">
+            <span class="mir-label">Trailers</span>
+            <span class="mir-value trailer-highlight">
+              <svg class="inline-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <path d="m10 8 6 4-6 4Z" />
+              </svg>
+              Watch Official Trailer
+            </span>
+          </div>
+        </div>
+
+        <div class="movie-ai-summary">
+          <div class="ai-label">
+            <svg class="inline-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9.5 2v6" />
+              <path d="M9.5 16v6" />
+              <path d="M2 9.5h6" />
+              <path d="M16 9.5h6" />
+              <path d="m4.2 4.2 4.2 4.2" />
+              <path d="m15.6 15.6 4.2 4.2" />
+              <path d="m19.8 4.2-4.2 4.2" />
+              <path d="m8.4 15.6-4.2 4.2" />
+            </svg>
+            AI Summary
+          </div>
+          <div class="ai-text">
+            A sweeping space epic about love, survival, and time, grounded by emotional stakes and
+            massive cinematic scale. If you like thoughtful science fiction with awe, tension, and a
+            strong human core, this is a high-confidence match.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section">
+    <div class="cta-eyebrow reveal">Get Started</div>
+    <h2 class="cta-headline reveal" style="color: var(--text)">
+      Start with the<br />movies you <em>love.</em>
+    </h2>
+    <p class="cta-sub reveal">
+      Create an account, complete onboarding, and turn your taste into a sharper movie queue — in
+      under two minutes.
+    </p>
+    <div class="cta-actions reveal">
+      <a routerLink="/register" class="btn-large" style="color: var(--cream)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5" />
+          <path d="M6.5 5.5l4 2.5-4 2.5V5.5z" fill="currentColor" />
+        </svg>
+        Create Account
+      </a>
+      <a routerLink="/login" class="sign-in-link">Already have an account? Sign in</a>
+    </div>
+  </section>
 </section>
