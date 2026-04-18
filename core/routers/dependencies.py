@@ -12,12 +12,35 @@ from sqlalchemy.future import select
 from models.review import Review
 from schemas.review import TmdbAuthorDetails, TmdbReview, sanitize_review_for_display
 from schemas.tmdbmovie import StreamingService
-from services.tmdb.tmdbservice import get_movie_reviews, get_movie_watch_providers
+from schemas.Ai import AISearchResponse
+from services.tmdb.tmdbservice import (
+    get_movie_reviews, 
+    get_movie_watch_providers,
+    discover_movies,
+    discover_movies_like_reference,
+    search_movies
+)
 
 TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/original/"
 
+AI_SEARCH_MAX_RESULTS = 25
+TMDB_RESULTS_PER_PAGE = 20
+AI_SEARCH_SOURCE_PAGES = (AI_SEARCH_MAX_RESULTS + TMDB_RESULTS_PER_PAGE - 1) // TMDB_RESULTS_PER_PAGE
+
 
 def _review_sort_key(review: TmdbReview) -> datetime:
+    """
+    Helper function to provide a sortable datetime key for movie reviews.
+
+    This ensures that reviews from different sources (TMDB and local) can be 
+    compared accurately, even if they have missing or naive timestamps.
+
+    Args:
+        review (TmdbReview): The review object to extract a sort key from.
+
+    Returns:
+        datetime: A timezone-aware datetime object used for sorting.
+    """
     created_at = review.created_at
     if created_at is None:
         return datetime.min.replace(tzinfo=timezone.utc)
@@ -155,6 +178,7 @@ async def _get_streaming_service(tmdb_id: int, country_code: str) -> list[Stream
         return []
 
     results = data.get("results", {})
+    # Look for streaming (flatrate) options specifically for the user's country
     country_data = results.get(country_code.upper())
 
     if not country_data or "flatrate" not in country_data:
@@ -171,3 +195,69 @@ async def _get_streaming_service(tmdb_id: int, country_code: str) -> list[Stream
             streaming_services.append(StreamingService(name=name, logo_path=full_logo_url))
             
     return streaming_services
+
+
+async def _collect_ai_movie_results(ai_filters: AISearchResponse) -> dict | None:
+    """
+    Aggregates movie search results from TMDB based on AI-generated filters.
+    
+    This helper function handles paginated requests to TMDB, collecting up to
+    AI_SEARCH_MAX_RESULTS unique movies that match the criteria (reference title,
+    keyword query, or structured filters).
+    
+    Args:
+        ai_filters (AISearchResponse): The structured filter criteria from the AI service.
+        
+    Returns:
+        dict | None: A TMDB-style dictionary containing the aggregated 'results' list,
+                    or None if the initial request fails.
+    """
+    reference_title = (ai_filters.filters.reference_title or "").strip()
+    query = (ai_filters.filters.query or "").strip()
+
+    async def fetch_page(page: int) -> dict | None:
+        if reference_title:
+            return await discover_movies_like_reference(ai_filters, page=page)
+        if query:
+            return await search_movies(query=query, page=page)
+        return await discover_movies(ai_filters, page=page)
+
+    aggregated_response: dict | None = None
+    aggregated_results: list[dict] = []
+    seen_movie_ids: set[int] = set()
+
+    # Fetch results page by page until we reach the global search limit
+    for page in range(1, AI_SEARCH_SOURCE_PAGES + 1):
+        page_response = await fetch_page(page)
+        if page_response is None:
+            return aggregated_response
+
+        if aggregated_response is None:
+            aggregated_response = {**page_response, "results": []}
+
+        page_results = page_response.get("results") or []
+        if not page_results:
+            break
+
+        # Deduplicate results across multiple pages and queries
+        for movie in page_results:
+            movie_id = movie.get("id")
+            if not isinstance(movie_id, int) or movie_id in seen_movie_ids:
+                continue
+
+            aggregated_results.append(movie)
+            seen_movie_ids.add(movie_id)
+
+            if len(aggregated_results) >= AI_SEARCH_MAX_RESULTS:
+                break
+
+        aggregated_response["results"] = aggregated_results
+        # Stop early if we have enough results or reach the last available page
+        if len(aggregated_results) >= AI_SEARCH_MAX_RESULTS:
+            break
+
+        total_pages = page_response.get("total_pages")
+        if isinstance(total_pages, int) and page >= total_pages:
+            break
+
+    return aggregated_response

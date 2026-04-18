@@ -45,7 +45,14 @@ from services.tmdb.tmdbservice import (
     search_movies,
 )
 
-from .dependencies import _get_all_reviews, _get_streaming_service, get_user_country_code, get_user_id
+from .dependencies import (
+    AI_SEARCH_MAX_RESULTS,
+    _collect_ai_movie_results,
+    _get_all_reviews,
+    _get_streaming_service,
+    get_user_country_code,
+    get_user_id,
+)
 
 router = APIRouter(
     prefix="/api/movies",
@@ -54,61 +61,6 @@ router = APIRouter(
 )
 
 SUMMARY_REVIEW_LOOKBACK = 10
-SUMMARY_MAX_REVIEWS = 5
-SUMMARY_MAX_WORDS = 120
-SUMMARY_MAX_OUTPUT_TOKENS = 300
-AI_SEARCH_MAX_RESULTS = 25
-TMDB_RESULTS_PER_PAGE = 20
-AI_SEARCH_SOURCE_PAGES = (AI_SEARCH_MAX_RESULTS + TMDB_RESULTS_PER_PAGE - 1) // TMDB_RESULTS_PER_PAGE
-
-
-async def _collect_ai_movie_results(ai_filters: AISearchResponse) -> dict | None:
-    reference_title = (ai_filters.filters.reference_title or "").strip()
-    query = (ai_filters.filters.query or "").strip()
-
-    async def fetch_page(page: int) -> dict | None:
-        if reference_title:
-            return await discover_movies_like_reference(ai_filters, page=page)
-        if query:
-            return await search_movies(query=query, page=page)
-        return await discover_movies(ai_filters, page=page)
-
-    aggregated_response: dict | None = None
-    aggregated_results: list[dict] = []
-    seen_movie_ids: set[int] = set()
-
-    for page in range(1, AI_SEARCH_SOURCE_PAGES + 1):
-        page_response = await fetch_page(page)
-        if page_response is None:
-            return aggregated_response
-
-        if aggregated_response is None:
-            aggregated_response = {**page_response, "results": []}
-
-        page_results = page_response.get("results") or []
-        if not page_results:
-            break
-
-        for movie in page_results:
-            movie_id = movie.get("id")
-            if not isinstance(movie_id, int) or movie_id in seen_movie_ids:
-                continue
-
-            aggregated_results.append(movie)
-            seen_movie_ids.add(movie_id)
-
-            if len(aggregated_results) >= AI_SEARCH_MAX_RESULTS:
-                break
-
-        aggregated_response["results"] = aggregated_results
-        if len(aggregated_results) >= AI_SEARCH_MAX_RESULTS:
-            break
-
-        total_pages = page_response.get("total_pages")
-        if isinstance(total_pages, int) and page >= total_pages:
-            break
-
-    return aggregated_response
 
 
 @router.post("/review/",response_model=ReviewRead ,status_code=status.HTTP_201_CREATED)
@@ -351,6 +303,7 @@ async def movie_search(query: str = Query(..., min_length=1), page: int = Query(
     if not data:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="TMDB unreachable")
 
+    # Truncate to the top 5 results for the quick-search preview in the UI
     if "results" in data:
         data["results"] = data["results"][:5]
         data["total_results"] = min(data.get("total_results", len(data["results"])), 5)
@@ -521,6 +474,7 @@ async def get_movie_summary(
 
     recent_reviews = reviews[:SUMMARY_REVIEW_LOOKBACK]
     payload_reviews = []
+    # Filter and format substantive reviews for the AI summarization payload
     for rev in recent_reviews:
         if len(payload_reviews) >= SUMMARY_MAX_REVIEWS:
             break
