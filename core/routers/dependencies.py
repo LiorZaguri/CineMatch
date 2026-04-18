@@ -22,7 +22,10 @@ from services.tmdb.tmdbservice import (
 )
 
 TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/original/"
-
+SUMMARY_MAX_REVIEWS = 5
+SUMMARY_REVIEW_LOOKBACK = 10
+SUMMARY_MAX_WORDS = 120
+SUMMARY_MAX_OUTPUT_TOKENS = 300
 AI_SEARCH_MAX_RESULTS = 25
 TMDB_RESULTS_PER_PAGE = 20
 AI_SEARCH_SOURCE_PAGES = (AI_SEARCH_MAX_RESULTS + TMDB_RESULTS_PER_PAGE - 1) // TMDB_RESULTS_PER_PAGE
@@ -158,6 +161,8 @@ async def _get_all_reviews(tmdb_id: int, db: AsyncSession) -> list[TmdbReview]:
         ))
         
     all_reviews.sort(key=_review_sort_key, reverse=True)
+    print("---------------------------------------------------------------------", flush=True)
+    print(all_reviews, flush=True)
     return all_reviews
 
 

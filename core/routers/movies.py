@@ -47,6 +47,10 @@ from services.tmdb.tmdbservice import (
 
 from .dependencies import (
     AI_SEARCH_MAX_RESULTS,
+    SUMMARY_MAX_REVIEWS,
+    SUMMARY_MAX_OUTPUT_TOKENS,
+    SUMMARY_MAX_WORDS,
+    SUMMARY_REVIEW_LOOKBACK,
     _collect_ai_movie_results,
     _get_all_reviews,
     _get_streaming_service,
@@ -59,8 +63,6 @@ router = APIRouter(
     tags=["movies & reviews"],
     responses={404: {"description": "Not found"}},
 )
-
-SUMMARY_REVIEW_LOOKBACK = 10
 
 
 @router.post("/review/",response_model=ReviewRead ,status_code=status.HTTP_201_CREATED)
@@ -567,22 +569,15 @@ async def get_movie_page(
     Fetches detailed information for a movie along with aggregated reviews, 
     AI summaries, and cast information.
 
-    Performs a concurrent fetch to minimize response time:
-    1. Calls TMDB API for movie metadata.
-    2. Aggregates reviews from TMDB and local database.
-    3. Fetches movie cast from TMDB.
-    4. Queries local database for cached AI summary.
-    5. Fetches localized streaming availability.
-    6. Checks if the user has liked/chosen the movie.
+    Performs a concurrent fetch for external TMDB data, followed by 
+    sequential database queries to ensure session integrity and prevent
+    concurrent access issues with the SQLAlchemy AsyncSession.
     """
-    # Run all data retrieval tasks concurrently
-    movie_data, reviews, credits_data, db_result, streaming_services, pref_result = await asyncio.gather(
+    # 1. Fetch external data from TMDB concurrently
+    movie_data, credits_data, streaming_services = await asyncio.gather(
         get_movie_details(tmdb_id),
-        _get_all_reviews(tmdb_id, db),
         get_movie_credits(tmdb_id),
-        db.execute(select(ReviewSummary).where(ReviewSummary.tmdb_id == tmdb_id)),
         _get_streaming_service(tmdb_id, country_code),
-        db.execute(select(UserMovie).where(UserMovie.user_id == user_id, UserMovie.tmdb_id == tmdb_id)),
         return_exceptions=True
     )
 
@@ -590,30 +585,46 @@ async def get_movie_page(
     if isinstance(movie_data, Exception) or not movie_data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Movie not found")
 
-    # Extract summary if it exists (handling potential DB exceptions)
+    # 2. Fetch database-dependent data sequentially
+    # SQLAlchemy AsyncSession does not support concurrent execution of multiple operations
+    
+    # Aggregate reviews from TMDB and local database
+    try:
+        reviews = await _get_all_reviews(tmdb_id, db)
+    except Exception as e:
+        print(f"[Core Error] Failed to aggregate reviews for {tmdb_id}: {e}", flush=True)
+        reviews = []
+
+    # Query local database for cached AI summary
     summary_text = None
-    if not isinstance(db_result, Exception):
-        summary_obj = db_result.scalars().first()
+    try:
+        summary_query = select(ReviewSummary).where(ReviewSummary.tmdb_id == tmdb_id)
+        summary_result = await db.execute(summary_query)
+        summary_obj = summary_result.scalars().first()
         summary_text = summary_obj.summary_text if summary_obj else None
+    except Exception as e:
+        print(f"[Core Error] Failed to fetch summary for {tmdb_id}: {e}", flush=True)
 
-    # Check if movie is liked
+    # Check if the user has liked/chosen the movie
     is_liked = False
-    if not isinstance(pref_result, Exception):
+    try:
+        pref_query = select(UserMovie).where(UserMovie.user_id == user_id, UserMovie.tmdb_id == tmdb_id)
+        pref_result = await db.execute(pref_query)
         is_liked = pref_result.scalars().first() is not None
+    except Exception as e:
+        print(f"[Core Error] Failed to fetch user preference for {tmdb_id}: {e}", flush=True)
 
-    # Safely extract cast list
+    # Safely extract cast list and handle potential exceptions in concurrent results
     cast = []
     if not isinstance(credits_data, Exception) and credits_data:
         cast = credits_data.get("cast", [])
 
-    # Ensure other aggregated data defaults to empty lists on failure
-    final_reviews = reviews if not isinstance(reviews, Exception) else []
     final_streaming = streaming_services if not isinstance(streaming_services, Exception) else []
 
     # Combine all data into the response schema format
     return {
         **movie_data,
-        "reviews": final_reviews,
+        "reviews": reviews,
         "summary": summary_text,
         "streaming_services": final_streaming,
         "cast": cast,
