@@ -1,5 +1,5 @@
 import { Component, signal, inject } from '@angular/core';
-import { RouterOutlet, Router, NavigationEnd, NavigationStart } from '@angular/router';
+import { NavigationEnd, NavigationStart, Router, RouterOutlet } from '@angular/router';
 import { TopbarComponent } from './core/layout/topbar/topbar';
 import { FooterComponent } from './core/layout/footer/footer';
 
@@ -22,8 +22,28 @@ export class App {
       }
 
       if (event instanceof NavigationEnd) {
-        requestAnimationFrame(() => this.pageVisible.set(true));
+        const hasFragment = this.router.parseUrl(event.urlAfterRedirects).fragment !== null;
+
+        requestAnimationFrame(() => {
+          if (!hasFragment) {
+            this.scrollViewportToTop();
+          }
+
+          requestAnimationFrame(() => {
+            if (!hasFragment) {
+              this.scrollViewportToTop();
+            }
+
+            this.pageVisible.set(true);
+          });
+        });
       }
     });
+  }
+
+  private scrollViewportToTop(): void {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
   }
 }
