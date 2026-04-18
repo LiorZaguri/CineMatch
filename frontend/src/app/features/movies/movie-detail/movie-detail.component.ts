@@ -502,6 +502,15 @@ export class MovieDetailComponent implements OnDestroy {
             next: (movie: Movie) => {
                 this.movie.set(movie);
                 this.setInitialSummary(movie);
+                
+                // Directly set signals from the movie object to avoid delays
+                if (movie.isLiked !== undefined) {
+                    this.isLiked.set(movie.isLiked);
+                }
+                if (movie.isInMyList !== undefined) {
+                    this.isInMyList.set(movie.isInMyList);
+                }
+
                 this.loading.set(false);
                 this.loadMoviePreferenceStatus(movie);
                 this.loadWatchlistStatus(movie);
@@ -861,6 +870,11 @@ export class MovieDetailComponent implements OnDestroy {
             return;
         }
 
+        if (movie.isLiked !== undefined) {
+            this.isLiked.set(movie.isLiked);
+            return;
+        }
+
         const tmdbId = this.resolveTmdbId(movie);
         if (!tmdbId) {
             this.isLiked.set(false);
@@ -880,6 +894,11 @@ export class MovieDetailComponent implements OnDestroy {
     private loadWatchlistStatus(movie: Movie): void {
         if (!this.authService.isAuthenticated()) {
             this.isInMyList.set(false);
+            return;
+        }
+
+        if (movie.isInMyList !== undefined) {
+            this.isInMyList.set(movie.isInMyList);
             return;
         }
 

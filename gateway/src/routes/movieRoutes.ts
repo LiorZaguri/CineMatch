@@ -28,5 +28,5 @@ movieRoutes.get('/recommendations/me/', authenticateJwt, getMyRecommendations);
 movieRoutes.post('/review/', authenticateJwt, createReview);
 movieRoutes.patch('/review/:review_id/', authenticateJwt, updateReview);
 movieRoutes.get('/ai/:tmdb_id/summary/', getMovieSummary);
-movieRoutes.get('/:tmdb_id/', getMovieDetails);
+movieRoutes.get('/:tmdb_id/', authenticateJwt, getMovieDetails);
 movieRoutes.post('/ai/search', authenticateJwt, aiSearch);

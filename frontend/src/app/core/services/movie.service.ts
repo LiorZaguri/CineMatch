@@ -258,6 +258,8 @@ export class MovieService {
       reviews: 'reviews' in movie && Array.isArray(movie.reviews) ? movie.reviews : undefined,
       review_summary:
         movie.review_summary ?? (movie.summary ? { summary_text: movie.summary } : null),
+      isLiked: movie.is_liked,
+      isInMyList: movie.is_in_watchlist,
     };
   }
 

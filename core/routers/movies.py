@@ -19,7 +19,7 @@ from sqlalchemy.orm import selectinload
 
 from db.db import get_db
 from models.review import Review, ReviewSummary
-from models.user_preference import UserPreference
+from models.user_preference import UserMovie, UserPreference
 from schemas.Ai import AISearchFallback, AISearchRequest, AISearchResponse, AISearchSuccess
 from schemas.review import (
     ReviewCreate,
@@ -605,6 +605,7 @@ async def get_movie_summary(
 @router.get("/{tmdb_id}/", response_model=MovieDetailWithReviews)
 async def get_movie_page(
     tmdb_id: int, 
+    user_id: Annotated[str, Depends(get_user_id)],
     db: AsyncSession = Depends(get_db),
     country_code: str = Depends(get_user_country_code)
 ):
@@ -618,14 +619,16 @@ async def get_movie_page(
     3. Fetches movie cast from TMDB.
     4. Queries local database for cached AI summary.
     5. Fetches localized streaming availability.
+    6. Checks if the user has liked/chosen the movie.
     """
     # Run all data retrieval tasks concurrently
-    movie_data, reviews, credits_data, db_result, streaming_services = await asyncio.gather(
+    movie_data, reviews, credits_data, db_result, streaming_services, pref_result = await asyncio.gather(
         get_movie_details(tmdb_id),
         _get_all_reviews(tmdb_id, db),
         get_movie_credits(tmdb_id),
         db.execute(select(ReviewSummary).where(ReviewSummary.tmdb_id == tmdb_id)),
         _get_streaming_service(tmdb_id, country_code),
+        db.execute(select(UserMovie).where(UserMovie.user_id == user_id, UserMovie.tmdb_id == tmdb_id)),
         return_exceptions=True
     )
 
@@ -638,6 +641,11 @@ async def get_movie_page(
     if not isinstance(db_result, Exception):
         summary_obj = db_result.scalars().first()
         summary_text = summary_obj.summary_text if summary_obj else None
+
+    # Check if movie is liked
+    is_liked = False
+    if not isinstance(pref_result, Exception):
+        is_liked = pref_result.scalars().first() is not None
 
     # Safely extract cast list
     cast = []
@@ -655,5 +663,6 @@ async def get_movie_page(
         "summary": summary_text,
         "streaming_services": final_streaming,
         "cast": cast,
-        "country_code": country_code
+        "country_code": country_code,
+        "is_liked": is_liked
     }

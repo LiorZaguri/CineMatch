@@ -5,6 +5,7 @@ import https from 'node:https';
 import { AuthenticatedRequest } from '../types/authRequest';
 import { env } from '../config/env';
 import { getUsersByIds } from '../services/authService';
+import { isMovieInWatchlist } from '../services/watchlistService';
 
 const reviewExternalLinkPattern =
   /\b(?:https?:\/\/\S+|www\.\S+|(?:[a-z0-9-]+\.)+(?:com|net|org|io|co|tv|app|dev|info|biz|me|gg|xyz)(?:\/\S*)?)/gi;
@@ -405,11 +406,32 @@ export async function getMyRecommendations(req: Request, res: Response, next: Ne
 
 export async function getMovieDetails(req: Request, res: Response, next: NextFunction) {
   try {
+    const authReq = req as AuthenticatedRequest;
     const { tmdb_id } = tmdbIdParamsSchema.parse(req.params);
-    const { status, payload } = await forwardToCore(`/api/movies/${tmdb_id}/`, req);
-    const enrichedPayload =
-      status >= 200 && status < 300 ? await enrichMovieDetailsPayload(payload) : payload;
-    return handleCoreResponse(res, status, enrichedPayload);
+
+    const userId = authReq.user?.userId;
+    const headers: Record<string, string> = {};
+    if (userId) {
+      headers['x-user-id'] = userId;
+    }
+
+    const [coreResponse, is_in_list] = await Promise.all([
+      forwardToCore(`/api/movies/${tmdb_id}/`, req, { headers }),
+      userId ? isMovieInWatchlist(userId, tmdb_id) : Promise.resolve(false),
+    ]);
+
+    const { status, payload } = coreResponse;
+
+    if (status >= 200 && status < 300) {
+      const mergedPayload =
+        typeof payload === 'object' && payload !== null
+          ? { ...payload, is_in_watchlist: is_in_list }
+          : payload;
+      const enrichedPayload = await enrichMovieDetailsPayload(mergedPayload);
+      return res.status(status).json(enrichedPayload);
+    }
+
+    return handleCoreResponse(res, status, payload);
   } catch (error) {
     if (error instanceof ZodError) {
       return sendValidationError(res, error);

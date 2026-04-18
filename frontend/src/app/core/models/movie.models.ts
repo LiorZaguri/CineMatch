@@ -68,6 +68,10 @@ export interface Movie {
   review_summary?: {
     summary_text?: string;
   } | null;
+  isLiked?: boolean;
+  isInMyList?: boolean;
+  is_liked?: boolean;
+  is_in_watchlist?: boolean;
 }
 
 export interface TmdbMovie {
@@ -100,6 +104,8 @@ export interface TmdbMovie {
   review_summary?: {
     summary_text?: string;
   } | null;
+  is_liked?: boolean;
+  is_in_watchlist?: boolean;
 }
 
 export interface TmdbMovieListResponse {

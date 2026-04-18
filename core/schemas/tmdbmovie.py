@@ -135,3 +135,7 @@ class MovieDetailWithReviews(TmdbMovie):
     spoken_languages: List[SpokenLanguage] = Field(default_factory=list, description="Spoken languages used in the movie")
 
     country_code: str = Field("US", description="The country code used for localized content")
+
+    is_liked: Optional[bool] = Field(None, description="Whether the user has liked/chosen this movie")
+
+    is_in_watchlist: Optional[bool] = Field(None, description="Whether the user has added this movie to their watchlist")
