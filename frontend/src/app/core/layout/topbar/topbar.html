@@ -1,72 +1,70 @@
-<header class="topbar">
-  <div class="container topbar-content">
-    <div class="topbar-left">
-      <a routerLink="/" class="brand">
-        <span class="material-symbols-outlined brand-icon">movie_filter</span>
-        <span>CineMatch</span>
-      </a>
+<div class="topbar-shell" #topbarShell>
+  <ng-template #searchTemplate>
+    <div class="search-shell">
+      <div class="search-panel">
+        <form class="search-form" (submit)="onSearchSubmit($event)">
+          <div class="search-mode-toggle" role="tablist" aria-label="Search mode">
+            <button
+              type="button"
+              class="search-mode-chip"
+              [class.is-active]="searchMode() === 'normal'"
+              [attr.aria-pressed]="searchMode() === 'normal'"
+              (click)="setSearchMode('normal')"
+            >
+              Normal
+            </button>
+            <button
+              type="button"
+              class="search-mode-chip"
+              [class.is-active]="searchMode() === 'ai'"
+              [attr.aria-pressed]="searchMode() === 'ai'"
+              (click)="setSearchMode('ai')"
+            >
+              AI
+            </button>
+          </div>
 
-      <nav class="nav-links">
-        <a
-          routerLink="/"
-          class="nav-link"
-          routerLinkActive="nav-link-active"
-          [routerLinkActiveOptions]="{ exact: true }"
-        >
-          <span class="material-symbols-outlined nav-icon">home</span>
-          Home
-        </a>
-        <a routerLink="/movies" class="nav-link" routerLinkActive="nav-link-active">
-          <span class="material-symbols-outlined nav-icon">movie</span>
-          Movies
-        </a>
-        <a routerLink="/my-list" class="nav-link" routerLinkActive="nav-link-active">
-          <span class="material-symbols-outlined nav-icon">bookmark</span>
-          My List
-        </a>
-      </nav>
-    </div>
-
-    <div class="auth-actions">
-      <div class="ai-search" #searchPanel>
-        <form class="ai-search-form" (submit)="onSearchSubmit($event)">
-          <span class="material-symbols-outlined ai-search-icon">auto_awesome</span>
-          <input
-            type="search"
-            class="ai-search-input"
-            [value]="aiSearchQuery()"
-            (input)="onSearchInput($event)"
-            (focus)="onSearchFocus()"
-            [disabled]="!isAuthenticated()"
-            [attr.placeholder]="
-              isAuthenticated() ? 'Ask AI for a movie vibe...' : 'Sign in to use AI search'
-            "
-            aria-label="AI movie search"
-          />
+          <div class="search-input-wrap">
+            <span class="material-symbols-outlined search-icon">
+              {{ isAiMode() ? 'auto_awesome' : 'search' }}
+            </span>
+            <input
+              type="search"
+              class="search-input"
+              [value]="searchQuery()"
+              (input)="onSearchInput($event)"
+              (focus)="onSearchFocus()"
+              [disabled]="isSearchDisabled()"
+              [attr.placeholder]="searchPlaceholder()"
+              [attr.aria-label]="isAiMode() ? 'AI movie search' : 'Movie search'"
+            />
+          </div>
 
           <button
             type="submit"
-            class="ai-search-submit"
-            [disabled]="!isAuthenticated() || !aiSearchQuery()"
-            aria-label="Search with AI"
+            class="search-submit"
+            [disabled]="!searchQuery().trim() || isSearchDisabled()"
+            [attr.aria-label]="isAiMode() ? 'Search with AI' : 'Search movies'"
           >
-            <span class="material-symbols-outlined">search</span>
+            <span class="material-symbols-outlined">
+              {{ isAiMode() ? 'auto_awesome' : 'search' }}
+            </span>
           </button>
         </form>
 
         @if (isSearchOpen()) {
-          <div class="ai-search-panel">
-            <div class="ai-search-dropdown">
-              @if (aiSearchLoading()) {
-                <div class="ai-search-state">
-                  <span class="ai-search-spinner" aria-hidden="true"></span>
-                  <span>Searching for AI matches...</span>
+          <div class="search-results-panel">
+            <div class="search-dropdown">
+              @if (searchLoading()) {
+                <div class="search-state">
+                  <span class="search-spinner" aria-hidden="true"></span>
+                  <span>{{ searchLoadingMessage() }}</span>
                 </div>
-              } @else if (aiSearchResults().length > 0) {
-                <div class="ai-search-dropdown-head">AI Matches</div>
-                @for (movie of aiSearchResults(); track movie.id) {
-                  <button type="button" class="ai-search-result" (click)="openMovie(movie.id)">
-                    <div class="ai-search-result-poster">
+              } @else if (searchResults().length > 0) {
+                <div class="search-dropdown-head">{{ searchHeading() }}</div>
+                @for (movie of searchResults(); track movie.id) {
+                  <button type="button" class="search-result" (click)="openMovie(movie.id)">
+                    <div class="search-result-poster">
                       @if (movie.posterUrl) {
                         <img [src]="movie.posterUrl" [alt]="movie.title" />
                       } @else {
@@ -74,86 +72,185 @@
                       }
                     </div>
 
-                    <div class="ai-search-result-copy">
-                      <p class="ai-search-result-title">{{ movie.title }}</p>
-                      <p class="ai-search-result-meta">
+                    <div class="search-result-copy">
+                      <p class="search-result-title">{{ movie.title }}</p>
+                      <p class="search-result-meta">
                         {{ movie.releaseDate ? (movie.releaseDate | slice: 0 : 4) : 'TBA' }}
                       </p>
                     </div>
                   </button>
                 }
               } @else {
-                <div class="ai-search-state">No AI matches found.</div>
+                <div class="search-state">{{ emptySearchMessage() }}</div>
               }
             </div>
 
-            @if (
-              !aiSearchLoading() &&
-              aiSearchResults().length > 0 &&
-              (hasPreviousSuggestions() || hasMoreSuggestions() || aiSearchNoMoreSuggestions())
-            ) {
-              <div class="ai-search-actions">
-                <div class="ai-search-page-indicator">
+            @if (shouldShowSearchActions()) {
+              <div class="search-actions">
+                <div class="search-page-indicator">
                   {{ currentSuggestionsPage() }} / {{ totalSuggestionsPages() }}
                 </div>
                 @if (hasPreviousSuggestions()) {
-                  <button type="button" class="ai-search-more" (click)="showPreviousSuggestions()">
+                  <button type="button" class="search-more" (click)="showPreviousSuggestions()">
                     Back to previous
                   </button>
                 }
                 @if (hasMoreSuggestions()) {
-                  <button type="button" class="ai-search-more" (click)="showOtherSuggestions()">
+                  <button type="button" class="search-more" (click)="showOtherSuggestions()">
                     See other suggestions
                   </button>
-                } @else if (aiSearchNoMoreSuggestions()) {
-                  <div class="ai-search-note">No more available suggestions.</div>
+                } @else if (searchNoMoreSuggestions()) {
+                  <div class="search-note">No more results available.</div>
                 }
               </div>
             }
           </div>
         }
       </div>
-
-      @if (isAuthenticated()) {
-        <details class="profile-menu" #profileMenu>
-          <summary class="user-profile">
-            <div class="profile-meta">
-              <p class="username">{{ user()?.displayName }}</p>
-              <p class="tier">Premium</p>
-            </div>
-            <div class="avatar-wrap">
-              @if (user()?.avatarUrl) {
-                <img [src]="user()?.avatarUrl" alt="User avatar" />
-              } @else {
-                <span class="avatar-fallback">{{ getAvatarInitials() }}</span>
-              }
-            </div>
-            <span class="material-symbols-outlined profile-caret">expand_more</span>
-          </summary>
-
-          <div class="profile-dropdown">
-            <a routerLink="/settings" class="dropdown-item" (click)="closeProfileMenu()">
-              <span class="material-symbols-outlined">settings</span>
-              Settings
-            </a>
-            <a routerLink="/preferences" class="dropdown-item" (click)="closeProfileMenu()">
-              <span class="material-symbols-outlined">tune</span>
-              Taste preferences
-            </a>
-            <button
-              type="button"
-              class="dropdown-item danger"
-              (click)="onLogout(); closeProfileMenu()"
-            >
-              <span class="material-symbols-outlined">logout</span>
-              Logout
-            </button>
-          </div>
-        </details>
-      } @else {
-        <a routerLink="/login" class="nav-link">Sign In</a>
-        <a routerLink="/register" class="btn-primary">Get Started</a>
-      }
     </div>
-  </div>
-</header>
+  </ng-template>
+
+  <header class="topbar">
+    <div class="container topbar-content">
+      <div class="topbar-left">
+        @if (isMobileViewport()) {
+          <button
+            type="button"
+            class="icon-button mobile-menu-toggle"
+            (click)="toggleMobileMenu()"
+            aria-label="Toggle navigation menu"
+            [attr.aria-expanded]="isMobileMenuOpen()"
+          >
+            <span class="material-symbols-outlined">
+              {{ isMobileMenuOpen() ? 'close' : 'menu' }}
+            </span>
+          </button>
+        }
+
+        <a routerLink="/" class="brand" (click)="onNavigateFromMenu()">
+          <span class="material-symbols-outlined brand-icon">movie_filter</span>
+          <span>CineMatch</span>
+        </a>
+
+        @if (!isMobileViewport()) {
+          <nav class="nav-links" aria-label="Primary navigation">
+            <a
+              routerLink="/"
+              class="nav-link"
+              routerLinkActive="nav-link-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+            >
+              <span class="material-symbols-outlined nav-icon">home</span>
+              Home
+            </a>
+            <a routerLink="/movies" class="nav-link" routerLinkActive="nav-link-active">
+              <span class="material-symbols-outlined nav-icon">movie</span>
+              Movies
+            </a>
+            <a routerLink="/my-list" class="nav-link" routerLinkActive="nav-link-active">
+              <span class="material-symbols-outlined nav-icon">bookmark</span>
+              My List
+            </a>
+          </nav>
+        }
+      </div>
+
+      @if (!isMobileViewport()) {
+        <div class="topbar-search">
+          <ng-container [ngTemplateOutlet]="searchTemplate"></ng-container>
+        </div>
+      }
+
+      <div class="topbar-right">
+        @if (isMobileViewport()) {
+          <button
+            type="button"
+            class="icon-button mobile-search-toggle"
+            (click)="toggleMobileSearch()"
+            aria-label="Toggle search"
+            [attr.aria-expanded]="isMobileSearchVisible()"
+          >
+            <span class="material-symbols-outlined">search</span>
+          </button>
+        }
+
+        @if (isAuthenticated()) {
+          <details class="profile-menu" #profileMenu>
+            <summary class="user-profile">
+              <div class="profile-meta">
+                <p class="username">{{ user()?.displayName }}</p>
+                <p class="tier">Normal User</p>
+              </div>
+              <div class="avatar-wrap">
+                @if (user()?.avatarUrl) {
+                  <img [src]="user()?.avatarUrl" alt="User avatar" />
+                } @else {
+                  <span class="avatar-fallback">{{ getAvatarInitials() }}</span>
+                }
+              </div>
+              <span class="material-symbols-outlined profile-caret">expand_more</span>
+            </summary>
+
+            <div class="profile-dropdown">
+              <a routerLink="/settings" class="dropdown-item" (click)="onNavigateFromMenu()">
+                <span class="material-symbols-outlined">settings</span>
+                Settings
+              </a>
+              <a routerLink="/preferences" class="dropdown-item" (click)="onNavigateFromMenu()">
+                <span class="material-symbols-outlined">tune</span>
+                Taste preferences
+              </a>
+              <button type="button" class="dropdown-item danger" (click)="onLogout()">
+                <span class="material-symbols-outlined">logout</span>
+                Logout
+              </button>
+            </div>
+          </details>
+        } @else {
+          <a routerLink="/login" class="btn-primary sign-in-link">Sign In</a>
+        }
+      </div>
+    </div>
+  </header>
+
+  @if (isMobileViewport() && isMobileMenuOpen()) {
+    <div class="mobile-panel mobile-panel--nav">
+      <nav class="mobile-nav-links" aria-label="Mobile navigation">
+        <a
+          routerLink="/"
+          class="nav-link"
+          routerLinkActive="nav-link-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          (click)="onNavigateFromMenu()"
+        >
+          <span class="material-symbols-outlined nav-icon">home</span>
+          Home
+        </a>
+        <a
+          routerLink="/movies"
+          class="nav-link"
+          routerLinkActive="nav-link-active"
+          (click)="onNavigateFromMenu()"
+        >
+          <span class="material-symbols-outlined nav-icon">movie</span>
+          Movies
+        </a>
+        <a
+          routerLink="/my-list"
+          class="nav-link"
+          routerLinkActive="nav-link-active"
+          (click)="onNavigateFromMenu()"
+        >
+          <span class="material-symbols-outlined nav-icon">bookmark</span>
+          My List
+        </a>
+      </nav>
+    </div>
+  }
+
+  @if (isMobileViewport() && isMobileSearchVisible()) {
+    <div class="mobile-panel mobile-panel--search">
+      <ng-container [ngTemplateOutlet]="searchTemplate"></ng-container>
+    </div>
+  }
+</div>
