@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
@@ -39,6 +39,7 @@ describe('TopbarComponent', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     authServiceStub.isAuthenticated.set(false);
     authServiceStub.currentUser.set(null);
     movieServiceStub.aiSearch.mockReset();
@@ -82,7 +83,8 @@ describe('TopbarComponent', () => {
     expect(input.placeholder).toContain('Sign in');
   });
 
-  it('should debounce normal search input and open the dropdown with TMDB results', fakeAsync(() => {
+  it('should debounce normal search input and open the dropdown with TMDB results', async () => {
+    vi.useFakeTimers();
     movieServiceStub.searchMovies.mockReturnValue(of([]));
     fixture.detectChanges();
 
@@ -91,16 +93,17 @@ describe('TopbarComponent', () => {
     input.value = 'interstellar';
     input.dispatchEvent(new Event('input'));
 
-    tick(299);
+    await vi.advanceTimersByTimeAsync(299);
     expect(movieServiceStub.searchMovies).not.toHaveBeenCalled();
 
-    tick(1);
+    await vi.advanceTimersByTimeAsync(1);
     fixture.detectChanges();
 
     expect(movieServiceStub.searchMovies).toHaveBeenCalledWith('interstellar');
     expect(component.isSearchOpen()).toBe(true);
     expect(fixture.debugElement.query(By.css('.search-dropdown'))).not.toBeNull();
-  }));
+    vi.useRealTimers();
+  });
 
   it('should not call TMDB search while the user is only typing in AI mode', () => {
     authServiceStub.isAuthenticated.set(true);

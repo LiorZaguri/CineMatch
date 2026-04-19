@@ -70,12 +70,12 @@ export class MovieListComponent implements OnInit, OnDestroy {
 
     return Boolean(
       profile &&
-        (profile.chosen_movies.length > 0 ||
-          profile.liked_genres.length > 0 ||
-          profile.moods.length > 0 ||
-          profile.eras.length > 0 ||
-          profile.languages.length > 0 ||
-          profile.runtime),
+      (profile.chosen_movies.length > 0 ||
+        profile.liked_genres.length > 0 ||
+        profile.moods.length > 0 ||
+        profile.eras.length > 0 ||
+        profile.languages.length > 0 ||
+        profile.runtime),
     );
   });
   readonly shouldPromptForTasteSetup = computed(

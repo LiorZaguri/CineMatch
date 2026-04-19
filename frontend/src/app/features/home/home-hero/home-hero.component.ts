@@ -31,7 +31,7 @@ export class HomeHeroComponent implements AfterViewInit, OnDestroy, OnInit {
   private animationFrameId: number | null = null;
   private intersectionObserver: IntersectionObserver | null = null;
   private movieSubscription: Subscription | null = null;
-  private readonly cleanupFns: Array<() => void> = [];
+  private readonly cleanupFns: (() => void)[] = [];
   private readonly fallbackPosters: HeroPoster[] = [
     {
       src: 'https://image.tmdb.org/t/p/w780/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg',

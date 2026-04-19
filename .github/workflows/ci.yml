@@ -28,12 +28,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install dependencies
         run: npm ci
-      # TODO: Fix linting errors in frontend
-      # - name: Lint
-      #   run: npm run lint
-      # TODO: Fix unit tests in frontend
-      # - name: Test
-      #   run: npm test -- --watch=false
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm test -- --watch=false
 
   # 2. Gateway CI (Node.js/Prisma)
   gateway:
@@ -190,5 +188,4 @@ jobs:
         run: uv python install 3.12
       - name: Install dependencies
         run: uv sync
-
 
