@@ -445,13 +445,12 @@ async def get_movie_summary(
     query = select(ReviewSummary).where(ReviewSummary.tmdb_id == tmdb_id)
     result = await db.execute(query)
     existing_summary = result.scalars().first()
-    print(tmdb_id, flush=True)
+    
     if existing_summary:
-        # Calculate the age of the existing summary
-        time_since_updated = datetime.now() - existing_summary.updated_at
-
+        # Calculate the age of the existing summary using UTC
+        time_since_updated = datetime.utcnow() - existing_summary.updated_at
         # If the summary was updated within the last 24 hours, return the cached version
-        if time_since_updated < timedelta(24):
+        if time_since_updated < timedelta(hours=24):
             print(f"[Review Summary] Returning cached summary for TMDB ID {tmdb_id}", flush=True)
             return ReviewSummaryResponse(
                 tmdb_id=existing_summary.tmdb_id,
@@ -548,6 +547,7 @@ async def get_movie_summary(
     # Save or update the newly generated summary in the database for future requests
     if existing_summary:
         existing_summary.summary_text = new_summary_text
+        existing_summary.updated_at = datetime.now()
     else:
         new_summary = ReviewSummary(
             tmdb_id=tmdb_id,
