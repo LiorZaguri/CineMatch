@@ -10,11 +10,11 @@ export const app = express();
 
 app.use(express.json());
 
-app.use('/CineMatch', healthRoutes);
-app.use('/CineMatch/movies', movieRoutes);
-app.use('/CineMatch/auth', authRoutes);
-app.use('/CineMatch/user-preferences', userPreferenceRoutes);
-app.use('/CineMatch/watchlist', watchlistRoutes);
+app.use('/api', healthRoutes);
+app.use('/api/movies', movieRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/user-preferences', userPreferenceRoutes);
+app.use('/api/watchlist', watchlistRoutes);
 app.use((_req, res) => {
   res.status(404).json({
     error: {
