@@ -10,15 +10,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from models.review import Review
+from schemas.Ai import AISearchResponse
 from schemas.review import TmdbAuthorDetails, TmdbReview, sanitize_review_for_display
 from schemas.tmdbmovie import StreamingService
-from schemas.Ai import AISearchResponse
 from services.tmdb.tmdbservice import (
-    get_movie_reviews, 
-    get_movie_watch_providers,
     discover_movies,
     discover_movies_like_reference,
-    search_movies
+    get_movie_reviews,
+    get_movie_watch_providers,
+    search_movies,
 )
 
 TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/original/"

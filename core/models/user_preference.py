@@ -11,7 +11,7 @@ import enum
 from datetime import datetime
 from typing import Any, List
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, JSON, String, Text
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base

@@ -34,8 +34,6 @@ from schemas.tmdbmovie import MovieDashboard, MovieDetailWithReviews, TmdbMovie,
 from services.rabbitmq.rpc import recommendation_rpc, summary_rpc
 from services.recommendations.profile_recommendations import get_profile_recommendations
 from services.tmdb.tmdbservice import (
-    discover_movies,
-    discover_movies_like_reference,
     get_movie_credits,
     get_movie_details,
     get_now_playing_movies,
@@ -47,8 +45,8 @@ from services.tmdb.tmdbservice import (
 
 from .dependencies import (
     AI_SEARCH_MAX_RESULTS,
-    SUMMARY_MAX_REVIEWS,
     SUMMARY_MAX_OUTPUT_TOKENS,
+    SUMMARY_MAX_REVIEWS,
     SUMMARY_MAX_WORDS,
     SUMMARY_REVIEW_LOOKBACK,
     _collect_ai_movie_results,
