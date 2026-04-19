@@ -1,12 +1,6 @@
 <div class="preferences-shell">
-  @if (cursorVisible()) {
-    <div class="cursor" [style.left.px]="cursor().x" [style.top.px]="cursor().y"></div>
-    <div
-      class="cursor-ring"
-      [style.left.px]="cursorRing().x"
-      [style.top.px]="cursorRing().y"
-    ></div>
-  }
+  <div class="cursor" id="cursor" aria-hidden="true"></div>
+  <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
 
   @if (feedback()) {
     <div class="toast show" [class.error]="feedback()!.type === 'error'">
@@ -53,6 +47,28 @@
       </aside>
 
       <main class="main-content">
+        <section class="mobile-profile-summary" aria-label="Taste profile summary">
+          <div class="mobile-profile-top">
+            <div>
+              <div class="mobile-profile-eyebrow">Taste Profile</div>
+              <h2>Keep your feed personal.</h2>
+            </div>
+            <div class="mobile-profile-percent">{{ completionPercent() }}%</div>
+          </div>
+          <div class="mobile-profile-bar-wrap">
+            <div class="mobile-profile-bar" [style.width.%]="completionPercent()"></div>
+          </div>
+          <div class="mobile-profile-meta">
+            <span>{{ selectedMovieIds().length }} movies selected</span>
+            @if (hasUnsavedChanges()) {
+              <span class="mobile-unsaved-pill">
+                <span class="unsaved-dot"></span>
+                Unsaved changes
+              </span>
+            }
+          </div>
+        </section>
+
         <div class="top-bar">
           <a routerLink="/movies" class="back-link">
             <lucide-icon name="arrow-left" [size]="13"></lucide-icon>
@@ -136,29 +152,77 @@
             </div>
           }
 
-          <div class="movie-chips-wrap">
-            @for (movie of selectedMovieCards(); track movie.id) {
-              <div class="movie-chip">
-                <span>{{ movie.title }}</span>
-                @if (movie.year) {
-                  <span class="movie-chip-year">{{ movie.year }}</span>
-                }
-                <button
-                  class="remove-btn"
-                  type="button"
-                  (click)="removeMovie(movie.id)"
-                  [attr.aria-label]="'Remove ' + movie.title"
-                >
-                  <lucide-icon name="x" [size]="11"></lucide-icon>
-                </button>
-              </div>
-            }
+          @if (selectedMovieCards().length > 0) {
+            <div class="selected-movies-shell">
+              <button
+                class="selected-movies-arrow left"
+                type="button"
+                [disabled]="!canScrollSelectedLeft()"
+                (click)="scrollSelectedMovies('left')"
+                aria-label="Scroll selected movies left"
+              >
+                <lucide-icon name="chevron-left" [size]="16"></lucide-icon>
+              </button>
 
-            <button class="add-movie-btn" type="button" (click)="movieSearchInput.focus()">
-              <lucide-icon name="plus" [size]="12"></lucide-icon>
-              Add a movie
-            </button>
-          </div>
+              <div
+                class="selected-movies-fade left"
+                [class.visible]="canScrollSelectedLeft()"
+                aria-hidden="true"
+              ></div>
+              <div
+                class="selected-movies-fade right"
+                [class.visible]="canScrollSelectedRight()"
+                aria-hidden="true"
+              ></div>
+
+              <div
+                #selectedMoviesRail
+                class="selected-movies-rail"
+                aria-label="Selected movies"
+                (scroll)="onSelectedMoviesScroll()"
+              >
+                @for (movie of selectedMovieCards(); track movie.id) {
+                  <article class="selected-movie-card">
+                    <div class="selected-movie-poster">
+                      @if (movie.posterUrl) {
+                        <img [src]="movie.posterUrl" [alt]="movie.title + ' poster'" loading="lazy" />
+                      } @else {
+                        <div class="selected-movie-poster-fallback" aria-hidden="true">
+                          {{ movie.title.charAt(0) }}
+                        </div>
+                      }
+                      <button
+                        class="selected-movie-remove"
+                        type="button"
+                        (click)="removeMovie(movie.id)"
+                        [attr.aria-label]="'Remove ' + movie.title"
+                      >
+                        <lucide-icon name="x" [size]="11"></lucide-icon>
+                      </button>
+                    </div>
+                    <div class="selected-movie-copy">
+                      <span class="selected-movie-title">{{ movie.title }}</span>
+                      <span class="selected-movie-meta">{{ movie.year ?? 'Saved' }}</span>
+                    </div>
+                  </article>
+                }
+              </div>
+
+              <button
+                class="selected-movies-arrow right"
+                type="button"
+                [disabled]="!canScrollSelectedRight()"
+                (click)="scrollSelectedMovies('right')"
+                aria-label="Scroll selected movies right"
+              >
+                <lucide-icon name="chevron-right" [size]="16"></lucide-icon>
+              </button>
+            </div>
+          } @else {
+            <div class="selected-movies-empty">
+              Search above to add movies that define your taste.
+            </div>
+          }
         </section>
 
         <section class="pref-section" id="sec-genres">
@@ -346,6 +410,22 @@
 
         <div class="page-spacer"></div>
       </main>
+
+      <footer class="mobile-save-footer">
+        @if (hasUnsavedChanges()) {
+          <div class="mobile-footer-unsaved">
+            <span class="unsaved-dot"></span>
+            Unsaved changes
+          </div>
+        }
+        <button class="mobile-save-btn" type="button" [disabled]="isSaving()" (click)="savePreferences()">
+          @if (isSaving()) {
+            Saving...
+          } @else {
+            Save preferences
+          }
+        </button>
+      </footer>
     </div>
   }
 </div>

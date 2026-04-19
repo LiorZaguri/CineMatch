@@ -1,25 +1,29 @@
 import { CommonModule } from '@angular/common';
 import {
+  AfterViewInit,
   Component,
+  computed,
+  ElementRef,
+  effect,
+  inject,
   OnDestroy,
   OnInit,
-  computed,
-  inject,
   signal,
-  HostListener,
+  ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
   ArrowLeft,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Droplets,
   Image,
   LucideAngularModule,
   LucideIconProvider,
   LUCIDE_ICONS,
   MoonStar,
-  Plus,
   Popcorn,
   Search,
   Sparkles,
@@ -142,10 +146,11 @@ const ERA_OPTIONS: Option<UserPreferenceEra>[] = [
       useValue: new LucideIconProvider({
         ArrowLeft,
         Check,
+        ChevronLeft,
+        ChevronRight,
         Droplets,
         Image,
         MoonStar,
-        Plus,
         Popcorn,
         Search,
         Sparkles,
@@ -157,12 +162,17 @@ const ERA_OPTIONS: Option<UserPreferenceEra>[] = [
   templateUrl: './preferences.component.html',
   styleUrl: './preferences.component.css',
 })
-export class PreferencesComponent implements OnInit, OnDestroy {
+export class PreferencesComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('selectedMoviesRail') private selectedMoviesRail?: ElementRef<HTMLDivElement>;
+
+  private readonly host = inject(ElementRef<HTMLElement>);
   private readonly preferences = inject(UserPreferenceService);
   private readonly movieService = inject(MovieService);
+  private animationFrameId: number | null = null;
   private searchSubscription: Subscription | null = null;
   private hydrateSubscription: Subscription | null = null;
   private feedbackTimeout: ReturnType<typeof setTimeout> | null = null;
+  private readonly cleanupFns: Array<() => void> = [];
 
   readonly genreOptions = GENRE_OPTIONS;
   readonly moodOptions = MOOD_OPTIONS;
@@ -186,10 +196,14 @@ export class PreferencesComponent implements OnInit, OnDestroy {
   readonly languages = signal<UserPreferenceLanguage[]>([]);
   readonly runtime = signal<UserPreferenceRuntime>('No preference');
   readonly eras = signal<UserPreferenceEra[]>([]);
-  readonly cursorVisible = signal(false);
-  readonly cursor = signal({ x: 0, y: 0 });
-  readonly cursorRing = signal({ x: 0, y: 0 });
   readonly initialSnapshot = signal<PreferenceSnapshot | null>(null);
+  readonly canScrollSelectedLeft = signal(false);
+  readonly canScrollSelectedRight = signal(false);
+
+  private readonly selectedRailEffect = effect(() => {
+    this.selectedMovieCards();
+    queueMicrotask(() => this.syncSelectedMoviesRail());
+  });
 
   readonly selectedMovieCards = computed(() =>
     this.selectedMovieIds().map(
@@ -230,26 +244,74 @@ export class PreferencesComponent implements OnInit, OnDestroy {
     return JSON.stringify(initial) !== JSON.stringify(this.currentSnapshot());
   });
 
-  @HostListener('document:mousemove', ['$event'])
-  onMouseMove(event: MouseEvent): void {
-    this.cursorVisible.set(true);
-    const point = { x: event.clientX, y: event.clientY };
-    this.cursor.set(point);
-
-    const currentRing = this.cursorRing();
-    this.cursorRing.set({
-      x: currentRing.x + (point.x - currentRing.x) * 0.12,
-      y: currentRing.y + (point.y - currentRing.y) * 0.12,
-    });
-  }
-
-  @HostListener('document:mouseleave')
-  onMouseLeave(): void {
-    this.cursorVisible.set(false);
-  }
-
   ngOnInit(): void {
     this.loadPreferences();
+  }
+
+  ngAfterViewInit(): void {
+    const root = this.host.nativeElement;
+    const cursor = root.querySelector('#cursor') as HTMLElement | null;
+    const ring = root.querySelector('#cursorRing') as HTMLElement | null;
+
+    if (!cursor || !ring) {
+      return;
+    }
+
+    let mouseX = 0;
+    let mouseY = 0;
+    let ringX = 0;
+    let ringY = 0;
+
+    const onMouseMove = (event: MouseEvent) => {
+      mouseX = event.clientX;
+      mouseY = event.clientY;
+      cursor.style.left = `${mouseX}px`;
+      cursor.style.top = `${mouseY}px`;
+    };
+
+    const animateRing = () => {
+      ringX += (mouseX - ringX) * 0.12;
+      ringY += (mouseY - ringY) * 0.12;
+      ring.style.left = `${ringX}px`;
+      ring.style.top = `${ringY}px`;
+      this.animationFrameId = window.requestAnimationFrame(animateRing);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    this.cleanupFns.push(() => document.removeEventListener('mousemove', onMouseMove));
+    window.addEventListener('resize', this.syncSelectedMoviesRail);
+    this.cleanupFns.push(() => window.removeEventListener('resize', this.syncSelectedMoviesRail));
+
+    const hoverTargets = root.querySelectorAll(
+      'a, button, input, select, textarea',
+    ) as NodeListOf<HTMLElement>;
+
+    hoverTargets.forEach((element) => {
+      const onEnter = () => {
+        cursor.style.width = '20px';
+        cursor.style.height = '20px';
+        ring.style.width = '56px';
+        ring.style.height = '56px';
+      };
+
+      const onLeave = () => {
+        cursor.style.width = '10px';
+        cursor.style.height = '10px';
+        ring.style.width = '36px';
+        ring.style.height = '36px';
+      };
+
+      element.addEventListener('mouseenter', onEnter);
+      element.addEventListener('mouseleave', onLeave);
+
+      this.cleanupFns.push(() => {
+        element.removeEventListener('mouseenter', onEnter);
+        element.removeEventListener('mouseleave', onLeave);
+      });
+    });
+
+    animateRing();
+    queueMicrotask(() => this.syncSelectedMoviesRail());
   }
 
   ngOnDestroy(): void {
@@ -258,7 +320,45 @@ export class PreferencesComponent implements OnInit, OnDestroy {
     if (this.feedbackTimeout) {
       clearTimeout(this.feedbackTimeout);
     }
+
+    this.cleanupFns.forEach((fn) => fn());
+    this.cleanupFns.length = 0;
+
+    if (this.animationFrameId !== null) {
+      window.cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
   }
+
+  scrollSelectedMovies(direction: 'left' | 'right'): void {
+    const rail = this.selectedMoviesRail?.nativeElement;
+    if (!rail) {
+      return;
+    }
+
+    const offset = Math.max(rail.clientWidth * 0.72, 160);
+    rail.scrollBy({
+      left: direction === 'right' ? offset : -offset,
+      behavior: 'smooth',
+    });
+  }
+
+  onSelectedMoviesScroll(): void {
+    this.syncSelectedMoviesRail();
+  }
+
+  private readonly syncSelectedMoviesRail = () => {
+    const rail = this.selectedMoviesRail?.nativeElement;
+    if (!rail) {
+      this.canScrollSelectedLeft.set(false);
+      this.canScrollSelectedRight.set(false);
+      return;
+    }
+
+    const maxScrollLeft = rail.scrollWidth - rail.clientWidth;
+    this.canScrollSelectedLeft.set(rail.scrollLeft > 4);
+    this.canScrollSelectedRight.set(maxScrollLeft - rail.scrollLeft > 4);
+  };
 
   loadPreferences(): void {
     this.isLoading.set(true);

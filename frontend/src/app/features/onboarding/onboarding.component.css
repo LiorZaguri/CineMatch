@@ -1001,12 +1001,6 @@ button {
     min-height: calc(100dvh - 4.3rem);
     height: auto;
     overflow: visible;
-    cursor: auto;
-  }
-
-  .cursor,
-  .cursor-ring {
-    display: none;
   }
 
   .main {
@@ -1248,6 +1242,30 @@ button {
   .movies-scroll,
   .choices-scroll {
     padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .onboarding-page,
+  .pip,
+  .sn,
+  .chip,
+  .sort-btn,
+  .mc,
+  .sel-thumb,
+  .btn-back,
+  .btn-skip,
+  .btn-continue,
+  .choice-card,
+  .search-box input,
+  button,
+  input {
+    cursor: auto;
+  }
+
+  .cursor,
+  .cursor-ring {
+    display: none;
   }
 }
 
