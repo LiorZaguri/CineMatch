@@ -19,7 +19,7 @@ async function registerUser() {
   const displayName = "Settings User";
 
   const res = await request(app)
-    .post("/CineMatch/auth/register")
+    .post("/api/auth/register")
     .send({ email, password, displayName })
     .expect(201);
 
@@ -36,7 +36,7 @@ describe("Authenticated auth settings flows", () => {
     const user = await registerUser();
 
     const res = await request(app)
-      .patch("/CineMatch/auth/me")
+      .patch("/api/auth/me")
       .set("Authorization", `Bearer ${user.accessToken}`)
       .send({ displayName: "Updated Settings User" });
 
@@ -52,7 +52,7 @@ describe("Authenticated auth settings flows", () => {
     const user = await registerUser();
 
     const res = await request(app)
-      .patch("/CineMatch/auth/me/onboarding-status")
+      .patch("/api/auth/me/onboarding-status")
       .set("Authorization", `Bearer ${user.accessToken}`)
       .send({ onboardingStatus: "skipped" });
 
@@ -63,7 +63,7 @@ describe("Authenticated auth settings flows", () => {
     });
 
     const loginRes = await request(app)
-      .post("/CineMatch/auth/login")
+      .post("/api/auth/login")
       .send({ email: user.email, password: user.password });
 
     expect(loginRes.status).toBe(200);
@@ -77,18 +77,18 @@ describe("Authenticated auth settings flows", () => {
     const newPassword = "NewPassword123!";
 
     await request(app)
-      .post("/CineMatch/auth/change-password")
+      .post("/api/auth/change-password")
       .set("Authorization", `Bearer ${user.accessToken}`)
       .send({ oldPassword: user.password, newPassword })
       .expect(204);
 
     await request(app)
-      .post("/CineMatch/auth/login")
+      .post("/api/auth/login")
       .send({ email: user.email, password: user.password })
       .expect(401);
 
     const loginRes = await request(app)
-      .post("/CineMatch/auth/login")
+      .post("/api/auth/login")
       .send({ email: user.email, password: newPassword });
 
     expect(loginRes.status).toBe(200);
@@ -102,7 +102,7 @@ describe("Authenticated auth settings flows", () => {
     const user = await registerUser();
 
     const res = await request(app)
-      .delete("/CineMatch/auth/me")
+      .delete("/api/auth/me")
       .set("Authorization", `Bearer ${user.accessToken}`)
       .send({ password: "WrongPassword123!" });
 
@@ -114,13 +114,13 @@ describe("Authenticated auth settings flows", () => {
     const user = await registerUser();
 
     await request(app)
-      .delete("/CineMatch/auth/me")
+      .delete("/api/auth/me")
       .set("Authorization", `Bearer ${user.accessToken}`)
       .send({ password: user.password })
       .expect(204);
 
     await request(app)
-      .post("/CineMatch/auth/login")
+      .post("/api/auth/login")
       .send({ email: user.email, password: user.password })
       .expect(401);
   });

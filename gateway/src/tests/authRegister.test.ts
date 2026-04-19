@@ -13,14 +13,14 @@ jest.mock("../controllers/userPreferenceController", () => {
 import request from "supertest";
 import {app} from "../app";
 
-describe("POST /CineMatch/auth/register", () => {
+describe("POST /api/auth/register", () => {
   it("should register and return accessToken + user", async () => {
     const email = `new_${Date.now()}@mail.com`;
     const password = "Password123!";
     const displayName = "New User";
 
     const res = await request(app)
-      .post("/CineMatch/auth/register")
+      .post("/api/auth/register")
       .send({ email, password, displayName });
 
     expect(res.status).toBe(201);
@@ -40,12 +40,12 @@ describe("POST /CineMatch/auth/register", () => {
     const displayName = "Duplicate User";
 
     await request(app)
-      .post("/CineMatch/auth/register")
+      .post("/api/auth/register")
       .send({ email, password, displayName })
       .expect(201);
 
     const res = await request(app)
-      .post("/CineMatch/auth/register")
+      .post("/api/auth/register")
       .send({ email, password, displayName });
 
     expect(res.status).toBe(400);

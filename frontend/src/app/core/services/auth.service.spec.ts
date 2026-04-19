@@ -40,7 +40,7 @@ describe('AuthService', () => {
 
     service.updateProfile({ displayName: 'Updated User' }).subscribe();
 
-    const req = httpMock.expectOne('/CineMatch/auth/me');
+    const req = httpMock.expectOne('/api/auth/me');
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual({ displayName: 'Updated User' });
 
@@ -75,7 +75,7 @@ describe('AuthService', () => {
 
     service.updateOnboardingStatus('completed').subscribe();
 
-    const req = httpMock.expectOne('/CineMatch/auth/me/onboarding-status');
+    const req = httpMock.expectOne('/api/auth/me/onboarding-status');
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual({ onboardingStatus: 'completed' });
 
@@ -112,7 +112,7 @@ describe('AuthService', () => {
       .changePassword({ oldPassword: 'OldPassword123!', newPassword: 'NewPassword123!' })
       .subscribe();
 
-    const req = httpMock.expectOne('/CineMatch/auth/change-password');
+    const req = httpMock.expectOne('/api/auth/change-password');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({
       oldPassword: 'OldPassword123!',
@@ -141,7 +141,7 @@ describe('AuthService', () => {
 
     service.deleteAccount({ password: 'Password123!' }).subscribe();
 
-    const req = httpMock.expectOne('/CineMatch/auth/me');
+    const req = httpMock.expectOne('/api/auth/me');
     expect(req.request.method).toBe('DELETE');
     expect(req.request.body).toEqual({ password: 'Password123!' });
 

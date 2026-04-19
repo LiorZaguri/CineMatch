@@ -75,18 +75,18 @@ describe('MovieService', () => {
       received = catalog;
     });
 
-    httpTestingController.expectOne('/CineMatch/movies/dashboard/').flush(dashboardResponse);
+    httpTestingController.expectOne('/api/movies/dashboard/').flush(dashboardResponse);
     httpTestingController
-      .expectOne('/CineMatch/movies/popular/?page=1')
+      .expectOne('/api/movies/popular/?page=1')
       .flush(createMovieList(createTmdbMovie(20, 'Popular Live')));
     httpTestingController
-      .expectOne('/CineMatch/movies/now-playing/?page=1')
+      .expectOne('/api/movies/now-playing/?page=1')
       .flush(createMovieList(createTmdbMovie(10, 'Now Live')));
     httpTestingController
-      .expectOne('/CineMatch/movies/upcoming/?page=1')
+      .expectOne('/api/movies/upcoming/?page=1')
       .flush(createMovieList(createTmdbMovie(30, 'Upcoming Live')));
     httpTestingController
-      .expectOne('/CineMatch/movies/top-rated/?page=1')
+      .expectOne('/api/movies/top-rated/?page=1')
       .flush(createMovieList(createTmdbMovie(40, 'Top Live')));
 
     expect(received).toBeDefined();
@@ -128,7 +128,7 @@ describe('MovieService', () => {
 
     expect(received?.movies.length).toBe(1);
     expect(received?.dashboard.errors).toEqual([]);
-    httpTestingController.expectNone('/CineMatch/movies/dashboard/');
+    httpTestingController.expectNone('/api/movies/dashboard/');
   });
 
   it('getMovieByTmdbId should fetch detail from gateway movie route', () => {
@@ -144,7 +144,7 @@ describe('MovieService', () => {
       expect(movie.review_summary).toEqual({ summary_text: 'Crowd favorite.' });
     });
 
-    const req = httpTestingController.expectOne('/CineMatch/movies/1523145/');
+    const req = httpTestingController.expectOne('/api/movies/1523145/');
     expect(req.request.method).toBe('GET');
     req.flush({
       ...createTmdbMovie(1523145, 'Detail Movie'),
@@ -160,9 +160,7 @@ describe('MovieService', () => {
       expect(movie.id).toBe(44);
     });
 
-    httpTestingController
-      .expectOne('/CineMatch/movies/44/')
-      .flush(createTmdbMovie(44, 'Alias Detail'));
+    httpTestingController.expectOne('/api/movies/44/').flush(createTmdbMovie(44, 'Alias Detail'));
   });
 
   it('createReview should post to the gateway review route', () => {
@@ -177,7 +175,7 @@ describe('MovieService', () => {
       received = response;
     });
 
-    const req = httpTestingController.expectOne('/CineMatch/movies/review/');
+    const req = httpTestingController.expectOne('/api/movies/review/');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(payload);
 
@@ -203,7 +201,7 @@ describe('MovieService', () => {
       received = response;
     });
 
-    const req = httpTestingController.expectOne('/CineMatch/movies/review/7/');
+    const req = httpTestingController.expectOne('/api/movies/review/7/');
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual(payload);
 
@@ -225,7 +223,7 @@ describe('MovieService', () => {
       receivedSummary = response.summary;
     });
 
-    const req = httpTestingController.expectOne('/CineMatch/movies/ai/44/summary/');
+    const req = httpTestingController.expectOne('/api/movies/ai/44/summary/');
     expect(req.request.method).toBe('GET');
 
     req.flush({
