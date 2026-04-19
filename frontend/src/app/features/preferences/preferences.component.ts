@@ -57,12 +57,12 @@ interface MoodOption extends Option {
   icon: string;
 }
 
-type FeedbackState = {
+interface FeedbackState {
   type: 'success' | 'error';
   message: string;
-};
+}
 
-type PreferenceSnapshot = {
+interface PreferenceSnapshot {
   chosen_movies: number[];
   liked_genres: UserPreferenceGenre[];
   disliked_genres: UserPreferenceGenre[];
@@ -71,7 +71,7 @@ type PreferenceSnapshot = {
   languages: UserPreferenceLanguage[];
   runtime: UserPreferenceRuntime | null;
   eras: UserPreferenceEra[];
-};
+}
 
 const GENRE_OPTIONS: Option<UserPreferenceGenre>[] = [
   { label: 'Thriller', value: 'Thriller' },
@@ -89,12 +89,42 @@ const GENRE_OPTIONS: Option<UserPreferenceGenre>[] = [
 ];
 
 const MOOD_OPTIONS: MoodOption[] = [
-  { label: 'Dark & tense', value: 'Dark & tense', caption: 'Psychological, gritty, unsettling', icon: 'moon-star' },
-  { label: 'Mind-bending', value: 'Mind-bending', caption: 'Non-linear, twists, complex', icon: 'sparkles' },
-  { label: 'Emotionally heavy', value: 'Emotionally heavy', caption: 'Moving, tearjerker, meaningful', icon: 'droplets' },
-  { label: 'Visually stunning', value: 'Visually stunning', caption: 'Cinematography-forward, beautiful', icon: 'image' },
-  { label: 'Fun & easy', value: 'Fun & easy', caption: 'Light, entertaining, feel-good', icon: 'popcorn' },
-  { label: 'Fast-paced', value: 'Fast-paced', caption: 'Tense, action-driven, high-energy', icon: 'zap' },
+  {
+    label: 'Dark & tense',
+    value: 'Dark & tense',
+    caption: 'Psychological, gritty, unsettling',
+    icon: 'moon-star',
+  },
+  {
+    label: 'Mind-bending',
+    value: 'Mind-bending',
+    caption: 'Non-linear, twists, complex',
+    icon: 'sparkles',
+  },
+  {
+    label: 'Emotionally heavy',
+    value: 'Emotionally heavy',
+    caption: 'Moving, tearjerker, meaningful',
+    icon: 'droplets',
+  },
+  {
+    label: 'Visually stunning',
+    value: 'Visually stunning',
+    caption: 'Cinematography-forward, beautiful',
+    icon: 'image',
+  },
+  {
+    label: 'Fun & easy',
+    value: 'Fun & easy',
+    caption: 'Light, entertaining, feel-good',
+    icon: 'popcorn',
+  },
+  {
+    label: 'Fast-paced',
+    value: 'Fast-paced',
+    caption: 'Tense, action-driven, high-energy',
+    icon: 'zap',
+  },
 ];
 
 const DISCOVERY_OPTIONS: Option<UserPreferenceDiscoveryMode>[] = [
@@ -174,7 +204,7 @@ export class PreferencesComponent implements OnInit, AfterViewInit, OnDestroy {
   private searchSubscription: Subscription | null = null;
   private hydrateSubscription: Subscription | null = null;
   private feedbackTimeout: ReturnType<typeof setTimeout> | null = null;
-  private readonly cleanupFns: Array<() => void> = [];
+  private readonly cleanupFns: (() => void)[] = [];
 
   readonly genreOptions = GENRE_OPTIONS;
   readonly moodOptions = MOOD_OPTIONS;
@@ -221,7 +251,9 @@ export class PreferencesComponent implements OnInit, AfterViewInit, OnDestroy {
   );
 
   readonly visibleSearchResults = computed(() =>
-    this.searchResults().filter((movie) => !this.selectedMovieIds().includes(movie.id)).slice(0, 5),
+    this.searchResults()
+      .filter((movie) => !this.selectedMovieIds().includes(movie.id))
+      .slice(0, 5),
   );
 
   readonly completionPercent = computed(() => {

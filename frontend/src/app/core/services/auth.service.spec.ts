@@ -5,98 +5,112 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
-    let service: AuthService;
-    let httpMock: HttpTestingController;
+  let service: AuthService;
+  let httpMock: HttpTestingController;
 
-    beforeEach(() => {
-        localStorage.clear();
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+    localStorage.clear();
+  });
+
+  function configureTestingModule(): void {
+    TestBed.configureTestingModule({
+      providers: [AuthService, provideHttpClient(), provideHttpClientTesting()],
     });
 
-    afterEach(() => {
-        httpMock.verify();
-        localStorage.clear();
+    service = TestBed.inject(AuthService);
+    httpMock = TestBed.inject(HttpTestingController);
+  }
+
+  function createTokenWithFutureExp(): string {
+    const payload = btoa(
+      JSON.stringify({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      }),
+    );
+    return `header.${payload}.signature`;
+  }
+
+  it('should update currentUser and localStorage after a profile update', () => {
+    configureTestingModule();
+
+    service.updateProfile({ displayName: 'Updated User' }).subscribe();
+
+    const req = httpMock.expectOne('/CineMatch/auth/me');
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ displayName: 'Updated User' });
+
+    req.flush({
+      user: {
+        id: 'user-1',
+        email: 'user@mail.com',
+        displayName: 'Updated User',
+        avatarUrl: null,
+      },
     });
 
-    function configureTestingModule(): void {
-        TestBed.configureTestingModule({
-            providers: [
-                AuthService,
-                provideHttpClient(),
-                provideHttpClientTesting(),
-            ],
-        });
+    expect(service.currentUser()).toEqual({
+      id: 'user-1',
+      email: 'user@mail.com',
+      displayName: 'Updated User',
+      avatarUrl: null,
+    });
+    expect(JSON.parse(localStorage.getItem('cm_user') ?? '{}')).toEqual({
+      id: 'user-1',
+      email: 'user@mail.com',
+      displayName: 'Updated User',
+      avatarUrl: null,
+    });
+  });
 
-        service = TestBed.inject(AuthService);
-        httpMock = TestBed.inject(HttpTestingController);
-    }
+  it('should post the old and new passwords to the change-password endpoint', () => {
+    configureTestingModule();
 
-    it('should update currentUser and localStorage after a profile update', () => {
-        configureTestingModule();
+    service
+      .changePassword({ oldPassword: 'OldPassword123!', newPassword: 'NewPassword123!' })
+      .subscribe();
 
-        service.updateProfile({ displayName: 'Updated User' }).subscribe();
-
-        const req = httpMock.expectOne('/CineMatch/auth/me');
-        expect(req.request.method).toBe('PATCH');
-        expect(req.request.body).toEqual({ displayName: 'Updated User' });
-
-        req.flush({
-            user: {
-                id: 'user-1',
-                email: 'user@mail.com',
-                displayName: 'Updated User',
-            },
-        });
-
-        expect(service.currentUser()).toEqual({
-            id: 'user-1',
-            email: 'user@mail.com',
-            displayName: 'Updated User',
-        });
-        expect(JSON.parse(localStorage.getItem('cm_user') ?? '{}')).toEqual({
-            id: 'user-1',
-            email: 'user@mail.com',
-            displayName: 'Updated User',
-        });
+    const req = httpMock.expectOne('/CineMatch/auth/change-password');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      oldPassword: 'OldPassword123!',
+      newPassword: 'NewPassword123!',
     });
 
-    it('should post the old and new passwords to the change-password endpoint', () => {
-        configureTestingModule();
+    req.flush(null);
+  });
 
-        service.changePassword({ oldPassword: 'OldPassword123!', newPassword: 'NewPassword123!' }).subscribe();
+  it('should clear auth state after deleting the account', () => {
+    localStorage.setItem('cm_access_token', createTokenWithFutureExp());
+    localStorage.setItem(
+      'cm_user',
+      JSON.stringify({
+        id: 'user-1',
+        email: 'user@mail.com',
+        displayName: 'Delete Me',
+        avatarUrl: null,
+      }),
+    );
 
-        const req = httpMock.expectOne('/CineMatch/auth/change-password');
-        expect(req.request.method).toBe('POST');
-        expect(req.request.body).toEqual({
-            oldPassword: 'OldPassword123!',
-            newPassword: 'NewPassword123!',
-        });
+    configureTestingModule();
 
-        req.flush(null);
-    });
+    expect(service.isAuthenticated()).toBe(true);
 
-    it('should clear auth state after deleting the account', () => {
-        localStorage.setItem('cm_access_token', 'token-123');
-        localStorage.setItem('cm_user', JSON.stringify({
-            id: 'user-1',
-            email: 'user@mail.com',
-            displayName: 'Delete Me',
-        }));
+    service.deleteAccount({ password: 'Password123!' }).subscribe();
 
-        configureTestingModule();
+    const req = httpMock.expectOne('/CineMatch/auth/me');
+    expect(req.request.method).toBe('DELETE');
+    expect(req.request.body).toEqual({ password: 'Password123!' });
 
-        expect(service.isAuthenticated()).toBe(true);
+    req.flush(null);
 
-        service.deleteAccount({ password: 'Password123!' }).subscribe();
-
-        const req = httpMock.expectOne('/CineMatch/auth/me');
-        expect(req.request.method).toBe('DELETE');
-        expect(req.request.body).toEqual({ password: 'Password123!' });
-
-        req.flush(null);
-
-        expect(service.isAuthenticated()).toBe(false);
-        expect(service.currentUser()).toBeNull();
-        expect(localStorage.getItem('cm_access_token')).toBeNull();
-        expect(localStorage.getItem('cm_user')).toBeNull();
-    });
+    expect(service.isAuthenticated()).toBe(false);
+    expect(service.currentUser()).toBeNull();
+    expect(localStorage.getItem('cm_access_token')).toBeNull();
+    expect(localStorage.getItem('cm_user')).toBeNull();
+  });
 });

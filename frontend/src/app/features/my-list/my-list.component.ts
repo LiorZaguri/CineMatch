@@ -70,14 +70,12 @@ export class MyListComponent implements OnInit {
 
         forkJoin(
           items.map((item) =>
-            this.movieService.getMovieByTmdbId(String(item.tmdb_id), true).pipe(
-              catchError(() => of(null)),
-            ),
+            this.movieService
+              .getMovieByTmdbId(String(item.tmdb_id), true)
+              .pipe(catchError(() => of(null))),
           ),
         )
-          .pipe(
-            map((movies) => movies.filter((movie): movie is Movie => movie !== null)),
-          )
+          .pipe(map((movies) => movies.filter((movie): movie is Movie => movie !== null)))
           .subscribe({
             next: (movies) => {
               this.movies.set(movies);

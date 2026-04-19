@@ -1,0 +1,28 @@
+name: Production Deployment
+
+on:
+  push:
+    branches:
+      - main # This ensures it ONLY runs when code lands on main
+
+jobs:
+  deploy:
+    name: Deploy to DigitalOcean Droplet
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Execute Deployment Commands via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DROPLET_IP }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            # 1. Navigate to the project directory
+            cd CineMatch
+            
+            # 2. Pull the latest code from the main branch
+            git pull origin main
+            
+            # 3. Rebuild and restart the Docker containers in detached mode
+            docker compose -f docker-compose.prod.yml up -d --build --remove-orphans

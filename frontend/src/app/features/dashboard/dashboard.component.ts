@@ -3,19 +3,19 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
-    selector: 'app-dashboard',
-    standalone: true,
-    imports: [],
-    templateUrl: './dashboard.component.html',
+  selector: 'app-dashboard',
+  standalone: true,
+  imports: [],
+  templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent {
-    private readonly auth = inject(AuthService);
-    private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
-    readonly currentUser = this.auth.currentUser;
+  readonly currentUser = this.auth.currentUser;
 
-    logout(): void {
-        this.auth.logout();
-        this.router.navigate(['/login']);
-    }
+  logout(): void {
+    this.auth.logout();
+    this.router.navigate(['/login']);
+  }
 }

@@ -190,9 +190,11 @@ describe("movie gateway routes", () => {
 
   it("forwards tmdb_id for movie details", async () => {
     const app = await loadApp();
+    const token = makeToken("user-123");
 
     const res = await request(app)
       .get("/CineMatch/movies/123/")
+      .set("Authorization", `Bearer ${token}`)
       .expect(200);
 
     expect(res.body).toMatchObject({
@@ -203,9 +205,11 @@ describe("movie gateway routes", () => {
 
   it("maps core 404 for movie details", async () => {
     const app = await loadApp();
+    const token = makeToken("user-123");
 
     const res = await request(app)
       .get("/CineMatch/movies/404/")
+      .set("Authorization", `Bearer ${token}`)
       .expect(404);
 
     expect(res.body.error.code).toBe("MOVIE_NOT_FOUND");

@@ -1,4 +1,13 @@
 <div class="settings-page">
+    @if (avatarFeedback()) {
+        <div class="toast show" [class.error]="avatarFeedback()!.type === 'error'">
+            <span class="material-symbols-outlined" aria-hidden="true">
+                {{ avatarFeedback()!.type === 'error' ? 'error' : 'check_circle' }}
+            </span>
+            {{ avatarFeedback()!.message }}
+        </div>
+    }
+
     <div class="page">
         <aside class="sidebar motion-shell" [class.is-visible]="showHero()">
             <div class="sb-intro">
@@ -18,7 +27,7 @@
                     [disabled]="!canSaveChanges()"
                     (click)="saveChanges()"
                 >
-                    Change profile
+                    Save changes
                 </button>
             </div>
         </aside>
@@ -55,80 +64,6 @@
 
                     <div class="scard-body">
                         <div class="profile-layout">
-                            <div class="profile-column password-column">
-                                @if (passwordFeedback()) {
-                                    <div class="status-banner" [class.error]="passwordFeedback()!.type === 'error'">
-                                        {{ passwordFeedback()!.message }}
-                                    </div>
-                                }
-
-                                <form [formGroup]="passwordForm" (ngSubmit)="updatePassword()" novalidate>
-                                    <div class="form-row password-stack">
-                                        <label class="field">
-                                            <span class="field-lbl">Current password</span>
-                                            <input
-                                                class="field-inp"
-                                                [class.invalid]="passwordForm.controls.oldPassword.invalid && passwordForm.controls.oldPassword.touched"
-                                                type="password"
-                                                formControlName="oldPassword"
-                                                autocomplete="current-password"
-                                            />
-                                            @if (
-                                                passwordForm.controls.oldPassword.invalid &&
-                                                passwordForm.controls.oldPassword.touched
-                                            ) {
-                                                <span class="field-err on">This field is required.</span>
-                                            }
-                                        </label>
-
-                                        <label class="field">
-                                            <span class="field-lbl">New password</span>
-                                            <input
-                                                class="field-inp"
-                                                [class.invalid]="passwordForm.controls.newPassword.invalid && passwordForm.controls.newPassword.touched"
-                                                type="password"
-                                                formControlName="newPassword"
-                                                autocomplete="new-password"
-                                            />
-                                            <div class="pw-bars" aria-hidden="true">
-                                                @for (bar of passwordBars; track bar) {
-                                                    <div
-                                                        class="pw-bar"
-                                                        [class.w]="passwordBarClass(bar) === 'w'"
-                                                        [class.m]="passwordBarClass(bar) === 'm'"
-                                                        [class.s]="passwordBarClass(bar) === 's'"
-                                                    ></div>
-                                                }
-                                            </div>
-                                            <span
-                                                class="field-hint"
-                                                [class.tone-red]="passwordStrength().tone === 'w'"
-                                                [class.tone-gold]="passwordStrength().tone === 'm'"
-                                            >
-                                                {{ passwordStrength().label }}
-                                            </span>
-                                        </label>
-
-                                        <label class="field">
-                                            <span class="field-lbl">Confirm new password</span>
-                                            <input
-                                                class="field-inp"
-                                                [class.invalid]="passwordForm.hasError('passwordMismatch') && passwordForm.controls.confirmPassword.touched"
-                                                type="password"
-                                                formControlName="confirmPassword"
-                                                autocomplete="new-password"
-                                            />
-                                            @if (
-                                                passwordForm.hasError('passwordMismatch') &&
-                                                passwordForm.controls.confirmPassword.touched
-                                            ) {
-                                                <span class="field-err on">Passwords don't match.</span>
-                                            }
-                                        </label>
-                                    </div>
-                                </form>
-                            </div>
-
                             <div class="profile-column identity-column">
                                 <div class="avatar-row">
                                     <input
@@ -177,12 +112,6 @@
                                     </div>
                                 </div>
 
-                                @if (avatarFeedback()) {
-                                    <div class="status-banner" [class.error]="avatarFeedback()!.type === 'error'">
-                                        {{ avatarFeedback()!.message }}
-                                    </div>
-                                }
-
                                 @if (profileFeedback()) {
                                     <div class="status-banner" [class.error]="profileFeedback()!.type === 'error'">
                                         {{ profileFeedback()!.message }}
@@ -214,6 +143,144 @@
                                             <span class="field-lbl">Email</span>
                                             <input class="field-inp" type="email" formControlName="email" readonly />
                                             <span class="field-hint">Email changes aren't part of this release.</span>
+                                        </label>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div class="profile-column password-column">
+                                @if (passwordFeedback()) {
+                                    <div class="status-banner" [class.error]="passwordFeedback()!.type === 'error'">
+                                        {{ passwordFeedback()!.message }}
+                                    </div>
+                                }
+
+                                <form [formGroup]="passwordForm" (ngSubmit)="updatePassword()" novalidate>
+                                    <div class="form-row password-stack">
+                                        <label class="field">
+                                            <span class="field-lbl">Current password</span>
+                                            <div class="password-field-shell">
+                                                <input
+                                                    class="field-inp password-field"
+                                                    [class.invalid]="passwordForm.controls.oldPassword.invalid && passwordForm.controls.oldPassword.touched"
+                                                    [type]="showCurrentPassword() ? 'text' : 'password'"
+                                                    formControlName="oldPassword"
+                                                    autocomplete="current-password"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    class="password-toggle"
+                                                    (click)="togglePasswordVisibility('current')"
+                                                    [attr.aria-label]="showCurrentPassword() ? 'Hide current password' : 'Show current password'"
+                                                >
+                                                    <span class="material-symbols-outlined">
+                                                        {{ showCurrentPassword() ? 'visibility_off' : 'visibility' }}
+                                                    </span>
+                                                </button>
+                                            </div>
+                                            @if (
+                                                passwordForm.controls.oldPassword.invalid &&
+                                                passwordForm.controls.oldPassword.touched
+                                            ) {
+                                                <span class="field-err on">This field is required.</span>
+                                            }
+                                        </label>
+
+                                        <label class="field">
+                                            <span class="field-lbl">New password</span>
+                                            <div class="password-field-shell">
+                                                <input
+                                                    class="field-inp password-field"
+                                                    [class.invalid]="passwordForm.controls.newPassword.invalid && passwordForm.controls.newPassword.touched"
+                                                    [type]="showNewPassword() ? 'text' : 'password'"
+                                                    formControlName="newPassword"
+                                                    autocomplete="new-password"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    class="password-toggle"
+                                                    (click)="togglePasswordVisibility('new')"
+                                                    [attr.aria-label]="showNewPassword() ? 'Hide new password' : 'Show new password'"
+                                                >
+                                                    <span class="material-symbols-outlined">
+                                                        {{ showNewPassword() ? 'visibility_off' : 'visibility' }}
+                                                    </span>
+                                                </button>
+                                            </div>
+                                            <div class="pw-bars" aria-hidden="true">
+                                                @for (bar of passwordBars; track bar) {
+                                                    <div
+                                                        class="pw-bar"
+                                                        [class.w]="passwordBarClass(bar) === 'w'"
+                                                        [class.m]="passwordBarClass(bar) === 'm'"
+                                                        [class.s]="passwordBarClass(bar) === 's'"
+                                                    ></div>
+                                                }
+                                            </div>
+                                            <span
+                                                class="field-hint"
+                                                [class.tone-red]="passwordStrength().tone === 'w'"
+                                                [class.tone-gold]="passwordStrength().tone === 'm'"
+                                            >
+                                                {{ passwordStrength().label }}
+                                            </span>
+                                            @if (
+                                                passwordForm.controls.newPassword.invalid &&
+                                                passwordForm.controls.newPassword.touched
+                                            ) {
+                                                <span class="field-err on">
+                                                    @if (passwordForm.controls.newPassword.errors?.['required']) {
+                                                        Password is required.
+                                                    }
+                                                    @if (passwordForm.controls.newPassword.errors?.['minlength']) {
+                                                        Password must be at least 12 characters.
+                                                    }
+                                                    @if (passwordForm.controls.newPassword.errors?.['maxlength']) {
+                                                        Password must be 128 characters or fewer.
+                                                    }
+                                                    @if (passwordForm.controls.newPassword.errors?.['uppercase']) {
+                                                        Include at least one uppercase letter.
+                                                    }
+                                                    @if (passwordForm.controls.newPassword.errors?.['lowercase']) {
+                                                        Include at least one lowercase letter.
+                                                    }
+                                                    @if (passwordForm.controls.newPassword.errors?.['number']) {
+                                                        Include at least one number.
+                                                    }
+                                                    @if (passwordForm.controls.newPassword.errors?.['special']) {
+                                                        Include at least one special character.
+                                                    }
+                                                </span>
+                                            }
+                                        </label>
+
+                                        <label class="field">
+                                            <span class="field-lbl">Confirm new password</span>
+                                            <div class="password-field-shell">
+                                                <input
+                                                    class="field-inp password-field"
+                                                    [class.invalid]="passwordForm.hasError('passwordMismatch') && passwordForm.controls.confirmPassword.touched"
+                                                    [type]="showConfirmPassword() ? 'text' : 'password'"
+                                                    formControlName="confirmPassword"
+                                                    autocomplete="new-password"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    class="password-toggle"
+                                                    (click)="togglePasswordVisibility('confirm')"
+                                                    [attr.aria-label]="showConfirmPassword() ? 'Hide confirmed password' : 'Show confirmed password'"
+                                                >
+                                                    <span class="material-symbols-outlined">
+                                                        {{ showConfirmPassword() ? 'visibility_off' : 'visibility' }}
+                                                    </span>
+                                                </button>
+                                            </div>
+                                            @if (
+                                                passwordForm.hasError('passwordMismatch') &&
+                                                passwordForm.controls.confirmPassword.touched
+                                            ) {
+                                                <span class="field-err on">Passwords don't match.</span>
+                                            }
                                         </label>
                                     </div>
                                 </form>
@@ -256,8 +323,9 @@
         </div>
     </div>
 
-    <div class="modal-bg" [class.on]="isDeleteConfirming()" (click)="cancelDeleteConfirmation()">
-        <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-bg" [class.on]="isDeleteConfirming()" tabindex="0" (click)="cancelDeleteConfirmation()"
+        (keydown.enter)="cancelDeleteConfirmation()" (keydown.space)="cancelDeleteConfirmation(); $event.preventDefault()">
+        <div class="modal" tabindex="0" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
             <div class="modal-eye">Irreversible action</div>
             <h3 class="modal-title">Confirm deletion</h3>
             <p class="modal-sub">
@@ -274,13 +342,25 @@
             <form [formGroup]="deleteForm" (ngSubmit)="deleteAccount()" novalidate>
                 <label class="field">
                     <span class="field-lbl">Current password</span>
-                    <input
-                        class="field-inp"
-                        [class.invalid]="deleteForm.controls.password.invalid && deleteForm.controls.password.touched"
-                        type="password"
-                        formControlName="password"
-                        autocomplete="current-password"
-                    />
+                    <div class="password-field-shell">
+                        <input
+                            class="field-inp password-field"
+                            [class.invalid]="deleteForm.controls.password.invalid && deleteForm.controls.password.touched"
+                            [type]="showDeletePassword() ? 'text' : 'password'"
+                            formControlName="password"
+                            autocomplete="current-password"
+                        />
+                        <button
+                            type="button"
+                            class="password-toggle"
+                            (click)="togglePasswordVisibility('delete')"
+                            [attr.aria-label]="showDeletePassword() ? 'Hide delete password' : 'Show delete password'"
+                        >
+                            <span class="material-symbols-outlined">
+                                {{ showDeletePassword() ? 'visibility_off' : 'visibility' }}
+                            </span>
+                        </button>
+                    </div>
                     @if (deleteForm.controls.password.invalid && deleteForm.controls.password.touched) {
                         <span class="field-err on">Password is required to proceed.</span>
                     }

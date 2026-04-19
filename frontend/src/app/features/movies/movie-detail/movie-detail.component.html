@@ -422,8 +422,11 @@
     }
 
     @if (mediaModalOpen()) {
-    <div class="trailer-modal" (click)="closeMediaModal()">
-        <div class="trailer-modal__dialog" [class.trailer-modal__dialog--image]="mediaModalKind() === 'image'" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" [attr.aria-label]="mediaModalTitle()">
+    <div class="trailer-modal" tabindex="0" (click)="closeMediaModal()" (keydown.enter)="closeMediaModal()"
+        (keydown.space)="closeMediaModal(); $event.preventDefault()">
+        <div class="trailer-modal__dialog" [class.trailer-modal__dialog--image]="mediaModalKind() === 'image'" tabindex="0"
+            (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()"
+            role="dialog" aria-modal="true" [attr.aria-label]="mediaModalTitle()">
             <div class="trailer-modal__header">
                 <h3>{{ mediaModalTitle() }}</h3>
                 <button type="button" class="trailer-modal__close" (click)="closeMediaModal()" aria-label="Close media viewer">

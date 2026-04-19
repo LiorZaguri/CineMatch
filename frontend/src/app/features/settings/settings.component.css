@@ -16,10 +16,11 @@
     --ff-body: 'DM Sans', system-ui, sans-serif;
     position: relative;
     min-height: calc(100vh - 4.9rem);
+    height: calc(100dvh - 4.9rem);
     background: var(--bg);
     color: var(--text);
     font-family: var(--ff-body);
-    overflow: clip;
+    overflow: hidden;
 }
 
 .settings-page::before {
@@ -52,30 +53,26 @@
     position: relative;
     z-index: 1;
     display: grid;
-    grid-template-columns: 236px minmax(0, 1fr);
-    min-height: calc(100vh - 4.9rem);
+    grid-template-columns: 260px 1fr;
+    min-height: 100%;
+    height: 100%;
 }
 
 .sidebar {
     position: sticky;
-    top: 1.5rem;
-    align-self: start;
-    min-height: calc(100vh - 7.9rem);
+    top: 0;
+    height: 100%;
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    padding: 2.25rem 1.375rem 1.75rem;
+    overflow-y: auto;
+    padding: 36px 28px 28px;
+    gap: 32px;
 }
 
 .sb-intro {
-    margin-bottom: 1.5rem;
-    padding: 1rem 1rem 1.1rem;
-    border: 1px solid rgba(28, 23, 20, 0.12);
-    border-radius: 1rem;
-    background:
-        linear-gradient(180deg, rgba(250, 247, 242, 0.95), rgba(237, 232, 222, 0.9)),
-        var(--cream);
-    box-shadow: 0 14px 36px -28px rgba(28, 23, 20, 0.35);
+    margin: 0;
+    padding: 0;
 }
 
 .sb-eyebrow,
@@ -89,18 +86,18 @@
 }
 
 .sb-eyebrow {
-    color: #5c5047;
+    color: var(--text-muted);
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.625rem;
+    gap: 8px;
+    margin-bottom: 10px;
 }
 
 .sb-eyebrow::before,
 .sh-eye::before {
     content: '';
     display: block;
-    width: 0.875rem;
+    width: 16px;
     height: 1px;
     background: var(--gold);
 }
@@ -115,9 +112,9 @@
 }
 
 .sb-headline {
-    font-size: 1.45rem;
-    margin: 0 0 0.5rem;
-    color: #120e0b;
+    font-size: 26px;
+    margin: 0;
+    color: var(--text);
 }
 
 .sb-headline em,
@@ -137,9 +134,9 @@
 }
 
 .sb-sub {
-    margin: 0 0 1.75rem;
-    font-size: 0.75rem;
-    color: #65584f;
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--text-muted);
 }
 
 .sb-icon {
@@ -165,10 +162,12 @@
     margin-top: auto;
     padding-top: 1.5rem;
     border-top: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(244, 239, 230, 0), rgba(244, 239, 230, 0.94) 28%, var(--bg) 100%);
 }
 
 .sidebar-save-btn {
     width: 100%;
+    box-shadow: 0 18px 30px -24px rgba(28, 23, 20, 0.65);
 }
 
 .av-circle {
@@ -191,6 +190,8 @@
 
 .main-wrap {
     min-width: 0;
+    height: 100%;
+    overflow-y: auto;
     padding: 2.75rem 3.25rem 3.75rem;
 }
 
@@ -270,6 +271,11 @@
     font-size: 0.8125rem;
 }
 
+#sec-profile .sh-sub,
+#sec-danger .sh-sub {
+    max-width: 32rem;
+}
+
 .sh-sub strong {
     color: var(--text);
 }
@@ -318,7 +324,7 @@
 
 .profile-layout {
     display: grid;
-    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr);
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
     gap: 1.5rem;
     align-items: start;
 }
@@ -327,12 +333,12 @@
     min-width: 0;
 }
 
-.password-column {
+.identity-column {
     padding-right: 1.5rem;
     border-right: 1px solid var(--border);
 }
 
-.identity-column {
+.password-column {
     padding-left: 0.25rem;
 }
 
@@ -472,6 +478,36 @@
     color: var(--red);
 }
 
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 2rem;
+    z-index: 2200;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 999px;
+    background: var(--text);
+    color: var(--cream);
+    font-size: 0.8125rem;
+    transform: translateX(-50%);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+}
+
+.toast .material-symbols-outlined {
+    font-size: 1rem;
+    color: var(--gold);
+}
+
+.toast.error {
+    background: #7e241d;
+}
+
+.toast.error .material-symbols-outlined {
+    color: #ffc0bb;
+}
+
 .form-row {
     display: grid;
     gap: 1.25rem;
@@ -487,6 +523,38 @@
     display: flex;
     flex-direction: column;
     gap: 0.4375rem;
+}
+
+.password-field-shell {
+    position: relative;
+}
+
+.password-field {
+    padding-right: 3rem;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.password-toggle .material-symbols-outlined {
+    font-size: 1.1rem;
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+    color: var(--text);
 }
 
 .field-lbl {
@@ -624,11 +692,21 @@
 .modal-title {
     margin: 0 0 0.625rem;
     font-size: 1.625rem;
+    color: var(--text);
 }
 
 .modal-sub {
     margin: 0 0 1.25rem;
     font-size: 0.8125rem;
+}
+
+.modal form {
+    display: grid;
+    gap: 1rem;
+}
+
+.modal-actions {
+    margin-top: 0.5rem;
 }
 
 .motion-shell {
@@ -656,8 +734,12 @@
     .sidebar {
         position: static;
         min-height: auto;
+        height: auto;
         border-right: 0;
         border-bottom: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow: visible;
     }
 
     .main-wrap {
@@ -675,7 +757,7 @@
     }
 
     .main-wrap {
-        padding: 1.5rem 1.25rem 2.5rem;
+        padding: 1.5rem 1.25rem 6.75rem;
     }
 
     .scard-head,
@@ -694,16 +776,37 @@
         grid-template-columns: 1fr;
     }
 
-    .password-column {
+    .identity-column {
         padding-right: 0;
         padding-bottom: 1.5rem;
-        border-right: 0;
         border-bottom: 1px solid var(--border);
+        border-right: 0;
     }
 
-    .identity-column {
+    .password-column {
         padding-left: 0;
         padding-top: 0.25rem;
+    }
+
+    .sb-action {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1200;
+        margin-top: 0;
+        padding: 0.9rem 1.25rem calc(0.9rem + env(safe-area-inset-bottom, 0px));
+        border-top: 1px solid var(--border);
+        background:
+            linear-gradient(180deg, rgba(244, 239, 230, 0.82), rgba(244, 239, 230, 0.97)),
+            var(--bg);
+        box-shadow: 0 -12px 28px -24px rgba(28, 23, 20, 0.58);
+        backdrop-filter: blur(14px);
+    }
+
+    .sidebar-save-btn {
+        max-width: 42rem;
+        margin: 0 auto;
     }
 
     .av-actions,
@@ -715,6 +818,12 @@
     .btn {
         width: 100%;
         justify-content: center;
+    }
+
+    .toast {
+        bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+        max-width: calc(100vw - 2rem);
+        width: max-content;
     }
 }
 

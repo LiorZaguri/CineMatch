@@ -81,10 +81,10 @@ export interface TmdbMovie {
   overview: string;
   genre?: string[];
   genre_ids?: number[];
-  genres?: Array<{
+  genres?: {
     id: number;
     name: string;
-  }>;
+  }[];
   poster_path?: string | null;
   backdrop_path?: string | null;
   release_date?: string | null;

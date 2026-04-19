@@ -19,7 +19,10 @@
             @if (getItem(offset); as data) {
             @if (data.isValid) {
             <div class="movie-card" [class.is-center]="offset === 0" [style.transform]="getTransform(offset)"
-                [ngStyle]="getStyle(offset)" (click)="offset !== 0 ? active.set(data.absIndex) : null">
+                [ngStyle]="getStyle(offset)" [attr.tabindex]="offset !== 0 ? 0 : null"
+                [attr.role]="offset !== 0 ? 'button' : null" (click)="handleCardSelect(offset, data.absIndex)"
+                (keydown.enter)="handleCardSelect(offset, data.absIndex)"
+                (keydown.space)="handleCardSelect(offset, data.absIndex); $event.preventDefault()">
 
                 <img [src]="data.item.imageSrc" [alt]="data.item.title" class="card-img">
 
