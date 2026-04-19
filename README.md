@@ -32,12 +32,20 @@ CineMatch is a modern movie discovery and review platform that bridges the gap b
    cd cinematch
    ```
 2. **Environment Configuration**:
-   Create `.env` files in `gateway/`, `core/`, `AI recommendation/`, and `review-summary-ai/` using the provided `.env.example` templates in each folder.
+   Create `.env` files in `gateway/`, `core/`, `recommendation-ai/`, and `review-summary-ai/` using the provided `.env.example` templates in each folder.
    
 3. **Spin up the stack**:
    ```bash
    docker compose up --build
    ```
+
+### 🛠️ Automated Setup
+CineMatch is designed for ease of use. On the first run:
+- **Database Migrations**: Both User and Movie databases are automatically migrated.
+- **Object Storage**: The required S3 buckets (`cinematch-avatars` and `cinematch-posters`) are automatically created and configured in MinIO.
+- **Prisma Client**: The Prisma client is generated inside the Gateway container.
+
+> **💡 Pro Tip**: For local development and full IDE support (Autocompletion/Types), it is recommended to run `npm install` and `npx prisma generate` inside the `gateway/` folder.
 
 **Service URLs:**
 - **Frontend**: http://localhost:4200
@@ -51,6 +59,8 @@ For production, use the `docker-compose.prod.yml` configuration, which assumes e
 ```bash
 docker compose -f docker-compose.prod.yml up --build -d
 ```
+
+> **⚠️ Production Note**: Unlike the local development environment, some production S3 providers (like Cloudflare R2) may not support automatic bucket creation or programmatic policy updates. You may need to manually create your buckets and set them to "Public" in your provider's dashboard.
 
 ---
 
@@ -192,10 +202,13 @@ CineMatch is designed with a **"Security-First"** approach to protect user data 
 | `GET` | `/movies/popular/` | List popular movies | No |
 | `GET` | `/movies/now-playing/` | Movies in theaters | No |
 | `GET` | `/movies/upcoming/` | Upcoming releases | No |
-| `GET` | `/movies/top-rated/` | Top-rated movies | No |
+| GET | `/movies/top-rated/` | Top-rated movies | No |
+| `GET` | `/movies/search/` | Search movies by title | No |
+| `GET` | `/movies/recommendations/me/` | Personalized movie recommendations | Yes |
 | `GET` | `/movies/:tmdb_id/` | Movie details & reviews | No |
 | `POST` | `/movies/review/` | Submit a movie review | Yes |
-| `GET` | `/movies/ai/:id/summary/` | Get AI review summary | No |
+| `PATCH` | `/movies/review/:review_id/` | Update an existing review | Yes |
+| `GET` | `/movies/ai/:tmdb_id/summary/` | Get AI review summary | No |
 | `POST` | `/movies/ai/search` | Natural language AI search | Yes |
 | `GET` | `/health` | Gateway service health check | No |
 
@@ -207,9 +220,12 @@ CineMatch is designed with a **"Security-First"** approach to protect user data 
 | `GET` | `/api/movies/now-playing/` | Movies currently in theaters |
 | `GET` | `/api/movies/upcoming/` | Upcoming movie releases |
 | `GET` | `/api/movies/top-rated/` | Highest-rated movies of all time |
+| `GET` | `/api/movies/search/` | Search movies by title |
+| `GET` | `/api/movies/recommendations/me/` | Profile-based recommendations |
 | `GET` | `/api/movies/:tmdb_id/` | Detailed movie view with local & external reviews |
 | `POST` | `/api/movies/review/` | Submit a new user review with rating |
-| `GET` | `/api/movies/ai/:id/summary/` | Get/Generate AI summary with 24h TTL cache |
+| `PATCH` | `/api/movies/review/:review_id/` | Update an existing review |
+| `GET` | `/api/movies/ai/:tmdb_id/summary/` | Get/Generate AI summary with 24h TTL cache |
 | `POST` | `/api/movies/ai/search/` | Process natural language movie search |
 
 > **📘 API Documentation**: When the Core service is running, you can explore the full interactive API documentation at:
@@ -232,6 +248,7 @@ CineMatch is designed with a **"Security-First"** approach to protect user data 
 If you encounter issues during setup or execution, check the following:
 
 - **TMDB API Key**: Ensure your `TMDB_READ_ACCESS_TOKEN` is a valid "API Read Access Token" from your TMDB settings.
+- **LLM API Key**: Ensure the `API_KEY` in `recommendation-ai/.env` and `review-summary-ai/.env` is set correctly with your NVIDIA or OpenAI key.
 - **Database Migrations**: If services fail to start, check the logs for Prisma (`gateway`) or Alembic (`core`) errors. You can manually run migrations using:
   - Gateway: `npx prisma migrate deploy`
   - Core: `alembic upgrade head`
@@ -246,7 +263,7 @@ If you encounter issues during setup or execution, check the following:
 - `gateway/`: Node.js BFF for auth and proxying.
 - `core/`: FastAPI hub for movie logic and TMDB integration.
 - `review-summary-ai/`: Worker for aggregating and summarizing sentiment.
-- `AI recommendation/`: Worker for natural language search parsing.
+- `recommendation-ai/`: Worker for natural language search parsing.
 - `k8s/`: Kubernetes manifests for scalable deployment.
 
 ## 📄 License
