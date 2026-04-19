@@ -43,6 +43,7 @@ import {
   UserPreferenceRuntime,
 } from '../../core/models/user-preference.models';
 import { MovieService } from '../../core/services/movie.service';
+import { OnboardingService } from '../../core/services/onboarding.service';
 import { UserPreferenceService } from '../../core/services/user-preference.service';
 import { OnboardingMovieCard } from '../onboarding/movie-card.models';
 
@@ -166,6 +167,7 @@ export class PreferencesComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('selectedMoviesRail') private selectedMoviesRail?: ElementRef<HTMLDivElement>;
 
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly onboarding = inject(OnboardingService);
   private readonly preferences = inject(UserPreferenceService);
   private readonly movieService = inject(MovieService);
   private animationFrameId: number | null = null;
@@ -475,6 +477,7 @@ export class PreferencesComponent implements OnInit, AfterViewInit, OnDestroy {
       .subscribe({
         next: (profile) => {
           this.applyProfile(profile, false);
+          this.onboarding.complete();
           this.setFeedback({ type: 'success', message: 'Preferences saved' }, 3000);
         },
         error: () => {
