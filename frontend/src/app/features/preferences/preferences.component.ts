@@ -1,7 +1,31 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+  OnInit,
+  computed,
+  inject,
+  signal,
+  HostListener,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import {
+  ArrowLeft,
+  Check,
+  Droplets,
+  Image,
+  LucideAngularModule,
+  LucideIconProvider,
+  LUCIDE_ICONS,
+  MoonStar,
+  Plus,
+  Popcorn,
+  Search,
+  Sparkles,
+  X,
+  Zap,
+} from 'lucide-angular';
 import { forkJoin, of, Subscription } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 import { Movie } from '../../core/models/movie.models';
@@ -16,7 +40,6 @@ import {
 } from '../../core/models/user-preference.models';
 import { MovieService } from '../../core/services/movie.service';
 import { UserPreferenceService } from '../../core/services/user-preference.service';
-import { MovieSeedCardComponent } from '../onboarding/components/movie-seed-card/movie-seed-card.component';
 import { OnboardingMovieCard } from '../onboarding/movie-card.models';
 
 interface Option<T extends string = string> {
@@ -25,9 +48,24 @@ interface Option<T extends string = string> {
   caption?: string;
 }
 
+interface MoodOption extends Option {
+  icon: string;
+}
+
 type FeedbackState = {
   type: 'success' | 'error';
   message: string;
+};
+
+type PreferenceSnapshot = {
+  chosen_movies: number[];
+  liked_genres: UserPreferenceGenre[];
+  disliked_genres: UserPreferenceGenre[];
+  moods: string[];
+  discovery_mode: UserPreferenceDiscoveryMode;
+  languages: UserPreferenceLanguage[];
+  runtime: UserPreferenceRuntime | null;
+  eras: UserPreferenceEra[];
 };
 
 const GENRE_OPTIONS: Option<UserPreferenceGenre>[] = [
@@ -45,16 +83,17 @@ const GENRE_OPTIONS: Option<UserPreferenceGenre>[] = [
   { label: 'Action', value: 'Action' },
 ];
 
-const MOOD_OPTIONS: Option[] = [
-  { label: 'Dark & tense', value: 'Dark & tense' },
-  { label: 'Mind-bending', value: 'Mind-bending' },
-  { label: 'Emotionally heavy', value: 'Emotionally heavy' },
-  { label: 'Visually stunning', value: 'Visually stunning' },
-  { label: 'Fun & easy', value: 'Fun & easy' },
-  { label: 'Fast-paced', value: 'Fast-paced' },
+const MOOD_OPTIONS: MoodOption[] = [
+  { label: 'Dark & tense', value: 'Dark & tense', caption: 'Psychological, gritty, unsettling', icon: 'moon-star' },
+  { label: 'Mind-bending', value: 'Mind-bending', caption: 'Non-linear, twists, complex', icon: 'sparkles' },
+  { label: 'Emotionally heavy', value: 'Emotionally heavy', caption: 'Moving, tearjerker, meaningful', icon: 'droplets' },
+  { label: 'Visually stunning', value: 'Visually stunning', caption: 'Cinematography-forward, beautiful', icon: 'image' },
+  { label: 'Fun & easy', value: 'Fun & easy', caption: 'Light, entertaining, feel-good', icon: 'popcorn' },
+  { label: 'Fast-paced', value: 'Fast-paced', caption: 'Tense, action-driven, high-energy', icon: 'zap' },
 ];
 
 const DISCOVERY_OPTIONS: Option<UserPreferenceDiscoveryMode>[] = [
+  { label: 'Best mix', value: 'best mix', caption: 'Balance reliable picks with surprises.' },
   {
     label: 'Mainstream confidence',
     value: 'mainstream confident',
@@ -65,7 +104,6 @@ const DISCOVERY_OPTIONS: Option<UserPreferenceDiscoveryMode>[] = [
     value: 'hidden gems',
     caption: 'Less obvious picks with more discovery.',
   },
-  { label: 'Best mix', value: 'best mix', caption: 'Balance reliable picks with surprises.' },
 ];
 
 const LANGUAGE_OPTIONS: Option<UserPreferenceLanguage>[] = [
@@ -78,10 +116,10 @@ const LANGUAGE_OPTIONS: Option<UserPreferenceLanguage>[] = [
 ];
 
 const RUNTIME_OPTIONS: Option<UserPreferenceRuntime>[] = [
+  { label: 'No preference', value: 'No preference', caption: 'Runtime is not a factor.' },
   { label: 'Under 100 min', value: '100', caption: 'Tight and efficient.' },
   { label: '100-140 min', value: '100-140', caption: 'Balanced feature length.' },
   { label: '140+ min', value: '140+', caption: 'Epic scale is fine.' },
-  { label: 'No preference', value: 'No preference', caption: 'Runtime is not a factor.' },
 ];
 
 const ERA_OPTIONS: Option<UserPreferenceEra>[] = [
@@ -96,7 +134,26 @@ const ERA_OPTIONS: Option<UserPreferenceEra>[] = [
 @Component({
   selector: 'app-preferences',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, MovieSeedCardComponent],
+  imports: [CommonModule, FormsModule, RouterLink, LucideAngularModule],
+  providers: [
+    {
+      provide: LUCIDE_ICONS,
+      multi: true,
+      useValue: new LucideIconProvider({
+        ArrowLeft,
+        Check,
+        Droplets,
+        Image,
+        MoonStar,
+        Plus,
+        Popcorn,
+        Search,
+        Sparkles,
+        X,
+        Zap,
+      }),
+    },
+  ],
   templateUrl: './preferences.component.html',
   styleUrl: './preferences.component.css',
 })
@@ -105,6 +162,7 @@ export class PreferencesComponent implements OnInit, OnDestroy {
   private readonly movieService = inject(MovieService);
   private searchSubscription: Subscription | null = null;
   private hydrateSubscription: Subscription | null = null;
+  private feedbackTimeout: ReturnType<typeof setTimeout> | null = null;
 
   readonly genreOptions = GENRE_OPTIONS;
   readonly moodOptions = MOOD_OPTIONS;
@@ -120,15 +178,75 @@ export class PreferencesComponent implements OnInit, OnDestroy {
   readonly searchQuery = signal('');
   readonly searchResults = signal<OnboardingMovieCard[]>([]);
   readonly selectedMovies = signal<Record<number, OnboardingMovieCard>>({});
-
   readonly selectedMovieIds = signal<number[]>([]);
   readonly likedGenres = signal<UserPreferenceGenre[]>([]);
   readonly dislikedGenres = signal<UserPreferenceGenre[]>([]);
   readonly moods = signal<string[]>([]);
   readonly discoveryMode = signal<UserPreferenceDiscoveryMode>('best mix');
   readonly languages = signal<UserPreferenceLanguage[]>([]);
-  readonly runtime = signal<UserPreferenceRuntime | null>(null);
+  readonly runtime = signal<UserPreferenceRuntime>('No preference');
   readonly eras = signal<UserPreferenceEra[]>([]);
+  readonly cursorVisible = signal(false);
+  readonly cursor = signal({ x: 0, y: 0 });
+  readonly cursorRing = signal({ x: 0, y: 0 });
+  readonly initialSnapshot = signal<PreferenceSnapshot | null>(null);
+
+  readonly selectedMovieCards = computed(() =>
+    this.selectedMovieIds().map(
+      (movieId) =>
+        this.selectedMovies()[movieId] ?? {
+          id: movieId,
+          title: `Movie #${movieId}`,
+          summary: 'Saved to your taste profile.',
+          posterUrl: null,
+          year: null,
+        },
+    ),
+  );
+
+  readonly visibleSearchResults = computed(() =>
+    this.searchResults().filter((movie) => !this.selectedMovieIds().includes(movie.id)).slice(0, 5),
+  );
+
+  readonly completionPercent = computed(() => {
+    let score = 0;
+    const selectedCount = this.selectedMovieIds().length;
+
+    score += Math.min(selectedCount, 3) * 10;
+
+    if (this.likedGenres().length >= 2) score += 20;
+    if (this.dislikedGenres().length >= 1) score += 10;
+    if (this.moods().length >= 2) score += 20;
+    if (this.languages().length >= 1) score += 10;
+    if (this.eras().length >= 1) score += 10;
+
+    return Math.min(score, 100);
+  });
+
+  readonly hasUnsavedChanges = computed(() => {
+    const initial = this.initialSnapshot();
+    if (!initial) return false;
+
+    return JSON.stringify(initial) !== JSON.stringify(this.currentSnapshot());
+  });
+
+  @HostListener('document:mousemove', ['$event'])
+  onMouseMove(event: MouseEvent): void {
+    this.cursorVisible.set(true);
+    const point = { x: event.clientX, y: event.clientY };
+    this.cursor.set(point);
+
+    const currentRing = this.cursorRing();
+    this.cursorRing.set({
+      x: currentRing.x + (point.x - currentRing.x) * 0.12,
+      y: currentRing.y + (point.y - currentRing.y) * 0.12,
+    });
+  }
+
+  @HostListener('document:mouseleave')
+  onMouseLeave(): void {
+    this.cursorVisible.set(false);
+  }
 
   ngOnInit(): void {
     this.loadPreferences();
@@ -137,6 +255,9 @@ export class PreferencesComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.searchSubscription?.unsubscribe();
     this.hydrateSubscription?.unsubscribe();
+    if (this.feedbackTimeout) {
+      clearTimeout(this.feedbackTimeout);
+    }
   }
 
   loadPreferences(): void {
@@ -149,7 +270,7 @@ export class PreferencesComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (profile) => this.applyProfile(profile),
         error: () => {
-          this.feedback.set({
+          this.setFeedback({
             type: 'error',
             message: 'Unable to load your taste profile right now.',
           });
@@ -176,7 +297,7 @@ export class PreferencesComponent implements OnInit, OnDestroy {
         if (this.searchQuery().trim() !== query) {
           return;
         }
-        this.searchResults.set(movies.slice(0, 5).map((movie) => this.toMovieCard(movie)));
+        this.searchResults.set(movies.map((movie) => this.toMovieCard(movie)));
         this.isSearching.set(false);
       },
       error: () => {
@@ -189,38 +310,32 @@ export class PreferencesComponent implements OnInit, OnDestroy {
     });
   }
 
-  toggleMovie(movieId: number): void {
-    if (this.selectedMovieIds().includes(movieId)) {
-      this.removeMovie(movieId);
+  addMovie(movie: OnboardingMovieCard): void {
+    if (this.selectedMovieIds().includes(movie.id)) {
       return;
     }
 
-    const movie = this.searchResults().find((result) => result.id === movieId);
-    if (movie) {
-      this.selectedMovies.update((movies) => ({ ...movies, [movie.id]: movie }));
-    }
-    this.selectedMovieIds.update((ids) => [...ids, movieId]);
+    this.selectedMovies.update((movies) => ({ ...movies, [movie.id]: movie }));
+    this.selectedMovieIds.update((ids) => [...ids, movie.id]);
+    this.searchQuery.set('');
+    this.searchResults.set([]);
   }
 
   removeMovie(movieId: number): void {
     this.selectedMovieIds.update((ids) => ids.filter((id) => id !== movieId));
   }
 
-  isMovieSelected(movieId: number): boolean {
-    return this.selectedMovieIds().includes(movieId);
-  }
-
   toggleLikedGenre(value: UserPreferenceGenre): void {
     this.toggleArrayValue(this.likedGenres, value);
     if (this.dislikedGenres().includes(value)) {
-      this.toggleArrayValue(this.dislikedGenres, value);
+      this.dislikedGenres.update((values) => values.filter((item) => item !== value));
     }
   }
 
   toggleDislikedGenre(value: UserPreferenceGenre): void {
     this.toggleArrayValue(this.dislikedGenres, value);
     if (this.likedGenres().includes(value)) {
-      this.toggleArrayValue(this.likedGenres, value);
+      this.likedGenres.update((values) => values.filter((item) => item !== value));
     }
   }
 
@@ -260,30 +375,16 @@ export class PreferencesComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (profile) => {
           this.applyProfile(profile, false);
-          this.feedback.set({ type: 'success', message: 'Taste profile updated.' });
+          this.setFeedback({ type: 'success', message: 'Preferences saved' }, 3000);
         },
         error: () => {
-          this.feedback.set({
+          this.setFeedback({
             type: 'error',
             message: 'Unable to save your preferences. Please check the selections and try again.',
           });
         },
       });
   }
-
-  getSelectedMovieCards(): OnboardingMovieCard[] {
-    const cache = this.selectedMovies();
-    return this.selectedMovieIds().map(
-      (movieId) =>
-        cache[movieId] ?? {
-          id: movieId,
-          title: `Movie #${movieId}`,
-          summary: 'Saved to your taste profile.',
-          posterUrl: null,
-        },
-    );
-  }
-
   private applyProfile(profile: UserPreferenceProfile, hydrateMovies = true): void {
     const movieIds = profile.chosen_movies.map((movie) => movie.tmdb_id);
     this.selectedMovieIds.set(movieIds);
@@ -292,8 +393,9 @@ export class PreferencesComponent implements OnInit, OnDestroy {
     this.moods.set(profile.moods.map((mood) => mood.name));
     this.discoveryMode.set(profile.discovery_mode ?? 'best mix');
     this.languages.set(profile.languages ?? []);
-    this.runtime.set(profile.runtime ?? null);
+    this.runtime.set(profile.runtime ?? 'No preference');
     this.eras.set(profile.eras ?? []);
+    this.initialSnapshot.set(this.currentSnapshot());
 
     if (hydrateMovies) {
       this.hydrateSelectedMovies(movieIds);
@@ -321,6 +423,35 @@ export class PreferencesComponent implements OnInit, OnDestroy {
       }
       this.selectedMovies.set(cache);
     });
+  }
+
+  private currentSnapshot(): PreferenceSnapshot {
+    return {
+      chosen_movies: [...this.selectedMovieIds()],
+      liked_genres: [...this.likedGenres()],
+      disliked_genres: [...this.dislikedGenres()],
+      moods: [...this.moods()],
+      discovery_mode: this.discoveryMode(),
+      languages: [...this.languages()],
+      runtime: this.runtime(),
+      eras: [...this.eras()],
+    };
+  }
+
+  private setFeedback(feedback: FeedbackState | null, timeoutMs?: number): void {
+    if (this.feedbackTimeout) {
+      clearTimeout(this.feedbackTimeout);
+      this.feedbackTimeout = null;
+    }
+
+    this.feedback.set(feedback);
+
+    if (feedback && timeoutMs) {
+      this.feedbackTimeout = setTimeout(() => {
+        this.feedback.set(null);
+        this.feedbackTimeout = null;
+      }, timeoutMs);
+    }
   }
 
   private toUpdatePayload(): UpdateUserPreferenceRequest {

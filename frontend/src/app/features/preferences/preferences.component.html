@@ -1,236 +1,351 @@
-<main class="preferences-page">
-  <section class="preferences-hero">
-    <div>
-      <span class="eyebrow">Taste Profile</span>
-      <h1>Update what CineMatch knows about you.</h1>
-      <p>Change the movie signals, genres, moods, and defaults that shape your recommendations.</p>
-    </div>
-
-    <div class="hero-actions">
-      <a routerLink="/movies" class="btn-secondary">
-        <span class="material-symbols-outlined">arrow_back</span>
-        Back to movies
-      </a>
-      <button type="button" class="btn-primary" [disabled]="isSaving()" (click)="savePreferences()">
-        @if (isSaving()) {
-          Saving...
-        } @else {
-          Save preferences
-        }
-      </button>
-    </div>
-  </section>
+<div class="preferences-shell">
+  @if (cursorVisible()) {
+    <div class="cursor" [style.left.px]="cursor().x" [style.top.px]="cursor().y"></div>
+    <div
+      class="cursor-ring"
+      [style.left.px]="cursorRing().x"
+      [style.top.px]="cursorRing().y"
+    ></div>
+  }
 
   @if (feedback()) {
-    <div class="status-banner" [class.error]="feedback()!.type === 'error'">
+    <div class="toast show" [class.error]="feedback()!.type === 'error'">
+      <lucide-icon [name]="feedback()!.type === 'error' ? 'x' : 'check'" [size]="14"></lucide-icon>
       {{ feedback()!.message }}
     </div>
   }
 
   @if (isLoading()) {
-    <section class="preferences-card loading-card">
-      <span class="loader"></span>
-      <p>Loading your taste profile...</p>
-    </section>
+    <main class="loading-state">
+      <div class="loading-card">
+        <span class="loader"></span>
+        <p>Loading your taste profile...</p>
+      </div>
+    </main>
   } @else {
-    <section class="preferences-grid">
-      <article class="preferences-card preferences-card--wide">
-        <div class="card-header">
-          <div>
-            <span class="section-tag">Movies</span>
-            <h2>Your chosen movies</h2>
-            <p>
-              Add or remove movies that best represent your taste. These are the strongest signals.
-            </p>
-          </div>
-          <strong class="count-pill">{{ selectedMovieIds().length }} selected</strong>
+    <div class="page">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-eyebrow">Taste Profile</div>
+          <h2 class="sidebar-headline">What<br />CineMatch<br />knows about <em>you.</em></h2>
+          <p class="sidebar-sub">Keep this sharp and your recommendations stay personal.</p>
         </div>
 
-        <label class="search-field">
-          <span>Search movies</span>
-          <input
-            type="text"
-            [ngModel]="searchQuery()"
-            (ngModelChange)="setMovieSearch($event)"
-            placeholder="Search TMDB for more favorites..."
-          />
-        </label>
+        <div class="completion-block">
+          <div class="comp-header">
+            <span class="comp-label">Profile strength</span>
+            <span class="comp-pct">{{ completionPercent() }}%</span>
+          </div>
+          <div class="comp-bar-wrap">
+            <div class="comp-bar" [style.width.%]="completionPercent()"></div>
+          </div>
+          <div class="comp-hint">Add more movies and moods to sharpen your feed.</div>
+          <br />
+          <button class="save-btn" type="button" [disabled]="isSaving()" (click)="savePreferences()">
+            <lucide-icon name="check" [size]="14"></lucide-icon>
+            @if (isSaving()) {
+              Saving...
+            } @else {
+              Save preferences
+            }
+          </button>
+        </div>
+      </aside>
 
-        @if (isSearching()) {
-          <p class="field-help">Searching TMDB...</p>
-        }
+      <main class="main-content">
+        <div class="top-bar">
+          <a routerLink="/movies" class="back-link">
+            <lucide-icon name="arrow-left" [size]="13"></lucide-icon>
+            Back to movies
+          </a>
+          <div class="top-actions">
+            @if (hasUnsavedChanges()) {
+              <span class="unsaved-indicator">
+                <span class="unsaved-dot"></span>
+                Unsaved changes
+              </span>
+            }
+            <button
+              class="top-save-btn"
+              type="button"
+              [disabled]="isSaving()"
+              (click)="savePreferences()"
+            >
+              @if (isSaving()) {
+                Saving...
+              } @else {
+                Save preferences
+              }
+            </button>
+          </div>
+        </div>
 
-        @if (getSelectedMovieCards().length > 0) {
-          <div class="selected-movies">
-            <div class="selected-movies__header">
-              <span>Saved movies</span>
-              <strong>Click × to remove</strong>
+        <section class="pref-section" id="sec-movies">
+          <div class="ps-header">
+            <div class="ps-header-left">
+              <div class="ps-eyebrow">Movies</div>
+              <h3 class="ps-title">Your chosen <em>films.</em></h3>
+              <p class="ps-sub">
+                These are your strongest taste signals. Add or remove titles to adjust what
+                CineMatch learns from you.
+              </p>
             </div>
-            <div class="selected-movies__list">
-              @for (movie of getSelectedMovieCards(); track movie.id) {
-                <button
-                  type="button"
-                  class="selected-movie-chip"
-                  (click)="removeMovie(movie.id)"
-                  [attr.aria-label]="'Remove ' + movie.title + ' from preferences'"
-                >
-                  <strong>{{ movie.title }}</strong>
-                  <span aria-hidden="true">×</span>
+            <div class="ps-badge" [class.has-val]="selectedMovieIds().length > 0">
+              {{ selectedMovieIds().length }} selected
+            </div>
+          </div>
+
+          <div class="movies-search-wrap">
+            <lucide-icon class="search-ico" name="search" [size]="14"></lucide-icon>
+            <input
+              #movieSearchInput
+              type="text"
+              [ngModel]="searchQuery()"
+              (ngModelChange)="setMovieSearch($event)"
+              placeholder="Search TMDB for more favorites..."
+            />
+          </div>
+
+          @if (isSearching()) {
+            <div class="suggestions-state">Searching TMDB...</div>
+          } @else if (visibleSearchResults().length > 0) {
+            <div class="suggestions">
+              @for (movie of visibleSearchResults(); track movie.id) {
+                <button class="suggestion-row" type="button" (click)="addMovie(movie)">
+                  <span class="suggestion-main">
+                    <span class="suggestion-poster">
+                      @if (movie.posterUrl) {
+                        <img [src]="movie.posterUrl" [alt]="movie.title + ' poster'" loading="lazy" />
+                      } @else {
+                        <span class="suggestion-poster-fallback">{{ movie.title.charAt(0) }}</span>
+                      }
+                    </span>
+                    <span class="suggestion-copy">
+                      <span class="suggestion-title">{{ movie.title }}</span>
+                      <span class="suggestion-meta">
+                        {{ movie.year ?? 'New' }}
+                        @if (movie.metadata) {
+                          <span class="suggestion-dot">•</span>
+                          {{ movie.metadata }}
+                        }
+                      </span>
+                    </span>
+                  </span>
                 </button>
               }
             </div>
-          </div>
-        }
+          }
 
-        @if (searchResults().length > 0) {
-          <div class="movie-result-grid">
-            @for (movie of searchResults(); track movie.id) {
-              <app-movie-seed-card
-                [movie]="movie"
-                [selected]="isMovieSelected(movie.id)"
-                [posterLoading]="isSearching()"
-                (toggled)="toggleMovie($event)"
-              />
+          <div class="movie-chips-wrap">
+            @for (movie of selectedMovieCards(); track movie.id) {
+              <div class="movie-chip">
+                <span>{{ movie.title }}</span>
+                @if (movie.year) {
+                  <span class="movie-chip-year">{{ movie.year }}</span>
+                }
+                <button
+                  class="remove-btn"
+                  type="button"
+                  (click)="removeMovie(movie.id)"
+                  [attr.aria-label]="'Remove ' + movie.title"
+                >
+                  <lucide-icon name="x" [size]="11"></lucide-icon>
+                </button>
+              </div>
+            }
+
+            <button class="add-movie-btn" type="button" (click)="movieSearchInput.focus()">
+              <lucide-icon name="plus" [size]="12"></lucide-icon>
+              Add a movie
+            </button>
+          </div>
+        </section>
+
+        <section class="pref-section" id="sec-genres">
+          <div class="ps-header">
+            <div class="ps-header-left">
+              <div class="ps-eyebrow">Genres</div>
+              <h3 class="ps-title">Shape the <em>signal.</em></h3>
+              <p class="ps-sub">
+                Prioritize genres to lean into, and dial down the ones you usually skip, both are
+                soft signals, not hard filters.
+              </p>
+            </div>
+          </div>
+
+          <div class="genre-grid">
+            <div class="genre-col">
+              <div class="genre-col-header">
+                <span class="genre-col-title">Prioritize</span>
+                <span class="genre-col-hint">— lean toward these</span>
+              </div>
+              <div class="genre-tags">
+                @for (genre of genreOptions; track genre.value) {
+                  <button
+                    type="button"
+                    class="gtag"
+                    [class.pri]="likedGenres().includes(genre.value)"
+                    (click)="toggleLikedGenre(genre.value)"
+                  >
+                    {{ genre.label }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="divider-line"></div>
+
+            <div class="genre-col">
+              <div class="genre-col-header">
+                <span class="genre-col-title danger">Dial down</span>
+                <span class="genre-col-hint">— usually skip these</span>
+              </div>
+              <div class="genre-tags">
+                @for (genre of genreOptions; track genre.value) {
+                  <button
+                    type="button"
+                    class="gtag"
+                    [class.avo]="dislikedGenres().includes(genre.value)"
+                    (click)="toggleDislikedGenre(genre.value)"
+                  >
+                    {{ genre.label }}
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="pref-section" id="sec-mood">
+          <div class="ps-header">
+            <div class="ps-header-left">
+              <div class="ps-eyebrow">Mood</div>
+              <h3 class="ps-title">Movie-night <em>feel.</em></h3>
+              <p class="ps-sub">
+                Select the moods that describe what you usually want to watch. Shapes the tone of
+                your recommendations.
+              </p>
+            </div>
+            <div class="ps-badge" [class.has-val]="moods().length > 0">{{ moods().length }} selected</div>
+          </div>
+
+          <div class="mood-grid">
+            @for (mood of moodOptions; track mood.value) {
+              <button
+                type="button"
+                class="mood-card"
+                [class.active]="moods().includes(mood.value)"
+                (click)="toggleMood(mood.value)"
+              >
+                <lucide-icon class="mood-icon" [name]="mood.icon" [size]="22"></lucide-icon>
+                <div class="mood-name">{{ mood.label }}</div>
+                <div class="mood-sub">{{ mood.caption }}</div>
+              </button>
             }
           </div>
-        }
-      </article>
+        </section>
 
-      <article class="preferences-card">
-        <div class="card-header">
-          <div>
-            <span class="section-tag">Genres</span>
-            <h2>Prioritize</h2>
-            <p>Choose genres you want CineMatch to lean toward.</p>
-          </div>
-        </div>
-
-        <div class="option-grid option-grid--pills">
-          @for (genre of genreOptions; track genre.value) {
-            <button
-              type="button"
-              class="option-pill"
-              [class.is-selected]="likedGenres().includes(genre.value)"
-              (click)="toggleLikedGenre(genre.value)"
-            >
-              {{ genre.label }}
-            </button>
-          }
-        </div>
-      </article>
-
-      <article class="preferences-card">
-        <div class="card-header">
-          <div>
-            <span class="section-tag">Avoid</span>
-            <h2>Dial down</h2>
-            <p>Mark genres you usually skip. This is a soft negative signal.</p>
-          </div>
-        </div>
-
-        <div class="option-grid option-grid--pills">
-          @for (genre of genreOptions; track genre.value) {
-            <button
-              type="button"
-              class="option-pill option-pill--negative"
-              [class.is-selected]="dislikedGenres().includes(genre.value)"
-              (click)="toggleDislikedGenre(genre.value)"
-            >
-              {{ genre.label }}
-            </button>
-          }
-        </div>
-      </article>
-
-      <article class="preferences-card preferences-card--wide">
-        <div class="card-header">
-          <div>
-            <span class="section-tag">Mood</span>
-            <h2>Movie-night feel</h2>
-            <p>Select the moods that describe what you usually want to watch.</p>
-          </div>
-        </div>
-
-        <div class="option-grid option-grid--cards">
-          @for (mood of moodOptions; track mood.value) {
-            <button
-              type="button"
-              class="choice-card"
-              [class.is-selected]="moods().includes(mood.value)"
-              (click)="toggleMood(mood.value)"
-            >
-              <strong>{{ mood.label }}</strong>
-            </button>
-          }
-        </div>
-      </article>
-
-      <article class="preferences-card preferences-card--wide">
-        <div class="card-header">
-          <div>
-            <span class="section-tag">Defaults</span>
-            <h2>Recommendation defaults</h2>
-            <p>Set soft defaults for discovery style, language, runtime, and era.</p>
-          </div>
-        </div>
-
-        <div class="defaults-grid">
-          <label class="field">
-            <span class="field-label">Discovery mode</span>
-            <select
-              class="field-input"
-              [ngModel]="discoveryMode()"
-              (ngModelChange)="discoveryMode.set($event)"
-            >
-              @for (option of discoveryOptions; track option.value) {
-                <option [ngValue]="option.value">{{ option.label }}</option>
-              }
-            </select>
-          </label>
-
-          <div class="field field--wide">
-            <span class="field-label">Languages</span>
-            <div class="option-grid option-grid--compact">
-              @for (option of languageOptions; track option.value) {
-                <button
-                  type="button"
-                  class="option-pill"
-                  [class.is-selected]="languages().includes(option.value)"
-                  (click)="toggleLanguage(option.value)"
-                >
-                  {{ option.label }}
-                </button>
-              }
+        <section class="pref-section" id="sec-defaults">
+          <div class="ps-header">
+            <div class="ps-header-left">
+              <div class="ps-eyebrow">Defaults</div>
+              <h3 class="ps-title">Recommendation <em>defaults.</em></h3>
+              <p class="ps-sub">
+                Set soft defaults for discovery style, language, runtime, and era. These can
+                always be overridden per-session.
+              </p>
             </div>
           </div>
 
-          <label class="field">
-            <span class="field-label">Runtime</span>
-            <select class="field-input" [ngModel]="runtime()" (ngModelChange)="runtime.set($event)">
-              <option [ngValue]="null">No preference</option>
-              @for (option of runtimeOptions; track option.value) {
-                <option [ngValue]="option.value">{{ option.label }}</option>
-              }
-            </select>
-          </label>
+          <div class="defaults-panel">
+            <div class="defaults-stack">
+              <section class="default-block priority-block">
+                <div class="default-copy">
+                  <span class="default-label">Required</span>
+                  <h3>Discovery style</h3>
+                  <p>Controls how safe or adventurous your first recommendations feel.</p>
+                </div>
+                <div class="choice-grid three-up">
+                  @for (option of discoveryOptions; track option.value) {
+                    <button
+                      type="button"
+                      class="choice-card compact-card"
+                      [class.active]="discoveryMode() === option.value"
+                      (click)="discoveryMode.set(option.value)"
+                    >
+                      <strong>{{ option.label }}</strong>
+                      <span>{{ option.caption }}</span>
+                    </button>
+                  }
+                </div>
+              </section>
 
-          <div class="field field--wide">
-            <span class="field-label">Eras</span>
-            <div class="option-grid option-grid--compact">
-              @for (option of eraOptions; track option.value) {
-                <button
-                  type="button"
-                  class="option-pill"
-                  [class.is-selected]="eras().includes(option.value)"
-                  (click)="toggleEra(option.value)"
-                >
-                  {{ option.label }}
-                </button>
-              }
+              <section class="default-block">
+                <div class="default-copy">
+                  <span class="default-label">Optional</span>
+                  <h3>Language comfort</h3>
+                  <p>Pick languages you are happy to watch.</p>
+                </div>
+                <div class="choice-grid compact">
+                  @for (option of languageOptions; track option.value) {
+                    <button
+                      type="button"
+                      class="chip choice-chip"
+                      [class.active]="languages().includes(option.value)"
+                      (click)="toggleLanguage(option.value)"
+                    >
+                      {{ option.label }}
+                    </button>
+                  }
+                </div>
+              </section>
+
+              <section class="default-block">
+                <div class="default-copy">
+                  <span class="default-label">Optional</span>
+                  <h3>Movie length</h3>
+                  <p>Tell CineMatch if runtime matters tonight.</p>
+                </div>
+                <div class="choice-grid two-up">
+                  @for (option of runtimeOptions; track option.value) {
+                    <button
+                      type="button"
+                      class="choice-card compact-card"
+                      [class.active]="runtime() === option.value"
+                      (click)="runtime.set(option.value)"
+                    >
+                      <strong>{{ option.label }}</strong>
+                      <span>{{ option.caption }}</span>
+                    </button>
+                  }
+                </div>
+              </section>
+
+              <section class="default-block">
+                <div class="default-copy">
+                  <span class="default-label">Optional</span>
+                  <h3>Eras</h3>
+                  <p>Nudge recommendations toward the decades you prefer.</p>
+                </div>
+                <div class="choice-grid compact">
+                  @for (option of eraOptions; track option.value) {
+                    <button
+                      type="button"
+                      class="chip choice-chip"
+                      [class.active]="eras().includes(option.value)"
+                      (click)="toggleEra(option.value)"
+                    >
+                      {{ option.label }}
+                    </button>
+                  }
+                </div>
+              </section>
             </div>
           </div>
-        </div>
-      </article>
-    </section>
+        </section>
+
+        <div class="page-spacer"></div>
+      </main>
+    </div>
   }
-</main>
+</div>
