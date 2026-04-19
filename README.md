@@ -187,30 +187,30 @@ CineMatch is designed with a **"Security-First"** approach to protect user data 
 
 ## 🛠️ Technical Reference
 
-### Core API Endpoints
+### API Endpoints
 **Gateway (BFF)**
 | Method | Endpoint | Description | Auth |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/auth/register` | User registration | No |
-| `POST` | `/auth/login` | JWT authentication | No |
-| `PATCH` | `/auth/me` | Update user profile | Yes |
-| `DELETE` | `/auth/me` | Delete user account | Yes |
-| `POST` | `/auth/change-password` | Change user password | Yes |
-| `GET` | `/auth/me/avatar/upload-url` | Presigned S3 URL for avatars | Yes |
-| `POST` | `/auth/me/avatar/confirm` | Confirm avatar upload completion | Yes |
-| `GET` | `/movies/dashboard/` | Aggregated view of trending movies | No |
-| `GET` | `/movies/popular/` | List popular movies | No |
-| `GET` | `/movies/now-playing/` | Movies in theaters | No |
-| `GET` | `/movies/upcoming/` | Upcoming releases | No |
-| GET | `/movies/top-rated/` | Top-rated movies | No |
-| `GET` | `/movies/search/` | Search movies by title | No |
-| `GET` | `/movies/recommendations/me/` | Personalized movie recommendations | Yes |
-| `GET` | `/movies/:tmdb_id/` | Movie details & reviews | No |
-| `POST` | `/movies/review/` | Submit a movie review | Yes |
-| `PATCH` | `/movies/review/:review_id/` | Update an existing review | Yes |
-| `GET` | `/movies/ai/:tmdb_id/summary/` | Get AI review summary | No |
-| `POST` | `/movies/ai/search` | Natural language AI search | Yes |
-| `GET` | `/health` | Gateway service health check | No |
+| `POST` | `/api/auth/register` | User registration | No |
+| `POST` | `/api/auth/login` | JWT authentication | No |
+| `PATCH` | `/api/auth/me` | Update user profile | Yes |
+| `DELETE` | `/api/auth/me` | Delete user account | Yes |
+| `POST` | `/api/auth/change-password` | Change user password | Yes |
+| `GET` | `/api/auth/me/avatar/upload-url` | Presigned S3 URL for avatars | Yes |
+| `POST` | `/api/auth/me/avatar/confirm` | Confirm avatar upload completion | Yes |
+| `GET` | `/api/movies/dashboard/` | Aggregated view of trending movies | No |
+| `GET` | `/api/movies/popular/` | List popular movies | No |
+| `GET` | `/api/movies/now-playing/` | Movies in theaters | No |
+| `GET` | `/api/movies/upcoming/` | Upcoming releases | No |
+| `GET` | `/api/movies/top-rated/` | Top-rated movies | No |
+| `GET` | `/api/movies/search/` | Search movies by title | No |
+| `GET` | `/api/movies/recommendations/me/` | Personalized movie recommendations | Yes |
+| `GET` | `/api/movies/:tmdb_id/` | Movie details & reviews | No |
+| `POST` | `/api/movies/review/` | Submit a movie review | Yes |
+| `PATCH` | `/api/movies/review/:review_id/` | Update an existing review | Yes |
+| `GET` | `/api/movies/ai/:tmdb_id/summary/` | Get AI review summary | No |
+| `POST` | `/api/movies/ai/search` | Natural language AI search | Yes |
+| `GET` | `/api/health` | Gateway service health check | No |
 
 **Core Service (FastAPI)**
 | Method | Endpoint | Description |
