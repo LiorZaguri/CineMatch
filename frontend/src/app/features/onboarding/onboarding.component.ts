@@ -3,6 +3,7 @@ import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { DiscoveryMode } from '../../core/models/onboarding.models';
 import { Movie } from '../../core/models/movie.models';
 import {
@@ -13,6 +14,7 @@ import {
   UserPreferenceLanguage,
   UserPreferenceRuntime,
 } from '../../core/models/user-preference.models';
+import { AuthService } from '../../core/services/auth.service';
 import { MovieService } from '../../core/services/movie.service';
 import { OnboardingService } from '../../core/services/onboarding.service';
 import { UserPreferenceService } from '../../core/services/user-preference.service';
@@ -193,6 +195,7 @@ const ERA_TO_API: Record<string, UserPreferenceEra> = {
 export class OnboardingComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly movieService = inject(MovieService);
+  private readonly auth = inject(AuthService);
   protected readonly onboarding = inject(OnboardingService);
   private readonly userPreferences = inject(UserPreferenceService);
   private catalogSubscription: Subscription | null = null;
@@ -538,21 +541,24 @@ export class OnboardingComponent implements OnInit, OnDestroy {
     this.isSavingPreferences.set(true);
     this.saveError.set(null);
 
-    this.userPreferences.updatePreferences(this.toUserPreferencePayload()).subscribe({
-      next: () => {
-        if (status === 'completed') {
-          this.onboarding.complete();
-        } else {
-          this.onboarding.skip();
-        }
-        this.isSavingPreferences.set(false);
-        this.router.navigate(['/movies']);
-      },
-      error: () => {
-        this.isSavingPreferences.set(false);
-        this.saveError.set('Unable to save your preferences. Please try again.');
-      },
-    });
+    this.userPreferences
+      .updatePreferences(this.toUserPreferencePayload())
+      .pipe(switchMap(() => this.auth.updateOnboardingStatus(status)))
+      .subscribe({
+        next: () => {
+          if (status === 'completed') {
+            this.onboarding.complete();
+          } else {
+            this.onboarding.skip();
+          }
+          this.isSavingPreferences.set(false);
+          this.router.navigate(['/movies']);
+        },
+        error: () => {
+          this.isSavingPreferences.set(false);
+          this.saveError.set('Unable to save your preferences. Please try again.');
+        },
+      });
   }
 
   private toUserPreferencePayload(): UpdateUserPreferenceRequest {

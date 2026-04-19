@@ -127,6 +127,7 @@ exports.Prisma.UserScalarFieldEnum = {
   displayName: 'displayName',
   passwordHash: 'passwordHash',
   avatarUrl: 'avatarUrl',
+  onboardingStatus: 'onboardingStatus',
   createdAt: 'createdAt'
 };
 

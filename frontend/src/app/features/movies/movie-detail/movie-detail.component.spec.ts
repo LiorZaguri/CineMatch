@@ -92,6 +92,7 @@ describe('MovieDetailComponent', () => {
         email: 'user@example.com',
         displayName: 'Test User',
         avatarUrl: 'https://cdn.example.com/avatar.jpg',
+        onboardingStatus: 'completed' as const,
       }).asReadonly(),
     };
     const mockUserPreferenceService = {

@@ -44,6 +44,31 @@ describe("Authenticated auth settings flows", () => {
     expect(res.body.user).toMatchObject({
       email: user.email,
       displayName: "Updated Settings User",
+      onboardingStatus: "pending",
+    });
+  });
+
+  it("should update the onboarding status for the current user", async () => {
+    const user = await registerUser();
+
+    const res = await request(app)
+      .patch("/CineMatch/auth/me/onboarding-status")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({ onboardingStatus: "skipped" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user).toMatchObject({
+      email: user.email,
+      onboardingStatus: "skipped",
+    });
+
+    const loginRes = await request(app)
+      .post("/CineMatch/auth/login")
+      .send({ email: user.email, password: user.password });
+
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body.user).toMatchObject({
+      onboardingStatus: "skipped",
     });
   });
 

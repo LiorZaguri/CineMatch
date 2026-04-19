@@ -11,17 +11,21 @@ export class AuthError extends Error {
       | "EMAIL_ALREADY_EXISTS"
       | "INVALID_CREDENTIALS"
       | "USER_NOT_FOUND"
-      | "INVALID_PASSWORD",
+      | "INVALID_PASSWORD"
+      | "INVALID_ONBOARDING_STATUS",
   ) {
     super(code);
   }
 }
+
+export type OnboardingStatus = "pending" | "completed" | "skipped";
 
 type SafeUser = {
   id: string;
   email: string;
   displayName: string;
   avatarUrl: string | null;
+  onboardingStatus: OnboardingStatus;
 };
 
 type AuthResponse = {
@@ -34,6 +38,7 @@ const safeUserSelect = {
   email: true,
   displayName: true,
   avatarUrl: true,
+  onboardingStatus: true,
 } as const;
 
 function getJwtSignOptions(): SignOptions {
@@ -44,6 +49,22 @@ function getJwtSignOptions(): SignOptions {
 
 function signAccessToken(user: SafeUser): string {
   return jwt.sign({ sub: user.id, email: user.email }, env.JWT_SECRET, getJwtSignOptions());
+}
+
+function toSafeUser(user: {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl: string | null;
+  onboardingStatus: string;
+}): SafeUser {
+  return {
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName,
+    avatarUrl: user.avatarUrl,
+    onboardingStatus: user.onboardingStatus as OnboardingStatus,
+  };
 }
 
 export async function registerUser(
@@ -59,7 +80,8 @@ export async function registerUser(
       select: safeUserSelect,
     });
 
-    return { accessToken: signAccessToken(user), user };
+    const safeUser = toSafeUser(user);
+    return { accessToken: signAccessToken(safeUser), user: safeUser };
   } catch (err: any) {
     if (err?.code === "P2002") {
       throw new AuthError("EMAIL_ALREADY_EXISTS");
@@ -92,22 +114,40 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
 
   return {
     accessToken,
-    user: {
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      avatarUrl: user.avatarUrl,
-    },
+    user: toSafeUser(user),
   };
 }
 
 export async function updateUserProfile(userId: string, displayName: string): Promise<SafeUser> {
   try {
-    return await prisma.user.update({
+    return toSafeUser(await prisma.user.update({
       where: { id: userId },
       data: { displayName },
       select: safeUserSelect,
-    });
+    }));
+  } catch (err: any) {
+    if (err?.code === "P2025") {
+      throw new AuthError("USER_NOT_FOUND");
+    }
+
+    throw err;
+  }
+}
+
+export async function updateUserOnboardingStatus(
+  userId: string,
+  onboardingStatus: OnboardingStatus,
+): Promise<SafeUser> {
+  if (!["pending", "completed", "skipped"].includes(onboardingStatus)) {
+    throw new AuthError("INVALID_ONBOARDING_STATUS");
+  }
+
+  try {
+    return toSafeUser(await prisma.user.update({
+      where: { id: userId },
+      data: { onboardingStatus },
+      select: safeUserSelect,
+    }));
   } catch (err: any) {
     if (err?.code === "P2025") {
       throw new AuthError("USER_NOT_FOUND");
@@ -166,11 +206,11 @@ export async function deleteUserAccount(userId: string, password: string): Promi
 
 export async function updateUserAvatar(userId: string, avatarUrl: string): Promise<SafeUser> {
   try {
-    return await prisma.user.update({
+    return toSafeUser(await prisma.user.update({
       where: { id: userId },
       data: { avatarUrl },
       select: safeUserSelect,
-    });
+    }));
   } catch (err: any) {
     if (err?.code === "P2025") {
       throw new AuthError("USER_NOT_FOUND");
@@ -186,7 +226,7 @@ export async function getUsersByIds(userIds: string[]): Promise<SafeUser[]> {
     return [];
   }
 
-  return prisma.user.findMany({
+  const users = await prisma.user.findMany({
     where: {
       id: {
         in: uniqueIds,
@@ -194,4 +234,6 @@ export async function getUsersByIds(userIds: string[]): Promise<SafeUser[]> {
     },
     select: safeUserSelect,
   });
+
+  return users.map(toSafeUser);
 }

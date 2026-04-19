@@ -6,7 +6,6 @@ import { signal } from '@angular/core';
 import { LoginComponent } from './login.component';
 import { AuthService } from '../../../core/services/auth.service';
 import { provideHttpClient } from '@angular/common/http';
-import { OnboardingService } from '../../../core/services/onboarding.service';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -35,10 +34,6 @@ describe('LoginComponent', () => {
         provideHttpClient(),
         provideRouter([]),
         { provide: AuthService, useValue: createAuthServiceMock() },
-        {
-          provide: OnboardingService,
-          useValue: { refreshForCurrentUser: () => ({ status: 'complete' }) },
-        },
       ],
     }).compileComponents();
 

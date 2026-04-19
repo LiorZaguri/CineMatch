@@ -34,6 +34,7 @@ describe("POST /CineMatch/auth/login", () => {
     expect(res.body.user).toMatchObject({
       email,
       displayName,
+      onboardingStatus: "pending",
     });
     expect(res.body.user).toHaveProperty("id");
   });

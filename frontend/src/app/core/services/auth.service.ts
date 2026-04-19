@@ -5,12 +5,14 @@ import { tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import type {
   AuthResponse,
+  AuthOnboardingStatus,
   AuthUser,
   AvatarUploadResponse,
   ChangePasswordRequest,
   DeleteAccountRequest,
   LoginRequest,
   RegisterRequest,
+  UpdateOnboardingStatusRequest,
   UpdateProfileRequest,
   UpdateProfileResponse,
 } from '../models/auth.models';
@@ -60,6 +62,13 @@ export class AuthService {
   updateProfile(req: UpdateProfileRequest) {
     return this.http
       .patch<UpdateProfileResponse>(`${API_BASE}/me`, req)
+      .pipe(tap((res) => this.persistUser(this.toAuthUser(res.user))));
+  }
+
+  updateOnboardingStatus(onboardingStatus: AuthOnboardingStatus) {
+    const req: UpdateOnboardingStatusRequest = { onboardingStatus };
+    return this.http
+      .patch<UpdateProfileResponse>(`${API_BASE}/me/onboarding-status`, req)
       .pipe(tap((res) => this.persistUser(this.toAuthUser(res.user))));
   }
 
@@ -113,7 +122,22 @@ export class AuthService {
   private loadUser(): AuthUser | null {
     try {
       const raw = localStorage.getItem('cm_user');
-      return raw ? JSON.parse(raw) : null;
+      if (!raw) {
+        return null;
+      }
+
+      const parsed = JSON.parse(raw) as Partial<AuthUser>;
+      if (!parsed.id || !parsed.email || !parsed.displayName) {
+        return null;
+      }
+
+      return {
+        id: parsed.id,
+        email: parsed.email,
+        displayName: parsed.displayName,
+        avatarUrl: parsed.avatarUrl ?? null,
+        onboardingStatus: parsed.onboardingStatus ?? 'pending',
+      };
     } catch {
       return null;
     }
@@ -169,6 +193,7 @@ export class AuthService {
       email: user.email,
       displayName: user.displayName,
       avatarUrl: user.avatarUrl ?? null,
+      onboardingStatus: user.onboardingStatus,
     };
   }
 

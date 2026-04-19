@@ -1,6 +1,15 @@
 import { Request, Response, NextFunction} from "express";
 import { AuthenticatedRequest } from "../types/authRequest";
-import {AuthError,changeUserPassword,deleteUserAccount,loginUser,registerUser,updateUserProfile,updateUserAvatar,} from "../services/authService";
+import {
+  AuthError,
+  changeUserPassword,
+  deleteUserAccount,
+  loginUser,
+  registerUser,
+  updateUserOnboardingStatus,
+  updateUserProfile,
+  updateUserAvatar,
+} from "../services/authService";
 import { initializeCorePreferences } from "./userPreferenceController";
 import {buildPublicFileUrl,createAvatarUploadUrl,validateAvatarContentType,} from "../services/S3Service";
 
@@ -18,6 +27,10 @@ function isValidPassword(password: string) {
 
 function isValidDisplayName(displayName: string) {
   return typeof displayName === "string" && displayName.trim().length >= 2 && displayName.trim().length <= 80;
+}
+
+function isValidOnboardingStatus(status: string) {
+  return status === "pending" || status === "completed" || status === "skipped";
 }
 
 function getAuthenticatedUserId(req: AuthenticatedRequest, res: Response): string | null {
@@ -100,6 +113,38 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
 
   try {
     const user = await updateUserProfile(userId, displayName.trim());
+    return res.status(200).json({ user });
+  } catch (err: any) {
+    if (err instanceof AuthError && err.code === "USER_NOT_FOUND") {
+      return res.status(404).json({ error: "USER_NOT_FOUND", message: "User not found" });
+    }
+
+    console.error("AUTH 500 ERROR:", err);
+
+    return res.status(500).json({
+      error: "INTERNAL_SERVER_ERROR",
+      message: "Internal server error",
+    });
+  }
+}
+
+export async function updateOnboardingStatus(req: AuthenticatedRequest, res: Response) {
+  const userId = getAuthenticatedUserId(req, res);
+  if (!userId) {
+    return;
+  }
+
+  const { onboardingStatus } = req.body ?? {};
+
+  if (typeof onboardingStatus !== "string" || !isValidOnboardingStatus(onboardingStatus)) {
+    return res.status(400).json({
+      error: "INVALID_INPUT",
+      message: "Invalid onboardingStatus",
+    });
+  }
+
+  try {
+    const user = await updateUserOnboardingStatus(userId, onboardingStatus);
     return res.status(200).json({ user });
   } catch (err: any) {
     if (err instanceof AuthError && err.code === "USER_NOT_FOUND") {
@@ -255,6 +300,5 @@ export async function confirmAvatarUpload(req: AuthenticatedRequest, res: Respon
     });
   }
 }
-
 
 

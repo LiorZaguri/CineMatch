@@ -2,6 +2,8 @@
 // These represent the exact shapes sent/received over the wire.
 // Components should never use these directly — use AuthUser instead.
 
+export type AuthOnboardingStatus = 'pending' | 'completed' | 'skipped';
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -23,6 +25,10 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
+export interface UpdateOnboardingStatusRequest {
+  onboardingStatus: AuthOnboardingStatus;
+}
+
 export interface DeleteAccountRequest {
   password: string;
 }
@@ -35,6 +41,7 @@ export interface AuthResponse {
     email: string;
     displayName: string;
     avatarUrl?: string | null;
+    onboardingStatus: AuthOnboardingStatus;
   };
 }
 
@@ -44,6 +51,7 @@ export interface UpdateProfileResponse {
     email: string;
     displayName: string;
     avatarUrl?: string | null;
+    onboardingStatus: AuthOnboardingStatus;
   };
 }
 
@@ -55,6 +63,7 @@ export interface AuthUser {
   email: string;
   displayName: string;
   avatarUrl?: string | null;
+  onboardingStatus: AuthOnboardingStatus;
 }
 
 export interface AvatarUploadResponse {

@@ -31,7 +31,7 @@ import {
   Zap,
 } from 'lucide-angular';
 import { forkJoin, of, Subscription } from 'rxjs';
-import { catchError, finalize } from 'rxjs/operators';
+import { catchError, finalize, map, switchMap } from 'rxjs/operators';
 import { Movie } from '../../core/models/movie.models';
 import {
   UpdateUserPreferenceRequest,
@@ -42,6 +42,7 @@ import {
   UserPreferenceProfile,
   UserPreferenceRuntime,
 } from '../../core/models/user-preference.models';
+import { AuthService } from '../../core/services/auth.service';
 import { MovieService } from '../../core/services/movie.service';
 import { OnboardingService } from '../../core/services/onboarding.service';
 import { UserPreferenceService } from '../../core/services/user-preference.service';
@@ -197,6 +198,7 @@ export class PreferencesComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('selectedMoviesRail') private selectedMoviesRail?: ElementRef<HTMLDivElement>;
 
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly auth = inject(AuthService);
   private readonly onboarding = inject(OnboardingService);
   private readonly preferences = inject(UserPreferenceService);
   private readonly movieService = inject(MovieService);
@@ -505,6 +507,11 @@ export class PreferencesComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.preferences
       .updatePreferences(this.toUpdatePayload())
+      .pipe(
+        switchMap((profile) =>
+          this.auth.updateOnboardingStatus('completed').pipe(map(() => profile)),
+        ),
+      )
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
         next: (profile) => {

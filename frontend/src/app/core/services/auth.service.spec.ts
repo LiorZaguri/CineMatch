@@ -50,6 +50,7 @@ describe('AuthService', () => {
         email: 'user@mail.com',
         displayName: 'Updated User',
         avatarUrl: null,
+        onboardingStatus: 'pending',
       },
     });
 
@@ -58,12 +59,49 @@ describe('AuthService', () => {
       email: 'user@mail.com',
       displayName: 'Updated User',
       avatarUrl: null,
+      onboardingStatus: 'pending',
     });
     expect(JSON.parse(localStorage.getItem('cm_user') ?? '{}')).toEqual({
       id: 'user-1',
       email: 'user@mail.com',
       displayName: 'Updated User',
       avatarUrl: null,
+      onboardingStatus: 'pending',
+    });
+  });
+
+  it('should update currentUser and localStorage after onboarding status changes', () => {
+    configureTestingModule();
+
+    service.updateOnboardingStatus('completed').subscribe();
+
+    const req = httpMock.expectOne('/CineMatch/auth/me/onboarding-status');
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ onboardingStatus: 'completed' });
+
+    req.flush({
+      user: {
+        id: 'user-1',
+        email: 'user@mail.com',
+        displayName: 'Updated User',
+        avatarUrl: null,
+        onboardingStatus: 'completed',
+      },
+    });
+
+    expect(service.currentUser()).toEqual({
+      id: 'user-1',
+      email: 'user@mail.com',
+      displayName: 'Updated User',
+      avatarUrl: null,
+      onboardingStatus: 'completed',
+    });
+    expect(JSON.parse(localStorage.getItem('cm_user') ?? '{}')).toEqual({
+      id: 'user-1',
+      email: 'user@mail.com',
+      displayName: 'Updated User',
+      avatarUrl: null,
+      onboardingStatus: 'completed',
     });
   });
 
@@ -93,6 +131,7 @@ describe('AuthService', () => {
         email: 'user@mail.com',
         displayName: 'Delete Me',
         avatarUrl: null,
+        onboardingStatus: 'pending',
       }),
     );
 

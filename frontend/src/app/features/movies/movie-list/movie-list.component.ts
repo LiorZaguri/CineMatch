@@ -10,9 +10,11 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs/operators';
 import { MovieService } from '../../../core/services/movie.service';
 import { Movie } from '../../../core/models/movie.models';
 import { ScrollRevealDirective } from '../../../core/directives/scroll-reveal.directive';
+import { AuthService } from '../../../core/services/auth.service';
 import { OnboardingService } from '../../../core/services/onboarding.service';
 import { UserPreferenceService } from '../../../core/services/user-preference.service';
 import { UserPreferenceProfile } from '../../../core/models/user-preference.models';
@@ -33,6 +35,7 @@ interface MovieSection {
 })
 export class MovieListComponent implements OnInit, OnDestroy {
   private readonly movieService = inject(MovieService);
+  private readonly auth = inject(AuthService);
   private readonly onboarding = inject(OnboardingService);
   private readonly router = inject(Router);
   private readonly userPreferenceService = inject(UserPreferenceService);
@@ -53,6 +56,7 @@ export class MovieListComponent implements OnInit, OnDestroy {
   readonly tasteProfile = signal<UserPreferenceProfile | null>(null);
   readonly tasteProfileLoading = signal(false);
   readonly tasteProfileMissing = signal(false);
+  readonly isRestartingTasteSetup = signal(false);
   @ViewChild('recommendationsRow') private recommendationsRow?: ElementRef<HTMLDivElement>;
 
   readonly heroMovies = this.movieService.nowPlaying;
@@ -173,8 +177,24 @@ export class MovieListComponent implements OnInit, OnDestroy {
   }
 
   startTasteSetup(): void {
-    this.onboarding.reset();
-    this.router.navigate(['/onboarding']);
+    if (this.isRestartingTasteSetup()) {
+      return;
+    }
+
+    this.isRestartingTasteSetup.set(true);
+    this.auth
+      .updateOnboardingStatus('pending')
+      .pipe(finalize(() => this.isRestartingTasteSetup.set(false)))
+      .subscribe({
+        next: () => {
+          this.onboarding.reset();
+          this.router.navigate(['/onboarding']);
+        },
+        error: () => {
+          this.onboarding.reset();
+          this.router.navigate(['/onboarding']);
+        },
+      });
   }
 
   private loadMovies(): void {
