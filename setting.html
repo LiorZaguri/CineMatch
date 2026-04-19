@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineMatch — Account Settings</title>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineMatch — Account Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #F4EFE6;
+  --text:       #1C1714;
+  --text-muted: #7A7168;
+  --gold:       #C4965A;
+  --red:        #C93027;
+  --cream:      #FAF7F2;
+  --card:       #EDE8DE;
+  --border:     rgba(28,23,20,0.10);
+  --border-mid: rgba(28,23,20,0.18);
+  --ff-display: 'Cormorant Garamond', Georgia, serif;
+  --ff-body:    'DM Sans', system-ui, sans-serif;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: var(--ff-body);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  cursor: none;
+  overflow: hidden;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.025; pointer-events: none; z-index: 9990;
+}
+
+/* ── CURSOR ── */
+#cursor     { position:fixed;width:10px;height:10px;background:var(--red);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .2s,height .2s;mix-blend-mode:multiply; }
+#cursor-ring{ position:fixed;width:34px;height:34px;border:1px solid rgba(201,48,39,0.45);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%); }
+
+/* ── NAV ── */
+.nav {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  height: 62px;
+  background: rgba(244,239,230,0.97);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+}
+.nav-left {
+  display: flex; align-items: center; height: 100%;
+  padding-left: 32px; border-right: 1px solid var(--border);
+}
+.nav-logo {
+  font-family: var(--ff-display); font-size: 20px; font-weight: 600;
+  letter-spacing: -0.025em; color: var(--text); text-decoration: none;
+  display: flex; align-items: center; gap: 7px;
+  padding-right: 28px; border-right: 1px solid var(--border); height: 100%; cursor: none;
+}
+.logo-dot { width: 7px; height: 7px; background: var(--red); border-radius: 50%; }
+.nav-links { display: flex; align-items: center; height: 100%; list-style: none; padding: 0 6px; }
+.nav-links a {
+  display: flex; align-items: center; gap: 5px; height: 100%; padding: 0 16px;
+  font-size: 13px; color: var(--text-muted); text-decoration: none;
+  position: relative; transition: color .2s; cursor: none;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-links a::after {
+  content: ''; position: absolute; bottom: 0; left: 16px; right: 16px;
+  height: 2px; background: var(--text); border-radius: 2px 2px 0 0;
+  transform: scaleX(0); transform-origin: left; transition: transform .25s;
+}
+.nav-links a:hover::after { transform: scaleX(1); }
+.nav-center { padding: 0 24px; }
+.nav-search {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--cream); border: 1px solid var(--border-mid);
+  border-radius: 10px; padding: 8px 14px 8px 12px;
+}
+.nav-search input {
+  background: none; border: none; outline: none;
+  font-family: var(--ff-body); font-size: 13px; color: var(--text);
+  width: 220px; cursor: none;
+}
+.nav-search input::placeholder { color: var(--text-muted); opacity: 0.5; }
+.nav-right {
+  display: flex; align-items: center; gap: 10px;
+  height: 100%; border-left: 1px solid var(--border); padding: 0 24px 0 20px;
+}
+.mode-pill {
+  display: flex; background: var(--card); border: 1px solid var(--border-mid);
+  border-radius: 100px; padding: 3px; gap: 2px;
+}
+.mode-pill span {
+  font-size: 10px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 100px; color: var(--text-muted);
+}
+.mode-pill .active { background: var(--text); color: var(--cream); }
+.nav-user { display: flex; align-items: center; gap: 10px; }
+.nav-uinfo { text-align: right; line-height: 1.2; }
+.nav-uinfo .uname { font-size: 13px; font-weight: 500; }
+.nav-uinfo .urole { font-size: 10px; color: var(--gold); letter-spacing: 0.06em; text-transform: uppercase; }
+.nav-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--text); color: var(--cream); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; }
+
+/* ── LAYOUT ── */
+.page {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 236px 1fr;
+  overflow: hidden;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 36px 22px 28px;
+  overflow-y: auto;
+}
+.sb-eyebrow {
+  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-muted); display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+.sb-eyebrow::before { content: ''; width: 14px; height: 1px; background: var(--gold); display: block; }
+.sb-headline {
+  font-family: var(--ff-display); font-size: 23px; font-weight: 300;
+  letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 8px;
+}
+.sb-headline em { font-style: italic; color: var(--red); }
+.sb-sub { font-size: 12px; color: var(--text-muted); line-height: 1.65; margin-bottom: 28px; }
+
+.sb-nav { display: flex; flex-direction: column; gap: 2px; }
+.sb-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 10px;
+  font-size: 13px; color: var(--text-muted);
+  background: none; border: none; width: 100%; text-align: left;
+  font-family: var(--ff-body); cursor: none;
+  transition: background .18s, color .18s;
+}
+.sb-link:hover { background: var(--card); color: var(--text); }
+.sb-link.active { background: var(--text); color: var(--cream); }
+.sb-link.red:hover { background: rgba(201,48,39,0.07); color: var(--red); }
+.sb-link.red.active { background: rgba(201,48,39,0.1); color: var(--red); border: 1px solid rgba(201,48,39,0.2); }
+.sb-icon { font-size: 13px; opacity: 0.6; width: 17px; text-align: center; flex-shrink: 0; }
+.sb-link.active .sb-icon { opacity: 1; }
+
+.sb-user {
+  margin-top: auto; padding-top: 24px; margin-top: 32px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+}
+.sb-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--text); color: var(--cream);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--ff-display); font-size: 18px; font-weight: 600; flex-shrink: 0;
+}
+.sb-uname  { font-size: 13px; font-weight: 500; line-height: 1.2; }
+.sb-uemail { font-size: 11px; color: var(--text-muted); }
+
+/* ── MAIN ── */
+.main {
+  overflow-y: auto;
+  padding: 44px 52px 60px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.main::-webkit-scrollbar { width: 5px; }
+.main::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;
+}
+.back-btn {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 13px; color: var(--text-muted);
+  background: none; border: 1px solid var(--border-mid);
+  border-radius: 100px; padding: 8px 18px;
+  font-family: var(--ff-body); cursor: none;
+  transition: color .2s, border-color .2s;
+}
+.back-btn:hover { color: var(--text); border-color: var(--text-muted); }
+.unsaved-pill {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; color: var(--text-muted);
+  opacity: 0; transition: opacity .3s;
+}
+.unsaved-pill.on { opacity: 1; }
+.ud { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); animation: udp 2s ease-in-out infinite; }
+@keyframes udp { 0%,100%{opacity:1}50%{opacity:.35} }
+
+/* ── SETTINGS CARD ── */
+.scard { background: var(--cream); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
+
+.scard-head {
+  padding: 30px 36px 26px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;
+}
+.sh-left { flex: 1; }
+.sh-eye {
+  font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-muted); display: flex; align-items: center; gap: 8px; margin-bottom: 7px;
+}
+.sh-eye::before { content: ''; width: 12px; height: 1px; background: var(--gold); display: block; }
+.sh-eye.red { color: rgba(201,48,39,0.75); }
+.sh-eye.red::before { background: var(--red); }
+.sh-title { font-family: var(--ff-display); font-size: 26px; font-weight: 300; letter-spacing: -0.03em; line-height: 1.05; }
+.sh-title em { font-style: italic; color: var(--red); }
+.sh-sub { font-size: 13px; color: var(--text-muted); margin-top: 5px; line-height: 1.65; max-width: 400px; }
+
+.sh-chips { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.sh-chip {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg); border: 1px solid var(--border-mid);
+  border-radius: 10px; padding: 10px 14px; min-width: 210px;
+}
+.sh-chip-icon { font-size: 13px; color: var(--text-muted); }
+.sh-chip-lbl { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1px; }
+.sh-chip-val { font-size: 13px; font-weight: 500; }
+
+.scard-body { padding: 30px 36px; }
+
+/* ── FORM ── */
+.form-row { display: grid; gap: 20px; }
+.form-row.two { grid-template-columns: 1fr 1fr; }
+.field { display: flex; flex-direction: column; gap: 7px; }
+.field-lbl { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+.field-inp {
+  background: var(--bg); border: 1px solid var(--border-mid);
+  border-radius: 10px; padding: 11px 14px;
+  font-family: var(--ff-body); font-size: 13px; color: var(--text);
+  outline: none; width: 100%; cursor: none;
+  transition: border-color .22s, box-shadow .22s;
+}
+.field-inp:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(196,150,90,0.10); }
+.field-inp:disabled { opacity: 0.4; cursor: not-allowed; }
+.field-hint { font-size: 11px; color: var(--text-muted); }
+.field-err  { font-size: 11px; color: var(--red); display: none; }
+.field-err.on { display: block; }
+
+.pw-bars { display: flex; gap: 4px; margin-top: 4px; }
+.pw-bar { flex: 1; height: 2px; border-radius: 2px; background: var(--border-mid); transition: background .3s; }
+.pw-bar.w { background: var(--red); }
+.pw-bar.m { background: var(--gold); }
+.pw-bar.s { background: #5C9E6A; }
+
+/* avatar row */
+.avatar-row {
+  display: flex; align-items: center; gap: 20px;
+  background: var(--bg); border: 1px solid var(--border-mid);
+  border-radius: 14px; padding: 18px 22px; margin-bottom: 24px;
+}
+.av-circle {
+  width: 54px; height: 54px; border-radius: 50%;
+  background: var(--text); color: var(--cream);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--ff-display); font-size: 22px; font-weight: 600;
+  flex-shrink: 0; position: relative; overflow: hidden; cursor: none;
+}
+.av-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.42);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s; font-size: 18px;
+}
+.av-circle:hover .av-overlay { opacity: 1; }
+.av-info { flex: 1; }
+.av-info h4 { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+.av-info p  { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+.av-actions { display: flex; gap: 8px; }
+
+/* danger box */
+.danger-box {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  background: rgba(201,48,39,0.04); border: 1px solid rgba(201,48,39,0.14);
+  border-radius: 14px; padding: 20px 24px;
+}
+.danger-box p { font-size: 13px; color: var(--text-muted); line-height: 1.65; max-width: 440px; }
+.danger-box strong { color: var(--text); }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: none; border-radius: 100px; padding: 11px 24px;
+  font-family: var(--ff-body); font-size: 13px; font-weight: 500;
+  cursor: none; transition: background .2s, transform .15s, opacity .2s; white-space: nowrap;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn-dark    { background: var(--text); color: var(--cream); }
+.btn-dark:hover    { background: #2a2520; }
+.btn-outline { background: none; color: var(--text); border: 1px solid var(--border-mid); }
+.btn-outline:hover { background: var(--card); }
+.btn-red     { background: var(--red); color: #fff; }
+.btn-red:hover     { background: #a8261f; }
+.btn-sm { padding: 8px 16px; font-size: 12px; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 26px; left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--text); color: var(--cream);
+  padding: 11px 22px; border-radius: 100px;
+  font-size: 13px; display: flex; align-items: center; gap: 9px;
+  z-index: 500; opacity: 0; transition: opacity .25s, transform .25s;
+  pointer-events: none;
+}
+.toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast-check { color: var(--gold); }
+
+/* ── MODAL ── */
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(28,23,20,0.48);
+  z-index: 800; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .25s;
+  backdrop-filter: blur(4px);
+}
+.modal-bg.on { opacity: 1; pointer-events: auto; }
+.modal {
+  background: var(--cream); border: 1px solid var(--border-mid);
+  border-radius: 20px; padding: 36px; max-width: 420px; width: 90%;
+  transform: translateY(14px); transition: transform .25s;
+}
+.modal-bg.on .modal { transform: none; }
+.modal-eye { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--red); margin-bottom: 8px; }
+.modal-title { font-family: var(--ff-display); font-size: 26px; font-weight: 300; letter-spacing: -0.03em; margin-bottom: 10px; }
+.modal-sub { font-size: 13px; color: var(--text-muted); line-height: 1.65; margin-bottom: 22px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="nav-left">
+    <a href="#" class="nav-logo"><span class="logo-dot"></span>CineMatch</a>
+    <ul class="nav-links">
+      <li><a href="#">Home</a></li>
+      <li><a href="#">Movies</a></li>
+      <li><a href="#">My List</a></li>
+    </ul>
+  </div>
+  <div class="nav-center">
+    <div class="nav-search">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="var(--text-muted)" stroke-width="1.25"/><path d="M9.5 9.5L12 12" stroke="var(--text-muted)" stroke-width="1.25" stroke-linecap="round"/></svg>
+      <input type="text" placeholder="Search movies, actors, and genres…">
+    </div>
+  </div>
+  <div class="nav-right">
+    <div class="mode-pill"><span class="active">Normal</span><span>AI</span></div>
+    <div class="nav-user">
+      <div class="nav-uinfo"><div class="uname">CineMatchAgent2</div><div class="urole">Normal User</div></div>
+      <div class="nav-avatar">C</div>
+    </div>
+  </div>
+</header>
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-eyebrow">Account Center</div>
+    <h2 class="sb-headline">Settings built<br>for a <em>quick<br>tune-up.</em></h2>
+    <p class="sb-sub">Update your profile, rotate your password, or manage your account.</p>
+
+    <nav class="sb-nav">
+      <button class="sb-link active" data-sec="sec-profile">
+        <span class="sb-icon">◉</span> Public identity
+      </button>
+      <button class="sb-link" data-sec="sec-security">
+        <span class="sb-icon">⚿</span> Change password
+      </button>
+      <button class="sb-link red" data-sec="sec-danger">
+        <span class="sb-icon">⚠</span> Delete account
+      </button>
+    </nav>
+
+    <div class="sb-user">
+      <div class="sb-avatar" id="sbAvatar">C</div>
+      <div>
+        <div class="sb-uname" id="sbName">CineMatchAgent2</div>
+        <div class="sb-uemail">qi-a22gent@cinematch.com</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="main">
+
+    <div class="topbar">
+      <button class="back-btn">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M9 6.5H4m0 0l2.5-2.5M4 6.5L6.5 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back to movies
+      </button>
+      <div class="unsaved-pill" id="unsaved"><span class="ud"></span>Unsaved changes</div>
+    </div>
+
+    <!-- ══ PROFILE ══ -->
+    <section class="scard" id="sec-profile">
+      <div class="scard-head">
+        <div class="sh-left">
+          <div class="sh-eye">Profile</div>
+          <h3 class="sh-title">Public <em>identity.</em></h3>
+          <p class="sh-sub">Keep your display name current. Your email is shown here for reference only.</p>
+        </div>
+        <div class="sh-chips">
+          <div class="sh-chip">
+            <span class="sh-chip-icon">◉</span>
+            <div><div class="sh-chip-lbl">Display name</div><div class="sh-chip-val" id="chipName">CineMatchAgent2</div></div>
+          </div>
+          <div class="sh-chip">
+            <span class="sh-chip-icon">✉</span>
+            <div><div class="sh-chip-lbl">Email</div><div class="sh-chip-val">qi-a22gent@cinematch.com</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="scard-body">
+        <div class="avatar-row">
+          <div class="av-circle" id="avCircle">
+            <span id="avLetter">C</span>
+            <div class="av-overlay">📷</div>
+          </div>
+          <div class="av-info">
+            <h4>Profile image</h4>
+            <p>Upload a JPG, PNG, or WebP up to 6 MB.<br>We'll crop and optimise to 512×512 JPEG.</p>
+          </div>
+          <div class="av-actions">
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileIn').click()">Choose image</button>
+            <button class="btn btn-dark btn-sm" onclick="toast('Avatar saved ✓')">Save avatar</button>
+          </div>
+        </div>
+        <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="handleFile(this)">
+
+        <div class="form-row two">
+          <div class="field">
+            <label class="field-lbl">Display name</label>
+            <input class="field-inp" type="text" id="dispName" value="CineMatchAgent2" oninput="dirty()">
+          </div>
+          <div class="field">
+            <label class="field-lbl">Email</label>
+            <input class="field-inp" type="email" value="qi-a22gent@cinematch.com" disabled>
+            <span class="field-hint">Email changes aren't part of this release.</span>
+          </div>
+        </div>
+
+        <div style="margin-top:22px">
+          <button class="btn btn-dark" onclick="saveProfile()">Save profile</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ SECURITY ══ -->
+    <section class="scard" id="sec-security">
+      <div class="scard-head">
+        <div class="sh-left">
+          <div class="sh-eye">Security</div>
+          <h3 class="sh-title">Change <em>password.</em></h3>
+          <p class="sh-sub">Confirm your current password before setting a new one. Use at least 8 characters.</p>
+        </div>
+      </div>
+      <div class="scard-body">
+        <div class="form-row" style="max-width:400px;gap:16px">
+          <div class="field">
+            <label class="field-lbl">Current password</label>
+            <input class="field-inp" type="password" id="curPw" placeholder="••••••••" oninput="dirty()">
+            <span class="field-err" id="errCur">This field is required.</span>
+          </div>
+          <div class="field">
+            <label class="field-lbl">New password</label>
+            <input class="field-inp" type="password" id="newPw" placeholder="••••••••" oninput="onPw();dirty()">
+            <div class="pw-bars"><div class="pw-bar" id="b1"></div><div class="pw-bar" id="b2"></div><div class="pw-bar" id="b3"></div><div class="pw-bar" id="b4"></div></div>
+            <span class="field-hint" id="pwHint">Minimum 8 characters.</span>
+          </div>
+          <div class="field">
+            <label class="field-lbl">Confirm new password</label>
+            <input class="field-inp" type="password" id="confPw" placeholder="••••••••" oninput="dirty()">
+            <span class="field-err" id="errConf">Passwords don't match.</span>
+          </div>
+        </div>
+        <div style="margin-top:22px">
+          <button class="btn btn-dark" onclick="savePw()">Update password</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ DANGER ══ -->
+    <section class="scard" id="sec-danger">
+      <div class="scard-head">
+        <div class="sh-left">
+          <div class="sh-eye red">Danger zone</div>
+          <h3 class="sh-title" style="color:var(--red)">Delete <em style="color:var(--red)">account.</em></h3>
+          <p class="sh-sub">Permanently removes your CineMatch account. <strong style="color:var(--text)">This cannot be undone.</strong></p>
+        </div>
+      </div>
+      <div class="scard-body">
+        <div class="danger-box">
+          <p>We require <strong>one confirmation step</strong> and your current password before we delete the account. All your data, lists, and taste profile will be permanently erased.</p>
+          <button class="btn btn-red" onclick="openModal()">Continue to deletion</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-eye">Irreversible action</div>
+    <h3 class="modal-title">Confirm deletion</h3>
+    <p class="modal-sub">Enter your current password to confirm. Your account, watchlist, and taste profile will be gone permanently.</p>
+    <div class="field">
+      <label class="field-lbl">Current password</label>
+      <input class="field-inp" type="password" id="delPw" placeholder="••••••••">
+      <span class="field-err" id="errDel">Password is required to proceed.</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="modalCancel">Cancel</button>
+      <button class="btn btn-red" onclick="confirmDelete()">Delete my account</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <svg class="toast-check" width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3.2 3.2L11 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span id="toastMsg">Saved</span>
+</div>
+
+<script>
+/* ── CURSOR ── */
+const curEl  = document.getElementById('cursor');
+const ringEl = document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; curEl.style.left=mx+'px'; curEl.style.top=my+'px'; });
+(function raf(){ rx+=(mx-rx)*.13; ry+=(my-ry)*.13; ringEl.style.left=rx+'px'; ringEl.style.top=ry+'px'; requestAnimationFrame(raf); })();
+document.addEventListener('mouseover', e => {
+  if (e.target.closest('a,button,input,.av-circle')) {
+    curEl.style.width='18px'; curEl.style.height='18px';
+    ringEl.style.width='50px'; ringEl.style.height='50px';
+  } else {
+    curEl.style.width='10px'; curEl.style.height='10px';
+    ringEl.style.width='34px'; ringEl.style.height='34px';
+  }
+});
+
+/* ── SIDEBAR NAV ── */
+const mainEl   = document.getElementById('main');
+const sbLinks  = document.querySelectorAll('.sb-link[data-sec]');
+const secIds   = ['sec-profile','sec-security','sec-danger'];
+
+sbLinks.forEach(link => {
+  link.addEventListener('click', () => {
+    const target = document.getElementById(link.dataset.sec);
+    if (!target) return;
+    mainEl.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' });
+    sbLinks.forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+  });
+});
+
+// Sync on scroll
+mainEl.addEventListener('scroll', () => {
+  let current = secIds[0];
+  secIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.offsetTop - mainEl.scrollTop <= 80) current = id;
+  });
+  sbLinks.forEach(l => {
+    l.classList.toggle('active', l.dataset.sec === current);
+  });
+});
+
+/* ── UNSAVED ── */
+function dirty() { document.getElementById('unsaved').classList.add('on'); }
+function clean() { document.getElementById('unsaved').classList.remove('on'); }
+
+/* ── TOAST ── */
+let tt;
+function toast(msg, err=false) {
+  const el = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  el.style.background = err ? 'var(--red)' : 'var(--text)';
+  el.classList.add('on');
+  clearTimeout(tt);
+  tt = setTimeout(() => el.classList.remove('on'), 3000);
+}
+
+/* ── AVATAR ── */
+function handleFile(input) {
+  if (!input.files?.[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const c = document.getElementById('avCircle');
+    c.innerHTML = `<img src="${e.target.result}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%"><div class="av-overlay">📷</div>`;
+    dirty();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ── PROFILE SAVE ── */
+function saveProfile() {
+  const name = document.getElementById('dispName').value.trim();
+  if (!name) { toast('Display name can\'t be empty', true); return; }
+  document.getElementById('chipName').textContent = name;
+  document.getElementById('sbName').textContent = name;
+  document.getElementById('avLetter') && (document.getElementById('avLetter').textContent = name[0].toUpperCase());
+  clean();
+  toast('Profile saved ✓');
+}
+
+/* ── PASSWORD STRENGTH ── */
+function onPw() {
+  const v = document.getElementById('newPw').value;
+  const bars = ['b1','b2','b3','b4'].map(id => document.getElementById(id));
+  const hint = document.getElementById('pwHint');
+  bars.forEach(b => b.className = 'pw-bar');
+  if (!v) { hint.textContent='Minimum 8 characters.'; hint.style.color=''; return; }
+  let score = 0;
+  if (v.length >= 8)          score++;
+  if (/[A-Z]/.test(v))        score++;
+  if (/[0-9]/.test(v))        score++;
+  if (/[^A-Za-z0-9]/.test(v)) score++;
+  const cls = score <= 1 ? 'w' : score <= 2 ? 'm' : 's';
+  const labels = ['','Weak','Fair — add uppercase & numbers','Good — add a symbol','Strong ✓'];
+  for (let i=0; i<score; i++) bars[i].classList.add(cls);
+  hint.textContent = labels[score];
+  hint.style.color = score <= 1 ? 'var(--red)' : score <= 2 ? 'var(--gold)' : '';
+}
+
+/* ── PASSWORD SAVE ── */
+function savePw() {
+  const cur  = document.getElementById('curPw').value;
+  const nw   = document.getElementById('newPw').value;
+  const conf = document.getElementById('confPw').value;
+  let ok = true;
+
+  const errCur = document.getElementById('errCur');
+  errCur.classList.toggle('on', !cur);
+  if (!cur) ok = false;
+
+  const hint = document.getElementById('pwHint');
+  if (nw && nw.length < 8) {
+    hint.textContent = 'Must be at least 8 characters.';
+    hint.style.color = 'var(--red)'; ok = false;
+  }
+
+  const errConf = document.getElementById('errConf');
+  errConf.classList.toggle('on', !!(conf && conf !== nw));
+  if (conf && conf !== nw) ok = false;
+
+  if (!ok) return;
+
+  ['curPw','newPw','confPw'].forEach(id => document.getElementById(id).value = '');
+  ['b1','b2','b3','b4'].forEach(id => document.getElementById(id).className='pw-bar');
+  document.getElementById('pwHint').textContent = 'Minimum 8 characters.';
+  document.getElementById('pwHint').style.color = '';
+  errCur.classList.remove('on'); errConf.classList.remove('on');
+  clean(); toast('Password updated ✓');
+}
+
+/* ── DELETE MODAL ── */
+function openModal() {
+  document.getElementById('delPw').value = '';
+  document.getElementById('errDel').classList.remove('on');
+  document.getElementById('delPw').style.borderColor = '';
+  document.getElementById('modalBg').classList.add('on');
+}
+document.getElementById('modalBg').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalBg')) document.getElementById('modalBg').classList.remove('on');
+});
+document.getElementById('modalCancel').addEventListener('click', () => {
+  document.getElementById('modalBg').classList.remove('on');
+});
+function confirmDelete() {
+  const pw = document.getElementById('delPw').value;
+  const err = document.getElementById('errDel');
+  if (!pw) {
+    err.classList.add('on');
+    document.getElementById('delPw').style.borderColor = 'var(--red)';
+    return;
+  }
+  document.getElementById('modalBg').classList.remove('on');
+  toast('Account scheduled for deletion.');
+}
+</script>
+</body>
+</html>

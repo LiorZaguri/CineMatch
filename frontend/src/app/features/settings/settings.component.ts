@@ -1,5 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, WritableSignal, effect, inject, signal } from '@angular/core';
+import {
+    AfterViewInit,
+    Component,
+    HostListener,
+    OnDestroy,
+    OnInit,
+    WritableSignal,
+    computed,
+    effect,
+    inject,
+    signal,
+} from '@angular/core';
 import {
     AbstractControl,
     FormBuilder,
@@ -8,7 +19,7 @@ import {
     ValidatorFn,
     Validators,
 } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import type { ChangePasswordRequest, DeleteAccountRequest, UpdateProfileRequest } from '../../core/models/auth.models';
@@ -29,6 +40,14 @@ type FeedbackState = {
     message: string;
 };
 
+type SectionId = 'sec-profile' | 'sec-danger';
+
+type PasswordStrength = {
+    score: number;
+    label: string;
+    tone: '' | 'w' | 'm' | 's';
+};
+
 const AVATAR_OUTPUT_SIZE = 512;
 const AVATAR_MAX_INPUT_BYTES = 6 * 1024 * 1024;
 const AVATAR_TARGET_BYTES = 300 * 1024;
@@ -40,24 +59,26 @@ const AVATAR_QUALITY_STEP = 0.08;
 @Component({
     selector: 'app-settings',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, RouterLink],
+    imports: [CommonModule, ReactiveFormsModule],
     templateUrl: './settings.component.html',
     styleUrl: './settings.component.css',
 })
-export class SettingsComponent implements OnInit, OnDestroy {
+export class SettingsComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly auth = inject(AuthService);
     private readonly fb = inject(FormBuilder);
     private readonly router = inject(Router);
     private readonly revealTimers: ReturnType<typeof setTimeout>[] = [];
     private objectPreviewUrl: string | null = null;
     private avatarSelectionId = 0;
+    private readonly sectionIds: SectionId[] = ['sec-profile', 'sec-danger'];
 
     readonly currentUser = this.auth.currentUser;
+    readonly passwordBars = [1, 2, 3, 4];
 
     readonly showHero = signal(false);
     readonly showProfileCard = signal(false);
-    readonly showPasswordCard = signal(false);
     readonly showDangerCard = signal(false);
+    readonly activeSection = signal<SectionId>('sec-profile');
 
     readonly isProfileSaving = signal(false);
     readonly isPasswordSaving = signal(false);
@@ -91,6 +112,71 @@ export class SettingsComponent implements OnInit, OnDestroy {
     readonly deleteForm = this.fb.group({
         password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(72)]],
     });
+    readonly hasPasswordInput = computed(() => {
+        const oldPassword = this.passwordForm.controls.oldPassword.value?.trim() ?? '';
+        const newPassword = this.passwordForm.controls.newPassword.value?.trim() ?? '';
+        const confirmPassword = this.passwordForm.controls.confirmPassword.value?.trim() ?? '';
+
+        return !!(oldPassword || newPassword || confirmPassword);
+    });
+    readonly passwordStrength = computed<PasswordStrength>(() => {
+        const value = this.passwordForm.controls.newPassword.value ?? '';
+
+        if (!value) {
+            return { score: 0, label: 'Minimum 8 characters.', tone: '' };
+        }
+
+        let score = 0;
+        if (value.length >= 8) {
+            score++;
+        }
+        if (/[A-Z]/.test(value)) {
+            score++;
+        }
+        if (/[0-9]/.test(value)) {
+            score++;
+        }
+        if (/[^A-Za-z0-9]/.test(value)) {
+            score++;
+        }
+
+        if (score <= 1) {
+            return { score, label: 'Weak', tone: 'w' };
+        }
+
+        if (score <= 2) {
+            return { score, label: 'Fair - add uppercase & numbers', tone: 'm' };
+        }
+
+        if (score === 3) {
+            return { score, label: 'Good - add a symbol', tone: 's' };
+        }
+
+        return { score, label: 'Strong', tone: 's' };
+    });
+    readonly canSaveChanges = computed(() => {
+        const hasProfileChanges = this.profileForm.dirty;
+        const hasPasswordChanges = this.hasPasswordInput();
+        const hasAvatarChanges = !!this.selectedAvatarFile();
+
+        if (this.isAvatarProcessing() || this.isAvatarUploading() || this.isProfileSaving() || this.isPasswordSaving()) {
+            return false;
+        }
+
+        if (!hasProfileChanges && !hasPasswordChanges && !hasAvatarChanges) {
+            return false;
+        }
+
+        if (hasProfileChanges && this.profileForm.invalid) {
+            return false;
+        }
+
+        if (hasPasswordChanges && this.passwordForm.invalid) {
+            return false;
+        }
+
+        return true;
+    });
 
     constructor() {
         effect(() => {
@@ -110,8 +196,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
     ngOnInit(): void {
         this.scheduleReveal(this.showHero, 50);
         this.scheduleReveal(this.showProfileCard, 140);
-        this.scheduleReveal(this.showPasswordCard, 230);
-        this.scheduleReveal(this.showDangerCard, 320);
+        this.scheduleReveal(this.showDangerCard, 230);
+    }
+
+    ngAfterViewInit(): void {
+        requestAnimationFrame(() => this.syncActiveSection());
     }
 
     ngOnDestroy(): void {
@@ -258,6 +347,60 @@ export class SettingsComponent implements OnInit, OnDestroy {
         return initials || 'CM';
     }
 
+    scrollToSection(sectionId: SectionId): void {
+        this.activeSection.set(sectionId);
+        const section = document.getElementById(sectionId);
+        if (!section) {
+            return;
+        }
+
+        const top = section.getBoundingClientRect().top + window.scrollY - 116;
+        window.scrollTo({ top, behavior: 'smooth' });
+    }
+
+    passwordBarClass(index: number): string {
+        const strength = this.passwordStrength();
+        if (strength.score < index) {
+            return '';
+        }
+
+        return strength.tone;
+    }
+
+    saveChanges(): void {
+        const shouldSaveProfile = this.profileForm.dirty;
+        const shouldSavePassword = this.hasPasswordInput();
+        const shouldUploadAvatar = !!this.selectedAvatarFile();
+
+        if (!shouldSaveProfile && !shouldSavePassword && !shouldUploadAvatar) {
+            return;
+        }
+
+        if (shouldSaveProfile && this.profileForm.invalid) {
+            this.profileForm.markAllAsTouched();
+        }
+
+        if (shouldSavePassword && this.passwordForm.invalid) {
+            this.passwordForm.markAllAsTouched();
+        }
+
+        if ((shouldSaveProfile && this.profileForm.invalid) || (shouldSavePassword && this.passwordForm.invalid) || this.isAvatarProcessing()) {
+            return;
+        }
+
+        if (shouldUploadAvatar) {
+            this.uploadAvatar();
+        }
+
+        if (shouldSaveProfile) {
+            this.saveProfile();
+        }
+
+        if (shouldSavePassword) {
+            this.updatePassword();
+        }
+    }
+
     updatePassword(): void {
         if (this.passwordForm.invalid || this.isPasswordSaving()) {
             this.passwordForm.markAllAsTouched();
@@ -327,9 +470,38 @@ export class SettingsComponent implements OnInit, OnDestroy {
         });
     }
 
+    @HostListener('window:scroll')
+    onWindowScroll(): void {
+        this.syncActiveSection();
+    }
+
+    @HostListener('document:keydown.escape')
+    onEscape(): void {
+        if (this.isDeleteConfirming()) {
+            this.cancelDeleteConfirmation();
+        }
+    }
+
     private scheduleReveal(state: WritableSignal<boolean>, delayMs: number): void {
         const timer = setTimeout(() => state.set(true), delayMs);
         this.revealTimers.push(timer);
+    }
+
+    private syncActiveSection(): void {
+        let currentSection: SectionId = this.sectionIds[0];
+
+        for (const sectionId of this.sectionIds) {
+            const section = document.getElementById(sectionId);
+            if (!section) {
+                continue;
+            }
+
+            if (section.getBoundingClientRect().top <= 180) {
+                currentSection = sectionId;
+            }
+        }
+
+        this.activeSection.set(currentSection);
     }
 
     private setPreviewUrl(url: string | null, isObjectUrl = false): void {

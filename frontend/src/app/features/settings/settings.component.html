@@ -1,219 +1,269 @@
 <div class="settings-page">
-    <section class="settings-hero motion-shell" [class.is-visible]="showHero()">
-        <div class="hero-copy">
-            <span class="eyebrow">Account Center</span>
-            <h1>Settings built for a quick, safe tune-up.</h1>
-            <p>
-                Update how your profile appears, review the email attached to your account, rotate your password, or
-                permanently delete your account after password confirmation.
-            </p>
-
-            <div class="hero-actions">
-                <a routerLink="/movies" class="btn-secondary">
-                    <span class="material-symbols-outlined">arrow_back</span>
-                    Back to movies
-                </a>
-            </div>
-        </div>
-
-        <div class="hero-summary">
-            <div class="summary-tile">
-                <span class="material-symbols-outlined">person</span>
-                <div>
-                    <p>Display name</p>
-                    <strong>{{ currentUser()?.displayName }}</strong>
-                </div>
+    <div class="page">
+        <aside class="sidebar motion-shell" [class.is-visible]="showHero()">
+            <div class="sb-intro">
+                <div class="sb-eyebrow">Account Center</div>
+                <h1 class="sb-headline">
+                    Settings built
+                    <br />
+                    for a <em>quick<br />tune-up.</em>
+                </h1>
+                <p class="sb-sub">Update your profile, rotate your password, or manage your account.</p>
             </div>
 
-            <div class="summary-tile">
-                <span class="material-symbols-outlined">mail</span>
-                <div>
-                    <p>Email</p>
-                    <strong>{{ currentUser()?.email }}</strong>
-                </div>
+            <div class="sb-action">
+                <button
+                    type="button"
+                    class="btn btn-dark sidebar-save-btn"
+                    [disabled]="!canSaveChanges()"
+                    (click)="saveChanges()"
+                >
+                    Change profile
+                </button>
             </div>
-        </div>
-    </section>
+        </aside>
 
-    <div class="settings-grid">
-        <section class="settings-card motion-shell" [class.is-visible]="showProfileCard()">
-            <div class="card-header">
-                <div>
-                    <span class="section-tag">Profile</span>
-                    <h2>Public identity</h2>
-                    <p>Keep your display name current. Your email is shown here for reference only.</p>
-                </div>
-            </div>
-
-            <div class="avatar-panel">
-                <div class="avatar-preview">
-                    @if (avatarPreviewUrl() || currentUser()?.avatarUrl) {
-                        <img
-                            [src]="avatarPreviewUrl() ?? currentUser()?.avatarUrl"
-                            alt="Profile avatar preview"
-                        />
-                    } @else {
-                        <span class="avatar-fallback">{{ getAvatarInitials() }}</span>
-                    }
-                </div>
-                <div class="avatar-details">
-                    <h3>Profile image</h3>
-                    <p>Upload a JPG, PNG, or WebP (up to 6MB). We'll crop and optimize to 512x512 JPEG.</p>
-                    <div class="avatar-actions">
-                        <input
-                            #avatarInput
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            class="avatar-input"
-                            (change)="onAvatarSelected($event)"
-                        />
-                        <button type="button" class="btn-secondary" (click)="avatarInput.click()">
-                            Choose image
-                        </button>
-                        <button
-                            type="button"
-                            class="btn-primary"
-                            [disabled]="!selectedAvatarFile() || isAvatarUploading() || isAvatarProcessing()"
-                            (click)="uploadAvatar()"
-                        >
-                            @if (isAvatarProcessing()) {
-                                Processing...
-                            } @else if (isAvatarUploading()) {
-                                Uploading...
-                            } @else {
-                                Save avatar
-                            }
-                        </button>
-                    </div>
-                    @if (avatarFeedback()) {
-                        <div class="status-banner compact" [class.error]="avatarFeedback()!.type === 'error'">
-                            {{ avatarFeedback()!.message }}
+        <div class="main-wrap">
+            <main class="main">
+                <section class="scard motion-shell" id="sec-profile" [class.is-visible]="showProfileCard()">
+                    <div class="scard-head">
+                        <div class="sh-left">
+                            <div class="sh-eye">Profile</div>
+                            <h2 class="sh-title">Change <em>profile.</em></h2>
+                            <p class="sh-sub">
+                                Update your display name, avatar, and password together in one place.
+                            </p>
                         </div>
-                    }
-                </div>
-            </div>
 
-            @if (profileFeedback()) {
-                <div class="status-banner" [class.error]="profileFeedback()!.type === 'error'">
-                    {{ profileFeedback()!.message }}
-                </div>
-            }
+                        <div class="sh-chips">
+                            <div class="sh-chip">
+                                <span class="sh-chip-icon" aria-hidden="true"></span>
+                                <div>
+                                    <div class="sh-chip-lbl">Display name</div>
+                                    <div class="sh-chip-val">{{ currentUser()?.displayName }}</div>
+                                </div>
+                            </div>
+                            <div class="sh-chip">
+                                <span class="sh-chip-icon" aria-hidden="true"></span>
+                                <div>
+                                    <div class="sh-chip-lbl">Email</div>
+                                    <div class="sh-chip-val">{{ currentUser()?.email }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-            <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="settings-form" novalidate>
-                <div class="form-grid">
-                    <label class="field">
-                        <span class="field-label">Display name</span>
-                        <input
-                            class="field-input"
-                            [class.invalid]="profileForm.controls.displayName.invalid && profileForm.controls.displayName.touched"
-                            type="text"
-                            formControlName="displayName"
-                            placeholder="Your public name"
-                            autocomplete="name"
-                        />
-                        @if (profileForm.controls.displayName.invalid && profileForm.controls.displayName.touched) {
-                            <span class="field-error">Display name must be between 2 and 80 characters.</span>
+                    <div class="scard-body">
+                        <div class="profile-layout">
+                            <div class="profile-column password-column">
+                                @if (passwordFeedback()) {
+                                    <div class="status-banner" [class.error]="passwordFeedback()!.type === 'error'">
+                                        {{ passwordFeedback()!.message }}
+                                    </div>
+                                }
+
+                                <form [formGroup]="passwordForm" (ngSubmit)="updatePassword()" novalidate>
+                                    <div class="form-row password-stack">
+                                        <label class="field">
+                                            <span class="field-lbl">Current password</span>
+                                            <input
+                                                class="field-inp"
+                                                [class.invalid]="passwordForm.controls.oldPassword.invalid && passwordForm.controls.oldPassword.touched"
+                                                type="password"
+                                                formControlName="oldPassword"
+                                                autocomplete="current-password"
+                                            />
+                                            @if (
+                                                passwordForm.controls.oldPassword.invalid &&
+                                                passwordForm.controls.oldPassword.touched
+                                            ) {
+                                                <span class="field-err on">This field is required.</span>
+                                            }
+                                        </label>
+
+                                        <label class="field">
+                                            <span class="field-lbl">New password</span>
+                                            <input
+                                                class="field-inp"
+                                                [class.invalid]="passwordForm.controls.newPassword.invalid && passwordForm.controls.newPassword.touched"
+                                                type="password"
+                                                formControlName="newPassword"
+                                                autocomplete="new-password"
+                                            />
+                                            <div class="pw-bars" aria-hidden="true">
+                                                @for (bar of passwordBars; track bar) {
+                                                    <div
+                                                        class="pw-bar"
+                                                        [class.w]="passwordBarClass(bar) === 'w'"
+                                                        [class.m]="passwordBarClass(bar) === 'm'"
+                                                        [class.s]="passwordBarClass(bar) === 's'"
+                                                    ></div>
+                                                }
+                                            </div>
+                                            <span
+                                                class="field-hint"
+                                                [class.tone-red]="passwordStrength().tone === 'w'"
+                                                [class.tone-gold]="passwordStrength().tone === 'm'"
+                                            >
+                                                {{ passwordStrength().label }}
+                                            </span>
+                                        </label>
+
+                                        <label class="field">
+                                            <span class="field-lbl">Confirm new password</span>
+                                            <input
+                                                class="field-inp"
+                                                [class.invalid]="passwordForm.hasError('passwordMismatch') && passwordForm.controls.confirmPassword.touched"
+                                                type="password"
+                                                formControlName="confirmPassword"
+                                                autocomplete="new-password"
+                                            />
+                                            @if (
+                                                passwordForm.hasError('passwordMismatch') &&
+                                                passwordForm.controls.confirmPassword.touched
+                                            ) {
+                                                <span class="field-err on">Passwords don't match.</span>
+                                            }
+                                        </label>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div class="profile-column identity-column">
+                                <div class="avatar-row">
+                                    <input
+                                        #avatarInput
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp"
+                                        class="avatar-input"
+                                        (change)="onAvatarSelected($event)"
+                                    />
+
+                                    <button type="button" class="av-circle" (click)="avatarInput.click()">
+                                        @if (avatarPreviewUrl() || currentUser()?.avatarUrl) {
+                                            <img
+                                                [src]="avatarPreviewUrl() ?? currentUser()?.avatarUrl"
+                                                alt="Profile avatar preview"
+                                            />
+                                        } @else {
+                                            <span>{{ getAvatarInitials() }}</span>
+                                        }
+                                        <span class="av-overlay">Edit</span>
+                                    </button>
+
+                                    <div class="av-info">
+                                        <h3>Profile image</h3>
+                                        <p>Upload a JPG, PNG, or WebP up to 6 MB. We'll crop and optimise to 512x512 JPEG.</p>
+                                    </div>
+
+                                    <div class="av-actions">
+                                        <button type="button" class="btn btn-outline btn-sm" (click)="avatarInput.click()">
+                                            Choose image
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="btn btn-dark btn-sm"
+                                            [disabled]="!selectedAvatarFile() || isAvatarUploading() || isAvatarProcessing()"
+                                            (click)="uploadAvatar()"
+                                        >
+                                            @if (isAvatarProcessing()) {
+                                                Processing...
+                                            } @else if (isAvatarUploading()) {
+                                                Uploading...
+                                            } @else {
+                                                Save avatar
+                                            }
+                                        </button>
+                                    </div>
+                                </div>
+
+                                @if (avatarFeedback()) {
+                                    <div class="status-banner" [class.error]="avatarFeedback()!.type === 'error'">
+                                        {{ avatarFeedback()!.message }}
+                                    </div>
+                                }
+
+                                @if (profileFeedback()) {
+                                    <div class="status-banner" [class.error]="profileFeedback()!.type === 'error'">
+                                        {{ profileFeedback()!.message }}
+                                    </div>
+                                }
+
+                                <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate>
+                                    <div class="form-row identity-fields">
+                                        <label class="field">
+                                            <span class="field-lbl">Display name</span>
+                                            <input
+                                                class="field-inp"
+                                                [class.invalid]="profileForm.controls.displayName.invalid && profileForm.controls.displayName.touched"
+                                                type="text"
+                                                formControlName="displayName"
+                                                autocomplete="name"
+                                            />
+                                            @if (
+                                                profileForm.controls.displayName.invalid &&
+                                                profileForm.controls.displayName.touched
+                                            ) {
+                                                <span class="field-err on">
+                                                    Display name must be between 2 and 80 characters.
+                                                </span>
+                                            }
+                                        </label>
+
+                                        <label class="field">
+                                            <span class="field-lbl">Email</span>
+                                            <input class="field-inp" type="email" formControlName="email" readonly />
+                                            <span class="field-hint">Email changes aren't part of this release.</span>
+                                        </label>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="scard motion-shell" id="sec-danger" [class.is-visible]="showDangerCard()">
+                    <div class="scard-head">
+                        <div class="sh-left">
+                            <div class="sh-eye red">Danger zone</div>
+                            <h2 class="sh-title danger-title">Delete <em>account.</em></h2>
+                            <p class="sh-sub">
+                                Permanently removes your CineMatch account.
+                                <strong>This cannot be undone.</strong>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="scard-body">
+                        @if (deleteFeedback() && !isDeleteConfirming()) {
+                            <div class="status-banner error">
+                                {{ deleteFeedback()!.message }}
+                            </div>
                         }
-                    </label>
 
-                    <label class="field">
-                        <span class="field-label">Email</span>
-                        <input class="field-input is-readonly" type="email" formControlName="email" readonly />
-                        <span class="field-help">Email changes are not part of this first settings release.</span>
-                    </label>
-                </div>
+                        <div class="danger-box">
+                            <p>
+                                We require <strong>one confirmation step</strong> and your current password before we
+                                delete the account. All your data, lists, and taste profile will be permanently erased.
+                            </p>
+                            <button type="button" class="btn btn-red" (click)="revealDeleteConfirmation()">
+                                Continue to deletion
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
 
-                <div class="card-actions">
-                    <button
-                        type="submit"
-                        class="btn-primary"
-                        [disabled]="isProfileSaving() || profileForm.invalid || !profileForm.dirty"
-                    >
-                        @if (isProfileSaving()) {
-                            Saving...
-                        } @else {
-                            Save profile
-                        }
-                    </button>
-                </div>
-            </form>
-        </section>
-
-        <section class="settings-card motion-shell" [class.is-visible]="showPasswordCard()">
-            <div class="card-header">
-                <div>
-                    <span class="section-tag">Security</span>
-                    <h2>Change password</h2>
-                    <p>Confirm your current password before setting a new one.</p>
-                </div>
-            </div>
-
-            @if (passwordFeedback()) {
-                <div class="status-banner" [class.error]="passwordFeedback()!.type === 'error'">
-                    {{ passwordFeedback()!.message }}
-                </div>
-            }
-
-            <form [formGroup]="passwordForm" (ngSubmit)="updatePassword()" class="settings-form" novalidate>
-                <div class="form-grid stacked">
-                    <label class="field">
-                        <span class="field-label">Current password</span>
-                        <input
-                            class="field-input"
-                            [class.invalid]="passwordForm.controls.oldPassword.invalid && passwordForm.controls.oldPassword.touched"
-                            type="password"
-                            formControlName="oldPassword"
-                            autocomplete="current-password"
-                        />
-                    </label>
-
-                    <label class="field">
-                        <span class="field-label">New password</span>
-                        <input
-                            class="field-input"
-                            [class.invalid]="passwordForm.controls.newPassword.invalid && passwordForm.controls.newPassword.touched"
-                            type="password"
-                            formControlName="newPassword"
-                            autocomplete="new-password"
-                        />
-                        <span class="field-help">Use at least 8 characters.</span>
-                    </label>
-
-                    <label class="field">
-                        <span class="field-label">Confirm new password</span>
-                        <input
-                            class="field-input"
-                            [class.invalid]="passwordForm.hasError('passwordMismatch') && passwordForm.controls.confirmPassword.touched"
-                            type="password"
-                            formControlName="confirmPassword"
-                            autocomplete="new-password"
-                        />
-                        @if (passwordForm.hasError('passwordMismatch') && passwordForm.controls.confirmPassword.touched) {
-                            <span class="field-error">Your new passwords must match.</span>
-                        }
-                    </label>
-                </div>
-
-                <div class="card-actions">
-                    <button type="submit" class="btn-primary" [disabled]="isPasswordSaving() || passwordForm.invalid">
-                        @if (isPasswordSaving()) {
-                            Updating...
-                        } @else {
-                            Update password
-                        }
-                    </button>
-                </div>
-            </form>
-        </section>
-
-        <section class="settings-card danger-card motion-shell" [class.is-visible]="showDangerCard()">
-            <div class="card-header">
-                <div>
-                    <span class="section-tag danger">Danger zone</span>
-                    <h2>Delete account</h2>
-                    <p>This permanently removes your CineMatch user account. This action cannot be undone.</p>
-                </div>
-            </div>
+    <div class="modal-bg" [class.on]="isDeleteConfirming()" (click)="cancelDeleteConfirmation()">
+        <div class="modal" (click)="$event.stopPropagation()">
+            <div class="modal-eye">Irreversible action</div>
+            <h3 class="modal-title">Confirm deletion</h3>
+            <p class="modal-sub">
+                Enter your current password to confirm. Your account, watchlist, and taste profile will be gone
+                permanently.
+            </p>
 
             @if (deleteFeedback()) {
                 <div class="status-banner error">
@@ -221,44 +271,32 @@
                 </div>
             }
 
-            @if (!isDeleteConfirming()) {
-                <div class="danger-shell">
-                    <p class="danger-copy">
-                        We require one extra confirmation step and your current password before we delete the account.
-                    </p>
+            <form [formGroup]="deleteForm" (ngSubmit)="deleteAccount()" novalidate>
+                <label class="field">
+                    <span class="field-lbl">Current password</span>
+                    <input
+                        class="field-inp"
+                        [class.invalid]="deleteForm.controls.password.invalid && deleteForm.controls.password.touched"
+                        type="password"
+                        formControlName="password"
+                        autocomplete="current-password"
+                    />
+                    @if (deleteForm.controls.password.invalid && deleteForm.controls.password.touched) {
+                        <span class="field-err on">Password is required to proceed.</span>
+                    }
+                </label>
 
-                    <div class="card-actions">
-                        <button type="button" class="btn-danger" (click)="revealDeleteConfirmation()">
-                            Continue to deletion
-                        </button>
-                    </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" (click)="cancelDeleteConfirmation()">Cancel</button>
+                    <button type="submit" class="btn btn-red" [disabled]="isDeleting() || deleteForm.invalid">
+                        @if (isDeleting()) {
+                            Deleting...
+                        } @else {
+                            Delete my account
+                        }
+                    </button>
                 </div>
-            } @else {
-                <form [formGroup]="deleteForm" (ngSubmit)="deleteAccount()" class="settings-form delete-form" novalidate>
-                    <label class="field">
-                        <span class="field-label">Confirm with password</span>
-                        <input
-                            class="field-input"
-                            [class.invalid]="deleteForm.controls.password.invalid && deleteForm.controls.password.touched"
-                            type="password"
-                            formControlName="password"
-                            autocomplete="current-password"
-                        />
-                        <span class="field-help">Enter your current password to permanently delete the account.</span>
-                    </label>
-
-                    <div class="card-actions">
-                        <button type="button" class="btn-secondary" (click)="cancelDeleteConfirmation()">Cancel</button>
-                        <button type="submit" class="btn-danger" [disabled]="isDeleting() || deleteForm.invalid">
-                            @if (isDeleting()) {
-                                Deleting...
-                            } @else {
-                                Delete account
-                            }
-                        </button>
-                    </div>
-                </form>
-            }
-        </section>
+            </form>
+        </div>
     </div>
 </div>
