@@ -156,7 +156,7 @@ describe("movie gateway routes", () => {
     const app = await loadApp();
 
     const res = await request(app)
-      .get("/CineMatch/movies/dashboard/")
+      .get("/api/movies/dashboard/")
       .expect(200);
 
     expect(res.body).toHaveProperty("now_playing");
@@ -169,7 +169,7 @@ describe("movie gateway routes", () => {
     const app = await loadApp();
 
     const res = await request(app)
-      .get("/CineMatch/movies/popular/?page=2")
+      .get("/api/movies/popular/?page=2")
       .expect(200);
 
     expect(res.body).toMatchObject({
@@ -182,7 +182,7 @@ describe("movie gateway routes", () => {
     const app = await loadApp();
 
     const res = await request(app)
-      .get("/CineMatch/movies/popular/?page=0")
+      .get("/api/movies/popular/?page=0")
       .expect(400);
 
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
@@ -193,7 +193,7 @@ describe("movie gateway routes", () => {
     const token = makeToken("user-123");
 
     const res = await request(app)
-      .get("/CineMatch/movies/123/")
+      .get("/api/movies/123/")
       .set("Authorization", `Bearer ${token}`)
       .expect(200);
 
@@ -208,7 +208,7 @@ describe("movie gateway routes", () => {
     const token = makeToken("user-123");
 
     const res = await request(app)
-      .get("/CineMatch/movies/404/")
+      .get("/api/movies/404/")
       .set("Authorization", `Bearer ${token}`)
       .expect(404);
 
@@ -219,7 +219,7 @@ describe("movie gateway routes", () => {
     const app = await loadApp();
 
     const res = await request(app)
-      .get("/CineMatch/movies/ai/123/summary/")
+      .get("/api/movies/ai/123/summary/")
       .expect(200);
 
     expect(res.body).toMatchObject({
@@ -232,7 +232,7 @@ describe("movie gateway routes", () => {
     const app = await loadApp();
 
     const res = await request(app)
-      .get("/CineMatch/movies/ai/0/summary/")
+      .get("/api/movies/ai/0/summary/")
       .expect(400);
 
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
@@ -242,7 +242,7 @@ describe("movie gateway routes", () => {
     const app = await loadApp();
 
     const res = await request(app)
-      .get("/CineMatch/movies/ai/404/summary/")
+      .get("/api/movies/ai/404/summary/")
       .expect(404);
 
     expect(res.body.error.code).toBe("MOVIE_NOT_FOUND");
@@ -252,7 +252,7 @@ describe("movie gateway routes", () => {
     const app = await loadApp();
 
     const res = await request(app)
-      .get("/CineMatch/movies/ai/500/summary/")
+      .get("/api/movies/ai/500/summary/")
       .expect(502);
 
     expect(res.body.error.code).toBe("CORE_REQUEST_FAILED");
@@ -262,7 +262,7 @@ describe("movie gateway routes", () => {
     const app = await loadApp();
 
     const res = await request(app)
-      .post("/CineMatch/movies/review/")
+      .post("/api/movies/review/")
       .send({
         tmdb_id: 123,
         rating: 8,
@@ -278,7 +278,7 @@ describe("movie gateway routes", () => {
     const token = makeToken("user-123");
 
     const res = await request(app)
-      .post("/CineMatch/movies/review/")
+      .post("/api/movies/review/")
       .set("Authorization", `Bearer ${token}`)
       .send({
         tmdb_id: 123,
@@ -302,7 +302,7 @@ describe("movie gateway routes", () => {
     const token = makeToken("user-123");
 
     const res = await request(app)
-      .post("/CineMatch/movies/review/")
+      .post("/api/movies/review/")
       .set("Authorization", `Bearer ${token}`)
       .send({
         tmdb_id: 123,
@@ -319,7 +319,7 @@ describe("movie gateway routes", () => {
     const token = makeToken("user-123");
 
     const res = await request(app)
-      .post("/CineMatch/movies/review/")
+      .post("/api/movies/review/")
       .set("Authorization", `Bearer ${token}`)
       .send({
         tmdb_id: 123,
@@ -336,7 +336,7 @@ describe("movie gateway routes", () => {
     const token = makeToken("user-123");
 
     const res = await request(app)
-      .post("/CineMatch/movies/review/")
+      .post("/api/movies/review/")
       .set("Authorization", `Bearer ${token}`)
       .send({
         tmdb_id: 123,
@@ -353,7 +353,7 @@ describe("movie gateway routes", () => {
     const token = makeToken("user-123");
 
     const res = await request(app)
-      .post("/CineMatch/movies/review/")
+      .post("/api/movies/review/")
       .set("Authorization", `Bearer ${token}`)
       .send({
         tmdb_id: 999,
@@ -370,7 +370,7 @@ describe("movie gateway routes", () => {
     const token = makeToken("user-123");
 
     const res = await request(app)
-      .post("/CineMatch/movies/review/")
+      .post("/api/movies/review/")
       .set("Authorization", `Bearer ${token}`)
       .send({
         tmdb_id: 502,
@@ -387,7 +387,7 @@ describe("movie gateway routes", () => {
     const token = makeToken("user-123");
 
     const res = await request(app)
-      .patch("/CineMatch/movies/review/7/")
+      .patch("/api/movies/review/7/")
       .set("Authorization", `Bearer ${token}`)
       .send({
         rating: 9,

@@ -189,11 +189,14 @@ CineMatch is designed with a **"Security-First"** approach to protect user data 
 
 ### API Endpoints
 **Gateway (BFF)**
+All public browser-facing gateway routes are exposed under the `/api/...` base path via the reverse proxy.
+
 | Method | Endpoint | Description | Auth |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/api/auth/register` | User registration | No |
 | `POST` | `/api/auth/login` | JWT authentication | No |
 | `PATCH` | `/api/auth/me` | Update user profile | Yes |
+| `PATCH` | `/api/auth/me/onboarding-status` | Update onboarding status (`pending`, `completed`, `skipped`) | Yes |
 | `DELETE` | `/api/auth/me` | Delete user account | Yes |
 | `POST` | `/api/auth/change-password` | Change user password | Yes |
 | `GET` | `/api/auth/me/avatar/upload-url` | Presigned S3 URL for avatars | Yes |

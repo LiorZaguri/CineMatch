@@ -10,7 +10,6 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule, LucideIconProvider, LUCIDE_ICONS, Eye, EyeOff } from 'lucide-angular';
 import { AuthService } from '../../../core/services/auth.service';
-import { OnboardingService } from '../../../core/services/onboarding.service';
 import { AuthLayoutComponent } from '../components/auth-layout/auth-layout.component';
 import type { LoginRequest } from '../../../core/models/auth.models';
 
@@ -32,7 +31,6 @@ const trimmedRequired: ValidatorFn = (control: AbstractControl): ValidationError
 export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
-  private readonly onboarding = inject(OnboardingService);
   private readonly router = inject(Router);
 
   readonly isLoading = signal(false);
@@ -67,8 +65,11 @@ export class LoginComponent {
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: () => {
-          const draft = this.onboarding.refreshForCurrentUser();
-          this.router.navigate([draft.status === 'pending' ? '/onboarding' : '/movies']);
+          this.router.navigate([
+            (this.auth.currentUser()?.onboardingStatus ?? 'pending') === 'pending'
+              ? '/onboarding'
+              : '/movies',
+          ]);
         },
         error: () => {
           this.errorMessage.set('Invalid email or password.');

@@ -16,6 +16,7 @@ describe('SettingsComponent', () => {
     email: 'user@mail.com',
     displayName: 'Existing User',
     avatarUrl: null,
+    onboardingStatus: 'pending' as const,
   });
 
   const authMock = {
@@ -27,6 +28,7 @@ describe('SettingsComponent', () => {
           email: 'user@mail.com',
           displayName: 'Updated User',
           avatarUrl: null,
+          onboardingStatus: 'pending' as const,
         },
       }),
     ),
@@ -44,6 +46,7 @@ describe('SettingsComponent', () => {
       email: 'user@mail.com',
       displayName: 'Existing User',
       avatarUrl: null,
+      onboardingStatus: 'pending' as const,
     });
 
     await TestBed.configureTestingModule({

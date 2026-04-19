@@ -1,14 +1,12 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { OnboardingService } from '../services/onboarding.service';
+import { AuthService } from '../services/auth.service';
 
 export const onboardingPendingGuard: CanActivateFn = () => {
-  const onboarding = inject(OnboardingService);
+  const auth = inject(AuthService);
   const router = inject(Router);
 
-  onboarding.refreshForCurrentUser();
-
-  if (!onboarding.hasFinished()) {
+  if ((auth.currentUser()?.onboardingStatus ?? 'pending') === 'pending') {
     return true;
   }
 

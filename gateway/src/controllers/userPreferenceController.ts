@@ -2,6 +2,7 @@ import { z, ZodError } from "zod";
 import { Request, Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "../types/authRequest";
 import { env } from "../config/env";
+import { updateUserOnboardingStatus } from "../services/authService";
 
 const DiscoveryMode = z.enum(["mainstream confident", "hidden gems", "best mix"]);
 const Language = z.enum(["English", "Korean", "Japanese", "French", "Spanish", "Open to anything"]);
@@ -156,9 +157,25 @@ export async function getMyPreferences(req: Request, res: Response, next: NextFu
     const userId = getAuthenticatedUserId(req as AuthenticatedRequest, res);
     if (!userId) return;
 
-    const { status, payload } = await forwardToCore("/api/user-preferences/me/", undefined, {
+    let { status, payload } = await forwardToCore("/api/user-preferences/me/", undefined, {
       headers: { "x-user-id": userId },
     });
+
+    if (
+      status === 404 &&
+      typeof payload === "object" &&
+      payload !== null &&
+      "detail" in payload &&
+      typeof (payload as { detail?: unknown }).detail === "string" &&
+      (payload as { detail: string }).detail.includes("User preferences not found")
+    ) {
+      await initializeCorePreferences(userId);
+
+      ({ status, payload } = await forwardToCore("/api/user-preferences/me/", undefined, {
+        headers: { "x-user-id": userId },
+      }));
+    }
+
     return handleCoreResponse(res, status, payload);
   } catch (error) {
     next(error);
@@ -180,6 +197,11 @@ export async function updateUserPreferences(req: Request, res: Response, next: N
       },
       body: JSON.stringify(body),
     });
+
+    if (status >= 200 && status < 300) {
+      await updateUserOnboardingStatus(userId, "completed");
+    }
+
     return handleCoreResponse(res, status, payload);
   } catch (error) {
     if (error instanceof ZodError) return sendValidationError(res, error);

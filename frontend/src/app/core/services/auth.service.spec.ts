@@ -40,7 +40,7 @@ describe('AuthService', () => {
 
     service.updateProfile({ displayName: 'Updated User' }).subscribe();
 
-    const req = httpMock.expectOne('/CineMatch/auth/me');
+    const req = httpMock.expectOne('/api/auth/me');
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual({ displayName: 'Updated User' });
 
@@ -50,6 +50,7 @@ describe('AuthService', () => {
         email: 'user@mail.com',
         displayName: 'Updated User',
         avatarUrl: null,
+        onboardingStatus: 'pending',
       },
     });
 
@@ -58,12 +59,49 @@ describe('AuthService', () => {
       email: 'user@mail.com',
       displayName: 'Updated User',
       avatarUrl: null,
+      onboardingStatus: 'pending',
     });
     expect(JSON.parse(localStorage.getItem('cm_user') ?? '{}')).toEqual({
       id: 'user-1',
       email: 'user@mail.com',
       displayName: 'Updated User',
       avatarUrl: null,
+      onboardingStatus: 'pending',
+    });
+  });
+
+  it('should update currentUser and localStorage after onboarding status changes', () => {
+    configureTestingModule();
+
+    service.updateOnboardingStatus('completed').subscribe();
+
+    const req = httpMock.expectOne('/api/auth/me/onboarding-status');
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ onboardingStatus: 'completed' });
+
+    req.flush({
+      user: {
+        id: 'user-1',
+        email: 'user@mail.com',
+        displayName: 'Updated User',
+        avatarUrl: null,
+        onboardingStatus: 'completed',
+      },
+    });
+
+    expect(service.currentUser()).toEqual({
+      id: 'user-1',
+      email: 'user@mail.com',
+      displayName: 'Updated User',
+      avatarUrl: null,
+      onboardingStatus: 'completed',
+    });
+    expect(JSON.parse(localStorage.getItem('cm_user') ?? '{}')).toEqual({
+      id: 'user-1',
+      email: 'user@mail.com',
+      displayName: 'Updated User',
+      avatarUrl: null,
+      onboardingStatus: 'completed',
     });
   });
 
@@ -74,7 +112,7 @@ describe('AuthService', () => {
       .changePassword({ oldPassword: 'OldPassword123!', newPassword: 'NewPassword123!' })
       .subscribe();
 
-    const req = httpMock.expectOne('/CineMatch/auth/change-password');
+    const req = httpMock.expectOne('/api/auth/change-password');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({
       oldPassword: 'OldPassword123!',
@@ -93,6 +131,7 @@ describe('AuthService', () => {
         email: 'user@mail.com',
         displayName: 'Delete Me',
         avatarUrl: null,
+        onboardingStatus: 'pending',
       }),
     );
 
@@ -102,7 +141,7 @@ describe('AuthService', () => {
 
     service.deleteAccount({ password: 'Password123!' }).subscribe();
 
-    const req = httpMock.expectOne('/CineMatch/auth/me');
+    const req = httpMock.expectOne('/api/auth/me');
     expect(req.request.method).toBe('DELETE');
     expect(req.request.body).toEqual({ password: 'Password123!' });
 

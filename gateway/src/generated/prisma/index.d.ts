@@ -998,6 +998,7 @@ export namespace Prisma {
     displayName: string | null
     passwordHash: string | null
     avatarUrl: string | null
+    onboardingStatus: string | null
     createdAt: Date | null
   }
 
@@ -1007,6 +1008,7 @@ export namespace Prisma {
     displayName: string | null
     passwordHash: string | null
     avatarUrl: string | null
+    onboardingStatus: string | null
     createdAt: Date | null
   }
 
@@ -1016,6 +1018,7 @@ export namespace Prisma {
     displayName: number
     passwordHash: number
     avatarUrl: number
+    onboardingStatus: number
     createdAt: number
     _all: number
   }
@@ -1027,6 +1030,7 @@ export namespace Prisma {
     displayName?: true
     passwordHash?: true
     avatarUrl?: true
+    onboardingStatus?: true
     createdAt?: true
   }
 
@@ -1036,6 +1040,7 @@ export namespace Prisma {
     displayName?: true
     passwordHash?: true
     avatarUrl?: true
+    onboardingStatus?: true
     createdAt?: true
   }
 
@@ -1045,6 +1050,7 @@ export namespace Prisma {
     displayName?: true
     passwordHash?: true
     avatarUrl?: true
+    onboardingStatus?: true
     createdAt?: true
     _all?: true
   }
@@ -1127,6 +1133,7 @@ export namespace Prisma {
     displayName: string
     passwordHash: string
     avatarUrl: string | null
+    onboardingStatus: string
     createdAt: Date
     _count: UserCountAggregateOutputType | null
     _min: UserMinAggregateOutputType | null
@@ -1153,6 +1160,7 @@ export namespace Prisma {
     displayName?: boolean
     passwordHash?: boolean
     avatarUrl?: boolean
+    onboardingStatus?: boolean
     createdAt?: boolean
     watchlist?: boolean | User$watchlistArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -1164,6 +1172,7 @@ export namespace Prisma {
     displayName?: boolean
     passwordHash?: boolean
     avatarUrl?: boolean
+    onboardingStatus?: boolean
     createdAt?: boolean
   }, ExtArgs["result"]["user"]>
 
@@ -1173,6 +1182,7 @@ export namespace Prisma {
     displayName?: boolean
     passwordHash?: boolean
     avatarUrl?: boolean
+    onboardingStatus?: boolean
     createdAt?: boolean
   }, ExtArgs["result"]["user"]>
 
@@ -1182,10 +1192,11 @@ export namespace Prisma {
     displayName?: boolean
     passwordHash?: boolean
     avatarUrl?: boolean
+    onboardingStatus?: boolean
     createdAt?: boolean
   }
 
-  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "displayName" | "passwordHash" | "avatarUrl" | "createdAt", ExtArgs["result"]["user"]>
+  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "displayName" | "passwordHash" | "avatarUrl" | "onboardingStatus" | "createdAt", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     watchlist?: boolean | User$watchlistArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -1204,6 +1215,7 @@ export namespace Prisma {
       displayName: string
       passwordHash: string
       avatarUrl: string | null
+      onboardingStatus: string
       createdAt: Date
     }, ExtArgs["result"]["user"]>
     composites: {}
@@ -1634,6 +1646,7 @@ export namespace Prisma {
     readonly displayName: FieldRef<"User", 'String'>
     readonly passwordHash: FieldRef<"User", 'String'>
     readonly avatarUrl: FieldRef<"User", 'String'>
+    readonly onboardingStatus: FieldRef<"User", 'String'>
     readonly createdAt: FieldRef<"User", 'DateTime'>
   }
     
@@ -3164,6 +3177,7 @@ export namespace Prisma {
     displayName: 'displayName',
     passwordHash: 'passwordHash',
     avatarUrl: 'avatarUrl',
+    onboardingStatus: 'onboardingStatus',
     createdAt: 'createdAt'
   };
 
@@ -3277,6 +3291,7 @@ export namespace Prisma {
     displayName?: StringFilter<"User"> | string
     passwordHash?: StringFilter<"User"> | string
     avatarUrl?: StringNullableFilter<"User"> | string | null
+    onboardingStatus?: StringFilter<"User"> | string
     createdAt?: DateTimeFilter<"User"> | Date | string
     watchlist?: WatchlistMovieListRelationFilter
   }
@@ -3287,6 +3302,7 @@ export namespace Prisma {
     displayName?: SortOrder
     passwordHash?: SortOrder
     avatarUrl?: SortOrderInput | SortOrder
+    onboardingStatus?: SortOrder
     createdAt?: SortOrder
     watchlist?: WatchlistMovieOrderByRelationAggregateInput
   }
@@ -3300,6 +3316,7 @@ export namespace Prisma {
     displayName?: StringFilter<"User"> | string
     passwordHash?: StringFilter<"User"> | string
     avatarUrl?: StringNullableFilter<"User"> | string | null
+    onboardingStatus?: StringFilter<"User"> | string
     createdAt?: DateTimeFilter<"User"> | Date | string
     watchlist?: WatchlistMovieListRelationFilter
   }, "id" | "email">
@@ -3310,6 +3327,7 @@ export namespace Prisma {
     displayName?: SortOrder
     passwordHash?: SortOrder
     avatarUrl?: SortOrderInput | SortOrder
+    onboardingStatus?: SortOrder
     createdAt?: SortOrder
     _count?: UserCountOrderByAggregateInput
     _max?: UserMaxOrderByAggregateInput
@@ -3325,6 +3343,7 @@ export namespace Prisma {
     displayName?: StringWithAggregatesFilter<"User"> | string
     passwordHash?: StringWithAggregatesFilter<"User"> | string
     avatarUrl?: StringNullableWithAggregatesFilter<"User"> | string | null
+    onboardingStatus?: StringWithAggregatesFilter<"User"> | string
     createdAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
   }
 
@@ -3387,6 +3406,7 @@ export namespace Prisma {
     displayName: string
     passwordHash: string
     avatarUrl?: string | null
+    onboardingStatus?: string
     createdAt?: Date | string
     watchlist?: WatchlistMovieCreateNestedManyWithoutUserInput
   }
@@ -3397,6 +3417,7 @@ export namespace Prisma {
     displayName: string
     passwordHash: string
     avatarUrl?: string | null
+    onboardingStatus?: string
     createdAt?: Date | string
     watchlist?: WatchlistMovieUncheckedCreateNestedManyWithoutUserInput
   }
@@ -3407,6 +3428,7 @@ export namespace Prisma {
     displayName?: StringFieldUpdateOperationsInput | string
     passwordHash?: StringFieldUpdateOperationsInput | string
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    onboardingStatus?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     watchlist?: WatchlistMovieUpdateManyWithoutUserNestedInput
   }
@@ -3417,6 +3439,7 @@ export namespace Prisma {
     displayName?: StringFieldUpdateOperationsInput | string
     passwordHash?: StringFieldUpdateOperationsInput | string
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    onboardingStatus?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     watchlist?: WatchlistMovieUncheckedUpdateManyWithoutUserNestedInput
   }
@@ -3427,6 +3450,7 @@ export namespace Prisma {
     displayName: string
     passwordHash: string
     avatarUrl?: string | null
+    onboardingStatus?: string
     createdAt?: Date | string
   }
 
@@ -3436,6 +3460,7 @@ export namespace Prisma {
     displayName?: StringFieldUpdateOperationsInput | string
     passwordHash?: StringFieldUpdateOperationsInput | string
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    onboardingStatus?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -3445,6 +3470,7 @@ export namespace Prisma {
     displayName?: StringFieldUpdateOperationsInput | string
     passwordHash?: StringFieldUpdateOperationsInput | string
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    onboardingStatus?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -3558,6 +3584,7 @@ export namespace Prisma {
     displayName?: SortOrder
     passwordHash?: SortOrder
     avatarUrl?: SortOrder
+    onboardingStatus?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -3567,6 +3594,7 @@ export namespace Prisma {
     displayName?: SortOrder
     passwordHash?: SortOrder
     avatarUrl?: SortOrder
+    onboardingStatus?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -3576,6 +3604,7 @@ export namespace Prisma {
     displayName?: SortOrder
     passwordHash?: SortOrder
     avatarUrl?: SortOrder
+    onboardingStatus?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -3961,6 +3990,7 @@ export namespace Prisma {
     displayName: string
     passwordHash: string
     avatarUrl?: string | null
+    onboardingStatus?: string
     createdAt?: Date | string
   }
 
@@ -3970,6 +4000,7 @@ export namespace Prisma {
     displayName: string
     passwordHash: string
     avatarUrl?: string | null
+    onboardingStatus?: string
     createdAt?: Date | string
   }
 
@@ -3995,6 +4026,7 @@ export namespace Prisma {
     displayName?: StringFieldUpdateOperationsInput | string
     passwordHash?: StringFieldUpdateOperationsInput | string
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    onboardingStatus?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -4004,6 +4036,7 @@ export namespace Prisma {
     displayName?: StringFieldUpdateOperationsInput | string
     passwordHash?: StringFieldUpdateOperationsInput | string
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    onboardingStatus?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 

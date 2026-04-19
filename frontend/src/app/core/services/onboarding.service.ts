@@ -25,9 +25,12 @@ export class OnboardingService {
   private readonly _draft = signal<OnboardingDraft>(createEmptyDraft());
 
   readonly draft = this._draft.asReadonly();
-  readonly hasFinished = computed(() => this._draft().status !== 'pending');
-  readonly isCompleted = computed(() => this._draft().status === 'completed');
-  readonly isSkipped = computed(() => this._draft().status === 'skipped');
+  readonly status = computed(
+    () => this.auth.currentUser()?.onboardingStatus ?? this._draft().status,
+  );
+  readonly hasFinished = computed(() => this.status() !== 'pending');
+  readonly isCompleted = computed(() => this.status() === 'completed');
+  readonly isSkipped = computed(() => this.status() === 'skipped');
 
   constructor() {
     effect(
@@ -97,21 +100,15 @@ export class OnboardingService {
   }
 
   complete(): void {
-    this.saveDraft({
-      ...this._draft(),
-      status: 'completed',
-    });
+    this.saveStatus('completed');
   }
 
   skip(): void {
-    this.saveDraft({
-      ...this._draft(),
-      status: 'skipped',
-    });
+    this.saveStatus('skipped');
   }
 
   reset(): void {
-    this.saveDraft(createEmptyDraft());
+    this.saveStatus('pending', createEmptyDraft());
   }
 
   private toggleValue(
@@ -164,9 +161,11 @@ export class OnboardingService {
       }
 
       const parsed = JSON.parse(raw) as Partial<OnboardingDraft>;
+      const authStatus = this.auth.currentUser()?.onboardingStatus;
       return {
         ...createEmptyDraft(),
         ...parsed,
+        status: authStatus ?? parsed.status ?? 'pending',
         selectedMovieIds: Array.isArray(parsed.selectedMovieIds) ? parsed.selectedMovieIds : [],
         favoriteGenres: Array.isArray(parsed.favoriteGenres) ? parsed.favoriteGenres : [],
         avoidedGenres: Array.isArray(parsed.avoidedGenres) ? parsed.avoidedGenres : [],
@@ -183,5 +182,12 @@ export class OnboardingService {
 
   private getStorageKey(userId: string | null): string | null {
     return userId ? `${STORAGE_KEY_PREFIX}:${userId}` : null;
+  }
+
+  private saveStatus(status: OnboardingDraft['status'], draft = this._draft()): void {
+    this.saveDraft({
+      ...draft,
+      status,
+    });
   }
 }
