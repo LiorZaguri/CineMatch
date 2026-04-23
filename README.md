@@ -208,11 +208,20 @@ All public browser-facing gateway routes are exposed under the `/api/...` base p
 | `GET` | `/api/movies/top-rated/` | Top-rated movies | No |
 | `GET` | `/api/movies/search/` | Search movies by title | No |
 | `GET` | `/api/movies/recommendations/me/` | Personalized movie recommendations | Yes |
-| `GET` | `/api/movies/:tmdb_id/` | Movie details & reviews | No |
+| `GET` | `/api/movies/:tmdb_id/` | Movie details & reviews | Yes |
 | `POST` | `/api/movies/review/` | Submit a movie review | Yes |
 | `PATCH` | `/api/movies/review/:review_id/` | Update an existing review | Yes |
 | `GET` | `/api/movies/ai/:tmdb_id/summary/` | Get AI review summary | No |
 | `POST` | `/api/movies/ai/search` | Natural language AI search | Yes |
+| `GET` | `/api/user-preferences/me/` | Get user preference profile | Yes |
+| `PUT` | `/api/user-preferences/update/` | Update taste profile & onboarding status | Yes |
+| `POST` | `/api/user-preferences/movie/` | Add a chosen movie to tastes | Yes |
+| `DELETE` | `/api/user-preferences/movie/:tmdb_id/` | Remove a chosen movie from tastes | Yes |
+| `GET` | `/api/user-preferences/movie/:tmdb_id/` | Check if a movie is in tastes | Yes |
+| `GET` | `/api/watchlist/` | Get personal watchlist | Yes |
+| `POST` | `/api/watchlist/` | Add movie to watchlist | Yes |
+| `DELETE` | `/api/watchlist/:tmdb_id/` | Remove movie from watchlist | Yes |
+| `GET` | `/api/watchlist/:tmdb_id/` | Check watchlist status | Yes |
 | `GET` | `/api/health` | Gateway service health check | No |
 
 **Core Service (FastAPI)**
@@ -225,11 +234,18 @@ All public browser-facing gateway routes are exposed under the `/api/...` base p
 | `GET` | `/api/movies/top-rated/` | Highest-rated movies of all time |
 | `GET` | `/api/movies/search/` | Search movies by title |
 | `GET` | `/api/movies/recommendations/me/` | Profile-based recommendations |
-| `GET` | `/api/movies/:tmdb_id/` | Detailed movie view with local & external reviews |
+| `GET` | `/api/movies/{tmdb_id}/` | Detailed movie view with local & external reviews |
 | `POST` | `/api/movies/review/` | Submit a new user review with rating |
-| `PATCH` | `/api/movies/review/:review_id/` | Update an existing review |
-| `GET` | `/api/movies/ai/:tmdb_id/summary/` | Get/Generate AI summary with 24h TTL cache |
+| `PATCH` | `/api/movies/review/{review_id}/` | Update an existing review |
+| `GET` | `/api/movies/ai/{tmdb_id}/summary/` | Get/Generate AI summary with 24h TTL cache |
 | `POST` | `/api/movies/ai/search/` | Process natural language movie search |
+| `GET` | `/api/user-preferences/me/` | Get user taste profile |
+| `POST` | `/api/user-preferences/register/` | Initialize user preferences on signup |
+| `PUT` | `/api/user-preferences/update/` | Full profile synchronization |
+| `POST` | `/api/user-preferences/movie/` | Add movie to taste profile |
+| `DELETE` | `/api/user-preferences/movie/{tmdb_id}/` | Remove movie from taste profile |
+| `GET` | `/api/user-preferences/movie/{tmdb_id}/` | Check preference status |
+| `GET` | `/api/health/` | Core service health check |
 
 > **📘 API Documentation**: When the Core service is running, you can explore the full interactive API documentation at:
 > - **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
