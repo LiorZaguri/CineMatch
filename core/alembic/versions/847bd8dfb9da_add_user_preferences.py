@@ -21,13 +21,14 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     # Define Enums explicitly to ensure they are created correctly in PostgreSQL
-    discoverymode = sa.Enum('MAINSTREAM', 'HIDDEN_GEMS', 'BEST_MIX', name='discoverymode')
-    language = sa.Enum('ENGLISH', 'KOREAN', 'JAPANESE', 'FRENCH', 'SPANISH', 'OPEN', name='language')
-    runtime = sa.Enum('UNDER_100', 'BETWEEN_100_140', 'OVER_140', 'NO_PREFERENCE', name='runtime')
-    era = sa.Enum('ERA_1970', 'ERA_1980', 'ERA_1990', 'ERA_2000', 'ERA_2010', 'ERA_2020', name='era')
+    discoverymode = sa.Enum('MAINSTREAM', 'HIDDEN_GEMS', 'BEST_MIX', name='discoverymode', create_type=False)
+    language = sa.Enum('ENGLISH', 'KOREAN', 'JAPANESE', 'FRENCH', 'SPANISH', 'OPEN', name='language', create_type=False)
+    runtime = sa.Enum('UNDER_100', 'BETWEEN_100_140', 'OVER_140', 'NO_PREFERENCE', name='runtime', create_type=False)
+    era = sa.Enum('ERA_1970', 'ERA_1980', 'ERA_1990', 'ERA_2000', 'ERA_2010', 'ERA_2020', name='era', create_type=False)
     genrename = sa.Enum(
         'THRILLER', 'DRAMA', 'SCI_FI', 'CRIME', 'MYSTERY', 'COMEDY', 'ROMANCE', 'HORROR', 'ANIMATION', 'FANTASY', 'DOCUMENTARY', 'ACTION', 
-        name='genrename'
+        name='genrename',
+        create_type=False,
     )
 
     # Create enums if they don't exist
