@@ -7,7 +7,7 @@ import {
   ValidationErrors,
   ValidatorFn,
 } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule, LucideIconProvider, LUCIDE_ICONS, Eye, EyeOff } from 'lucide-angular';
 import { AuthService } from '../../../core/services/auth.service';
 import { AuthLayoutComponent } from '../components/auth-layout/auth-layout.component';
@@ -32,9 +32,14 @@ export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly isLoading = signal(false);
-  readonly errorMessage = signal<string | null>(null);
+  readonly errorMessage = signal<string | null>(
+    this.route.snapshot.queryParamMap.get('reason') === 'session-expired'
+      ? 'Your session expired. Please sign in again.'
+      : null,
+  );
   readonly showPassword = signal(false);
 
   readonly form = this.fb.group({

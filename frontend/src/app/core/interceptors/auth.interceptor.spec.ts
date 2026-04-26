@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { describe, it, expect, afterEach } from 'vitest';
+import { Router } from '@angular/router';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { authInterceptor } from './auth.interceptor';
 import { AuthService } from '../services/auth.service';
@@ -11,11 +12,23 @@ import { AuthService } from '../services/auth.service';
 describe('authInterceptor', () => {
   let http: HttpClient;
   let httpMock: HttpTestingController;
+  let authMock: {
+    token: ReturnType<typeof signal<string | null>>;
+    isAuthenticated: ReturnType<typeof signal<boolean>>;
+    logout: ReturnType<typeof vi.fn>;
+  };
+  let routerMock: {
+    navigate: ReturnType<typeof vi.fn>;
+  };
 
   function setupWithToken(token: string | null) {
-    const authMock = {
+    authMock = {
       token: signal<string | null>(token),
       isAuthenticated: signal(!!token),
+      logout: vi.fn(),
+    };
+    routerMock = {
+      navigate: vi.fn().mockResolvedValue(true),
     };
 
     TestBed.configureTestingModule({
@@ -23,6 +36,7 @@ describe('authInterceptor', () => {
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
         { provide: AuthService, useValue: authMock },
+        { provide: Router, useValue: routerMock },
       ],
     });
 
@@ -76,5 +90,35 @@ describe('authInterceptor', () => {
     const req = httpMock.expectOne(presignedUrl);
     expect(req.request.headers.has('Authorization')).toBe(false);
     req.flush({});
+  });
+
+  it('should clear auth state and redirect to login when an authenticated request returns 401', () => {
+    setupWithToken('expired-token');
+
+    http.get('/api/protected').subscribe({
+      error: () => undefined,
+    });
+
+    const req = httpMock.expectOne('/api/protected');
+    req.flush({ error: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+
+    expect(authMock.logout).toHaveBeenCalledOnce();
+    expect(routerMock.navigate).toHaveBeenCalledWith(['/login'], {
+      queryParams: { reason: 'session-expired' },
+    });
+  });
+
+  it('should not redirect for 401 responses when no token was attached', () => {
+    setupWithToken(null);
+
+    http.post('/api/auth/login', { email: 'bad@example.com', password: 'invalid' }).subscribe({
+      error: () => undefined,
+    });
+
+    const req = httpMock.expectOne('/api/auth/login');
+    req.flush({ error: 'INVALID_CREDENTIALS' }, { status: 401, statusText: 'Unauthorized' });
+
+    expect(authMock.logout).not.toHaveBeenCalled();
+    expect(routerMock.navigate).not.toHaveBeenCalled();
   });
 });

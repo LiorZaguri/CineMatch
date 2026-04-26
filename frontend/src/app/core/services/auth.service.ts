@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { catchError, map, switchMap, throwError, timeout } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
@@ -19,6 +20,7 @@ import type {
 
 const TOKEN_KEY = 'cm_access_token';
 const API_BASE = `${environment.apiUrl}/auth`;
+const SESSION_EXPIRY_BUFFER_MS = 5000;
 interface JwtPayload {
   exp?: number;
 }
@@ -26,6 +28,8 @@ interface JwtPayload {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private sessionExpiryTimer: ReturnType<typeof setTimeout> | null = null;
 
   // ── State ──────────────────────────────────────────────────────────────────
   private readonly _token = signal<string | null>(this.loadValidToken());
@@ -40,6 +44,10 @@ export class AuthService {
   readonly currentUser = this._user.asReadonly();
 
   // ── Auth Actions ───────────────────────────────────────────────────────────
+
+  constructor() {
+    this.scheduleSessionExpiry(this._token());
+  }
 
   login(req: LoginRequest) {
     return this.http.post<AuthResponse>(`${API_BASE}/login`, req).pipe(
@@ -113,6 +121,7 @@ export class AuthService {
   }
 
   logout(): void {
+    this.clearSessionExpiryTimer();
     this._token.set(null);
     this._user.set(null);
     localStorage.removeItem(TOKEN_KEY);
@@ -164,6 +173,7 @@ export class AuthService {
   private handleAuthResponse(res: AuthResponse): void {
     this._token.set(res.accessToken);
     localStorage.setItem(TOKEN_KEY, res.accessToken);
+    this.scheduleSessionExpiry(res.accessToken);
     this.persistUser(this.toAuthUser(res.user));
   }
 
@@ -209,6 +219,42 @@ export class AuthService {
     } catch {
       return true;
     }
+  }
+
+  private scheduleSessionExpiry(token: string | null): void {
+    this.clearSessionExpiryTimer();
+    if (!token) {
+      return;
+    }
+
+    try {
+      const payload = this.decodeJwtPayload(token);
+      if (!payload.exp) {
+        return;
+      }
+
+      const expiresInMs = payload.exp * 1000 - Date.now() - SESSION_EXPIRY_BUFFER_MS;
+      if (expiresInMs <= 0) {
+        this.expireSession();
+        return;
+      }
+
+      this.sessionExpiryTimer = setTimeout(() => this.expireSession(), expiresInMs);
+    } catch {
+      this.expireSession();
+    }
+  }
+
+  private clearSessionExpiryTimer(): void {
+    if (this.sessionExpiryTimer) {
+      clearTimeout(this.sessionExpiryTimer);
+      this.sessionExpiryTimer = null;
+    }
+  }
+
+  private expireSession(): void {
+    this.logout();
+    void this.router.navigate(['/login'], { queryParams: { reason: 'session-expired' } });
   }
 
   private decodeJwtPayload(token: string): JwtPayload {

@@ -1,6 +1,6 @@
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { signal } from '@angular/core';
 import { LoginComponent } from './login.component';
@@ -33,6 +33,14 @@ describe('LoginComponent', () => {
       providers: [
         provideHttpClient(),
         provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              queryParamMap: convertToParamMap({}),
+            },
+          },
+        },
         { provide: AuthService, useValue: createAuthServiceMock() },
       ],
     }).compileComponents();
@@ -78,5 +86,31 @@ describe('LoginComponent', () => {
 
     const button: HTMLButtonElement = fixture.nativeElement.querySelector('#login-submit');
     expect(button.textContent).toContain('Sign In');
+  });
+
+  it('should show a session expired message when redirected after token expiration', async () => {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent, ReactiveFormsModule],
+      providers: [
+        provideHttpClient(),
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              queryParamMap: convertToParamMap({ reason: 'session-expired' }),
+            },
+          },
+        },
+        { provide: AuthService, useValue: createAuthServiceMock() },
+      ],
+    }).compileComponents();
+
+    const expiredFixture = TestBed.createComponent(LoginComponent);
+    expiredFixture.detectChanges();
+
+    const banner: HTMLElement = expiredFixture.nativeElement.querySelector('.error-banner');
+    expect(banner.textContent).toContain('Your session expired. Please sign in again.');
   });
 });

@@ -34,6 +34,6 @@ export const env = {
   NODE_ENV,
   PORT: parsePort(process.env.PORT),
   JWT_SECRET: requireEnv("JWT_SECRET"),
-  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN ?? "1h",
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN ?? "24h",
   CORE_SERVICE_URL: requireEnv("CORE_SERVICE_URL"),
 };
