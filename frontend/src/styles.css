@@ -1813,6 +1813,12 @@ a:hover {
 }
 
 @media (max-width: 720px) {
+    input,
+    textarea,
+    select {
+        font-size: 16px !important;
+    }
+
     .home-page {
         cursor: auto;
     }
