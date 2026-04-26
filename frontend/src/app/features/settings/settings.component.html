@@ -320,18 +320,18 @@
                     </div>
                 </section>
             </main>
-
-            <footer class="mobile-save-footer">
-                <button
-                    type="button"
-                    class="mobile-save-btn"
-                    [disabled]="!canSaveChanges()"
-                    (click)="saveChanges()"
-                >
-                    Save changes
-                </button>
-            </footer>
         </div>
+
+        <footer class="mobile-save-footer">
+            <button
+                type="button"
+                class="mobile-save-btn"
+                [disabled]="!canSaveChanges()"
+                (click)="saveChanges()"
+            >
+                Save changes
+            </button>
+        </footer>
     </div>
 
     <div class="modal-bg" [class.on]="isDeleteConfirming()" tabindex="0" (click)="cancelDeleteConfirmation()"
