@@ -740,7 +740,6 @@
     .page {
         grid-template-columns: 1fr;
         height: 100%;
-        overflow-y: auto;
     }
 
     .sidebar {
@@ -761,14 +760,15 @@
 
     .main-wrap {
         height: auto;
-        overflow: visible;
+        min-height: 0;
         padding: 2rem 3.25rem 3.75rem;
     }
 }
 
 @media (max-width: 760px) {
     .settings-page {
-        min-height: calc(100vh - 4.3rem);
+        min-height: calc(100dvh - 4.3rem);
+        height: calc(100dvh - 4.3rem);
     }
 
     .settings-page::before {
