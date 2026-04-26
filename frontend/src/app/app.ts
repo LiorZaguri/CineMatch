@@ -1,7 +1,15 @@
 import { Component, signal, inject } from '@angular/core';
-import { NavigationEnd, NavigationStart, Router, RouterOutlet } from '@angular/router';
+import {
+  NavigationEnd,
+  NavigationError,
+  NavigationStart,
+  Router,
+  RouterOutlet,
+} from '@angular/router';
 import { TopbarComponent } from './core/layout/topbar/topbar';
 import { FooterComponent } from './core/layout/footer/footer';
+
+const CHUNK_RELOAD_KEY = 'cm_chunk_reload_attempted';
 
 @Component({
   selector: 'app-root',
@@ -21,7 +29,13 @@ export class App {
         return;
       }
 
+      if (event instanceof NavigationError) {
+        this.reloadOnceForStaleChunk(event.error);
+        return;
+      }
+
       if (event instanceof NavigationEnd) {
+        sessionStorage.removeItem(CHUNK_RELOAD_KEY);
         const hasFragment = this.router.parseUrl(event.urlAfterRedirects).fragment !== null;
 
         requestAnimationFrame(() => {
@@ -45,5 +59,20 @@ export class App {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
+  }
+
+  private reloadOnceForStaleChunk(error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    const isChunkLoadFailure =
+      message.includes('Failed to fetch dynamically imported module') ||
+      message.includes('Loading chunk') ||
+      message.includes('ChunkLoadError');
+
+    if (!isChunkLoadFailure || sessionStorage.getItem(CHUNK_RELOAD_KEY) === 'true') {
+      return;
+    }
+
+    sessionStorage.setItem(CHUNK_RELOAD_KEY, 'true');
+    window.location.reload();
   }
 }
