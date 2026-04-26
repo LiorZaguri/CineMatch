@@ -34,6 +34,16 @@
 
         <div class="main-wrap">
             <main class="main">
+                <section class="mobile-settings-summary" aria-label="Account settings summary">
+                    <div class="sb-eyebrow">Account Center</div>
+                    <h1 class="sb-headline">
+                        Settings built
+                        <br />
+                        for a <em>quick<br />tune-up.</em>
+                    </h1>
+                    <p class="sb-sub">Update your profile, rotate your password, or manage your account.</p>
+                </section>
+
                 <section class="scard motion-shell" id="sec-profile" [class.is-visible]="showProfileCard()">
                     <div class="scard-head">
                         <div class="sh-left">
@@ -319,6 +329,8 @@
                         </div>
                     </div>
                 </section>
+
+                <div class="page-spacer" aria-hidden="true"></div>
             </main>
         </div>
 

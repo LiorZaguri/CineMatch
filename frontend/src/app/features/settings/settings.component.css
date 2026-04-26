@@ -197,6 +197,10 @@
     display: none;
 }
 
+.mobile-settings-summary {
+    display: none;
+}
+
 .btn {
     display: inline-flex;
     align-items: center;
@@ -775,8 +779,17 @@
         padding: 1.5rem 1.25rem 0;
     }
 
+    .sidebar {
+        display: none;
+    }
+
     .sb-action {
         display: none;
+    }
+
+    .mobile-settings-summary {
+        display: block;
+        padding: 0 0 1.5rem;
     }
 
     .scard-head,
@@ -816,6 +829,10 @@
     .btn {
         width: 100%;
         justify-content: center;
+    }
+
+    .page-spacer {
+        height: calc(96px + env(safe-area-inset-bottom, 0px));
     }
 
     .mobile-save-footer {
