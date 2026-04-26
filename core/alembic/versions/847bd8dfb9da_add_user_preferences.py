@@ -18,26 +18,37 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+from sqlalchemy.dialects import postgresql
+
 def upgrade() -> None:
     """Upgrade schema."""
-    # Define Enums explicitly to ensure they are created correctly in PostgreSQL
-    discoverymode = sa.Enum('MAINSTREAM', 'HIDDEN_GEMS', 'BEST_MIX', name='discoverymode', create_type=False)
-    language = sa.Enum('ENGLISH', 'KOREAN', 'JAPANESE', 'FRENCH', 'SPANISH', 'OPEN', name='language', create_type=False)
-    runtime = sa.Enum('UNDER_100', 'BETWEEN_100_140', 'OVER_140', 'NO_PREFERENCE', name='runtime', create_type=False)
-    era = sa.Enum('ERA_1970', 'ERA_1980', 'ERA_1990', 'ERA_2000', 'ERA_2010', 'ERA_2020', name='era', create_type=False)
-    genrename = sa.Enum(
-        'THRILLER', 'DRAMA', 'SCI_FI', 'CRIME', 'MYSTERY', 'COMEDY', 'ROMANCE', 'HORROR', 'ANIMATION', 'FANTASY', 'DOCUMENTARY', 'ACTION', 
-        name='genrename',
-        create_type=False,
-    )
-
-    # Create enums if they don't exist
     bind = op.get_bind()
-    discoverymode.create(bind, checkfirst=True)
-    language.create(bind, checkfirst=True)
-    runtime.create(bind, checkfirst=True)
-    era.create(bind, checkfirst=True)
-    genrename.create(bind, checkfirst=True)
+
+    # Safely create Enums using DO blocks to handle "already exists" cases
+    def create_enum_safely(name, values):
+        values_str = ", ".join(f"'{v}'" for v in values)
+        bind.execute(sa.text(f"""
+            DO $$ BEGIN
+                CREATE TYPE {name} AS ENUM ({values_str});
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+        """))
+
+    create_enum_safely('discoverymode', ['MAINSTREAM', 'HIDDEN_GEMS', 'BEST_MIX'])
+    create_enum_safely('language', ['ENGLISH', 'KOREAN', 'JAPANESE', 'FRENCH', 'SPANISH', 'OPEN'])
+    create_enum_safely('runtime', ['UNDER_100', 'BETWEEN_100_140', 'OVER_140', 'NO_PREFERENCE'])
+    create_enum_safely('era', ['ERA_1970', 'ERA_1980', 'ERA_1990', 'ERA_2000', 'ERA_2010', 'ERA_2020'])
+    create_enum_safely('genrename', [
+        'THRILLER', 'DRAMA', 'SCI_FI', 'CRIME', 'MYSTERY', 'COMEDY', 'ROMANCE', 'HORROR', 'ANIMATION', 'FANTASY', 'DOCUMENTARY', 'ACTION'
+    ])
+
+    # Define the types for column use with create_type=False
+    discovery_mode_type = postgresql.ENUM(name='discoverymode', create_type=False)
+    language_type = postgresql.ENUM(name='language', create_type=False)
+    runtime_type = postgresql.ENUM(name='runtime', create_type=False)
+    era_type = postgresql.ENUM(name='era', create_type=False)
+    genrename_type = postgresql.ENUM(name='genrename', create_type=False)
 
     # Helper function to check if table exists
     def table_exists(name):
@@ -63,10 +74,10 @@ def upgrade() -> None:
         op.create_table('user_preferences',
             sa.Column('id', sa.Integer(), nullable=False),
             sa.Column('user_id', sa.String(), nullable=False),
-            sa.Column('discovery_mode', discoverymode, nullable=False),
-            sa.Column('languages', language, nullable=True),
-            sa.Column('runtime', runtime, nullable=True),
-            sa.Column('eras', era, nullable=True),
+            sa.Column('discovery_mode', discovery_mode_type, nullable=False),
+            sa.Column('languages', language_type, nullable=True),
+            sa.Column('runtime', runtime_type, nullable=True),
+            sa.Column('eras', era_type, nullable=True),
             sa.PrimaryKeyConstraint('id')
         )
         op.create_index(op.f('ix_user_preferences_id'), 'user_preferences', ['id'], unique=False)
@@ -77,7 +88,7 @@ def upgrade() -> None:
         op.create_table('liked_genres',
             sa.Column('id', sa.Integer(), nullable=False),
             sa.Column('user_id', sa.String(), nullable=False),
-            sa.Column('name', genrename, nullable=False),
+            sa.Column('name', genrename_type, nullable=False),
             sa.ForeignKeyConstraint(['user_id'], ['user_preferences.user_id'], ondelete='CASCADE'),
             sa.PrimaryKeyConstraint('id')
         )
@@ -91,7 +102,7 @@ def upgrade() -> None:
         op.create_table('disliked_genres',
             sa.Column('id', sa.Integer(), nullable=False),
             sa.Column('user_id', sa.String(), nullable=False),
-            sa.Column('name', genrename, nullable=False),
+            sa.Column('name', genrename_type, nullable=False),
             sa.ForeignKeyConstraint(['user_id'], ['user_preferences.user_id'], ondelete='CASCADE'),
             sa.PrimaryKeyConstraint('id')
         )
