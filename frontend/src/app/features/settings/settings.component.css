@@ -59,8 +59,6 @@
 }
 
 .sidebar {
-    position: sticky;
-    top: 0;
     height: 100%;
     border-right: 1px solid var(--border);
     display: flex;
@@ -193,6 +191,10 @@
     height: 100%;
     overflow-y: auto;
     padding: 2.75rem 3.25rem 3.75rem;
+}
+
+.mobile-save-footer {
+    display: none;
 }
 
 .btn {
@@ -727,8 +729,14 @@
 }
 
 @media (max-width: 1080px) {
+    .settings-page {
+        overflow: hidden;
+    }
+
     .page {
         grid-template-columns: 1fr;
+        height: 100%;
+        overflow-y: auto;
     }
 
     .sidebar {
@@ -742,8 +750,15 @@
         overflow: visible;
     }
 
+    .sidebar.motion-shell {
+        transform: none;
+        filter: none;
+    }
+
     .main-wrap {
-        padding-top: 2rem;
+        height: auto;
+        overflow: visible;
+        padding: 2rem 3.25rem 3.75rem;
     }
 }
 
@@ -757,7 +772,11 @@
     }
 
     .main-wrap {
-        padding: 1.5rem 1.25rem 6.75rem;
+        padding: 1.5rem 1.25rem 0;
+    }
+
+    .sb-action {
+        display: none;
     }
 
     .scard-head,
@@ -788,27 +807,6 @@
         padding-top: 0.25rem;
     }
 
-    .sb-action {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 1200;
-        margin-top: 0;
-        padding: 0.9rem 1.25rem calc(0.9rem + env(safe-area-inset-bottom, 0px));
-        border-top: 1px solid var(--border);
-        background:
-            linear-gradient(180deg, rgba(244, 239, 230, 0.82), rgba(244, 239, 230, 0.97)),
-            var(--bg);
-        box-shadow: 0 -12px 28px -24px rgba(28, 23, 20, 0.58);
-        backdrop-filter: blur(14px);
-    }
-
-    .sidebar-save-btn {
-        max-width: 42rem;
-        margin: 0 auto;
-    }
-
     .av-actions,
     .modal-actions {
         flex-direction: column;
@@ -818,6 +816,36 @@
     .btn {
         width: 100%;
         justify-content: center;
+    }
+
+    .mobile-save-footer {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        display: block;
+        margin: 1.25rem -1.25rem 0;
+        padding: 0.875rem 1.125rem calc(0.875rem + env(safe-area-inset-bottom, 0px));
+        background: rgba(244, 239, 230, 0.94);
+        box-shadow: 0 -10px 30px rgba(28, 23, 20, 0.08);
+        backdrop-filter: blur(10px);
+    }
+
+    .mobile-save-btn {
+        width: 100%;
+        min-height: 48px;
+        border: 0;
+        border-radius: 14px;
+        background: var(--text);
+        color: var(--cream);
+        font-family: var(--ff-body);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    .mobile-save-btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
     }
 
     .toast {
