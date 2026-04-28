@@ -3,7 +3,6 @@ import re
 from openai import AsyncOpenAI
 from services.AImodel.config import get_AI_settings
 from schemas import ParsedSearchResponse, SearchFilters
-from pydantic import ValidationError
 import asyncio
 import time
 

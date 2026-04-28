@@ -622,7 +622,7 @@ async def get_movie_page(
         cast = credits_data.get("cast", [])
 
     final_streaming = streaming_services if not isinstance(streaming_services, Exception) else []
-
+    
     # Combine all data into the response schema format
     return {
         **movie_data,

@@ -8,6 +8,7 @@ Create Date: 2026-04-15 11:34:42.147800
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -18,7 +19,7 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-from sqlalchemy.dialects import postgresql
+
 
 def upgrade() -> None:
     """Upgrade schema."""

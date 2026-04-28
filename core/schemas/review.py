@@ -5,6 +5,7 @@ It includes schemas for creating new reviews and reading review data.
 
 import re
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -169,6 +170,17 @@ class TmdbReview(BaseModel):
     content: str = Field(..., description="The full text content of the review")
     created_at: datetime | None = Field(None, description="Optional timestamp for the review")
     author_details: TmdbAuthorDetails = Field(..., description="Details about the author of the review")
+
+    @field_validator('created_at', mode='before')
+    @classmethod
+    def parse_tmdb_datetime(cls, v: Any) -> Any:
+        """
+        Handles TMDB's non-standard datetime format (e.g., '2015-06-09 07:21:30 UTC').
+        Replaces ' UTC' with 'Z' to make it ISO 8601 compliant for Pydantic parsing.
+        """
+        if isinstance(v, str) and v.endswith(" UTC"):
+            return v.replace(" UTC", "Z")
+        return v
 
 
 class TmdbReviewsResponse(BaseModel):
